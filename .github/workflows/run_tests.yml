@@ -1,0 +1,87 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Run Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.8.x, 3.x]
+        compiler: [g++, clang]
+        target: [Debug]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install baseline for ${{ matrix.os }}, with ${{ matrix.compiler }}
+      run: |
+        sudo apt -y update
+        sudo apt -y upgrade
+        sudo apt -y install cmake \
+                            ${{ matrix.compiler }} \
+                            libmpfr-dev \
+                            python3-dev \
+                            libboost-dev \
+                            libmpfr6
+
+    - name: Install TNCO for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
+        matrix.python-version }} (${{ matrix.target }})
+      run: |
+        if [[ ${{ matrix.compiler }} == g++ ]]; then
+          export CC=gcc
+          export CXX=g++
+        elif [[ ${{ matrix.compiler }} == clang ]]; then
+          export CC=clang
+          export CXX=clang++
+        else
+          echo 'Not supported.'
+          return 1
+        fi
+        pip install .[parallel,testing] --config-settings=cmake.build-type=${{ matrix.target }} --verbose
+
+    - name: Run Tests for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
+        matrix.python-version }} (${{ matrix.target }})
+      if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'g++' && matrix.python-version
+        == '3.x'
+      run: |
+        pip install pytest-sugar
+        PYTEST_FRACTION_N_TESTS=2 pytest --verbose --timeout=180 -n $((2 * $(nproc))) tests/*.py
+
+    - name: Run CLI for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
+        matrix.python-version }} (${{ matrix.target }})
+      run: |
+        tnco optimize '2 a b' '(0, 100)' --n-steps=100 --n-runs=100 > /dev/null
+
+    - name: Run Example for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
+        matrix.python-version }} (${{ matrix.target }})
+      run: |
+        pip install jupyterlab papermill
+        papermill examples/Optimization.ipynb /dev/null

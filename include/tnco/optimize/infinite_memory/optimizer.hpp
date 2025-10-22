@@ -1,0 +1,307 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#pragma once
+
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
+#include <cmath>
+#include <memory>
+#include <optional>
+#include <random>
+#include <sstream>
+#include <tnco/assert.hpp>
+#include <tnco/globals.hpp>
+#include <tnco/optimize/optimizer.hpp>
+#include <tnco/utils.hpp>
+#include <variant>
+
+#include "utils.hpp"
+
+namespace tnco::optimize::infinite_memory::optimizer {
+
+// Rename pybind11
+namespace py = pybind11;
+
+// Use _a literal for py::arg
+using namespace py::literals;
+
+template <typename CostModel, typename Probability>
+struct Optimizer : optimize::optimizer::Optimizer {
+  using base_type = optimize::optimizer::Optimizer;
+  using ctree_type = tnco::ctree_type;
+  using cmodel_type = CostModel;
+  using prob_fn_type = Probability;
+  using index_type = typename ctree_type::node_type::index_type;
+  using prob_type = tnco::prob_type;
+  using cost_type = typename cmodel_type::cost_type;
+  using bitset_type = typename ctree_type::bitset_type;
+  using prng_type = tnco::prng_type;
+  using cost_cache_type = infinite_memory::utils::CostCache<cost_type>;
+  using hyper_cache_type = infinite_memory::utils::HyperCache<bitset_type>;
+  using atol_type = tnco::atol_type;
+
+  std::shared_ptr<cmodel_type> p_cmodel;
+  mutable cost_cache_type cost_cache;
+  mutable hyper_cache_type hyper_cache;
+  cost_type min_total_cost{};
+
+  Optimizer(ctree_type ctree, const cmodel_type &cmodel,
+            std::optional<std::variant<size_t, std::string>> seed,
+            const bool disable_shared_inds, const atol_type &atol,
+            std::optional<ctree_type> min_ctree = std::nullopt)
+      : base_type{std::move(ctree), std::move(seed), disable_shared_inds,
+                  std::move(min_ctree)},
+        p_cmodel{cmodel.clone()},
+        cost_cache{
+            this->ctree,
+            WRAP(*p_cmodel, contraction_cost),
+        },
+        hyper_cache{this->ctree},
+        min_total_cost{infinite_memory::utils::get_cost<cost_type>(
+            this->min_ctree, WRAP(*p_cmodel, contraction_cost))} {
+    // If the total cost is infinite, there is the indication that the float
+    // precision is not enough
+    if (const auto log2_tc_ = log2(get_total_cost());
+        isinf(log2_tc_) || isnan(log2_tc_)) {
+      throw std::domain_error("Precision is too low.");
+    }
+    if (const auto log2_tc_ = log2(get_min_total_cost());
+        isinf(log2_tc_) || isnan(log2_tc_)) {
+      throw std::domain_error("Precision is too low.");
+    }
+    if (const auto [valid_, msg_] = is_valid(atol); !valid_) {
+      throw std::invalid_argument(msg_);
+    }
+  }
+
+  auto update(const prob_fn_type &prob)
+#ifdef NDEBUG
+      noexcept
+#endif
+      -> void {
+    static constexpr auto null = ctree_type::node_type::null;
+    const auto &cmodel = *p_cmodel;
+    auto &nodes = this->ctree.nodes;
+    auto &inds = this->ctree.inds;
+    const auto &dims = this->ctree.dims;
+    auto uniform = std::uniform_real_distribution<prob_type>{};
+
+    // Start by selecting a random leaf
+    index_type pos_B = this->prng() % this->n_leaves;
+    ASSERT(nodes[pos_B].is_leaf(), "Nodes are in the wrong order.");
+
+    // Get the next node
+    if ((pos_B = nodes[pos_B].parent); pos_B == null) {
+      return;
+    }
+
+    // Initialize total cost
+    auto total_cost = get_total_cost();
+
+    // Total cost should be a positive number
+    ASSERT(total_cost >= 0, "'total_cost' should always be a positive number.");
+
+    while (true) {
+      /*
+       *      A
+       *     / \
+       *    B   C <- Try to swap with E
+       *   / \
+       *  D   E
+       *      ^
+       *      |
+       *      pos
+       */
+
+      // Collect neighbors
+      auto [pos_A, pos_C, pos_D, pos_E] = this->get_ctree_nn(pos_B);
+      if (pos_A == null) {
+        break;
+      }
+
+      // Get inds
+      const auto &inds_A = inds[pos_A];
+      auto &inds_B = inds[pos_B];
+      const auto &inds_C = inds[pos_C];
+      const auto &inds_D = inds[pos_D];
+      const auto &inds_E = inds[pos_E];
+      ASSERT(this->disable_shared_inds || inds_D.intersects(inds_C),
+             "Problem with shared inds.");
+
+      // Get new inds for B
+      auto &hyper_inds_A = hyper_cache.hyper_inds[pos_A];
+      auto &hyper_inds_B = hyper_cache.hyper_inds[pos_B];
+      const auto new_inds_B = (inds_D ^ inds_C) | hyper_inds_A | hyper_inds_B;
+
+      // Get new cost for B and A
+      auto &ccost_A = cost_cache.contraction_cost[pos_A];
+      auto &ccost_B = cost_cache.contraction_cost[pos_B];
+      const auto new_ccost_A =
+          cmodel.contraction_cost(inds_A, new_inds_B, inds_E, dims);
+      const auto new_ccost_B =
+          cmodel.contraction_cost(new_inds_B, inds_D, inds_C, dims);
+
+      // Get the delta cost
+      const auto delta_cost = (new_ccost_B - ccost_B) + (new_ccost_A - ccost_A);
+
+      //-------------------------------
+
+      if (uniform(this->prng) <= prob(delta_cost, total_cost)) {
+        // Swap
+        this->ctree.swap_with_nn(pos_E);
+
+        // Swap positions
+        std::swap(pos_C, pos_E);
+
+        // Update inds and hyper-inds
+        inds_B = new_inds_B;
+        hyper_inds_A = inds_A & inds_B & inds_E;
+        hyper_inds_B = inds_B & inds_D & inds_C;
+
+        // Update costs
+        ccost_B = new_ccost_B;
+        ccost_A = new_ccost_A;
+        total_cost += delta_cost;
+
+        // Total cost should be a positive number
+        ASSERT(total_cost >= 0,
+               "'total_cost' should always be a positive number.");
+      }
+
+      // Propagate partial costs
+      cost_cache.partial_cost[pos_B] = cost_cache.partial_cost[pos_D] +
+                                       cost_cache.partial_cost[pos_E] + ccost_B;
+      cost_cache.partial_cost[pos_A] = cost_cache.partial_cost[pos_B] +
+                                       cost_cache.partial_cost[pos_C] + ccost_A;
+
+      // Go to the next node
+      pos_B = pos_A;
+    }
+
+    // At this point, B should be the root
+    ASSERT(nodes[pos_B].is_root(), "Last visited node should be a root.");
+
+    // Update min
+    if (const auto tc_ = get_total_cost(); tc_ < min_total_cost) {
+      min_total_cost = tc_;
+      this->min_ctree = this->ctree;
+    }
+
+#ifndef NDEBUG
+    if (const auto [valid_, msg_] = this->is_valid(1e-5); !valid_) {
+      throw std::logic_error("Something went wrong with the update: " + msg_);
+    }
+
+    // Check final cost
+    if (const auto rel_error = abs((log(total_cost) - log(get_total_cost())) /
+                                   log(get_total_cost()));
+        rel_error > 1e-2) {
+      throw std::logic_error("Total cost is not properly cached (rel. error: " +
+                             tnco::to_string(rel_error * 100) + "%)");
+    }
+#endif
+  }
+
+  [[nodiscard]] auto is_valid(const atol_type &atol) const
+      -> std::pair<bool, std::string> {
+    if (const auto [valid_, msg_] = base_type::is_valid(); !valid_) {
+      return {valid_, msg_};
+    }
+
+    // Check min ctree cost
+    if (!tnco::utils::is_logclose(
+            infinite_memory::utils::get_cost<cost_type>(
+                this->min_ctree, WRAP(*p_cmodel, contraction_cost)),
+            min_total_cost, atol)) {
+      return {false, "Cost for min ctree is not correct."};
+    }
+
+    // Check CostCache
+    if (!cost_cache.is_close_to(
+            cost_cache_type{this->ctree, WRAP(*p_cmodel, contraction_cost)},
+            atol)) {
+      return {false, "CostCache is not properly cached."};
+    }
+
+    // Check HyperCache
+    if (!hyper_cache.is_close_to(hyper_cache_type{this->ctree}, atol)) {
+      return {false, "HyperCache is not properly cached."};
+    }
+
+    // Everything, OK
+    return {true, ""};
+  }
+
+  [[nodiscard]] auto get_total_cost() const {
+    return cost_cache.partial_cost.back();
+  }
+
+  [[nodiscard]] auto get_min_total_cost() const { return min_total_cost; }
+
+  [[nodiscard]] auto cmodel() const -> const cmodel_type & { return *p_cmodel; }
+};
+
+template <typename... T>
+void init(py::module &m, const std::string &name) {
+  using self_type = Optimizer<T...>;
+  using base_type = typename self_type::base_type;
+  using ctree_type = typename self_type::ctree_type;
+  using cmodel_type = typename self_type::cmodel_type;
+  using atol_type = typename self_type::atol_type;
+  py::class_<self_type, base_type>(m, name.c_str())
+      .def(py::init<ctree_type, const cmodel_type &,
+                    std::optional<std::variant<size_t, std::string>>,
+                    const bool, const atol_type &, std::optional<ctree_type>>(),
+           "ctree"_a, "cmodel"_a, py::kw_only(), "seed"_a = std::nullopt,
+           "disable_shared_inds"_a = false, "atol"_a = 1e-5,
+           "min_ctree"_a = std::nullopt)
+      .def("update", &self_type::update, "prob"_a)
+      .def_property_readonly("cmodel", &self_type::cmodel)
+      .def_property_readonly(
+          "total_cost",
+          [](const self_type &self) -> auto {
+            auto Decimal = py::module_::import("decimal").attr("Decimal");
+            return Decimal(tnco::to_string(self.get_total_cost()));
+          })
+      .def_property_readonly(
+          "min_total_cost",
+          [](const self_type &self) -> auto {
+            auto Decimal = py::module_::import("decimal").attr("Decimal");
+            return Decimal(tnco::to_string(self.get_min_total_cost()));
+          })
+      .def_property_readonly("log2_total_cost",
+                             [](const self_type &self) -> auto {
+                               return log2(self.get_total_cost());
+                             })
+      .def_property_readonly("log2_min_total_cost",
+                             [](const self_type &self) -> auto {
+                               return log2(self.get_min_total_cost());
+                             })
+      .def(
+          "is_valid",
+          [](const self_type &self, const atol_type &atol,
+             const bool return_message)
+              -> std::variant<bool, std::pair<bool, std::string>> {
+            const auto [valid, msg] = self.is_valid(atol);
+            if (return_message) {
+              return std::pair{valid, msg};
+            }
+            return valid;
+          },
+          py::kw_only(), "atol"_a = 1e-5, "return_message"_a = false);
+}
+
+}  // namespace tnco::optimize::infinite_memory::optimizer
