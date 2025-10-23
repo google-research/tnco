@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathvalidate import validate_filepath, ValidationError
 from typing import Optional, Dict, Tuple, Union, List, Any
 from tnco.app.tn import Tensor, TensorNetwork
 import tnco.utils.circuit as circuit_utils
@@ -96,6 +97,12 @@ def load_file(filename: str) -> Any:
     Raises:
         FileNotFoundError: 'filename' does not exist or not accessible.
     """
+    # Validate filename
+    try:
+        validate_filepath(filename, platform='auto')
+    except ValidationError as e:
+        raise ValueError("'filename is not valid' ({})".format(e))
+
     # Check that file exists
     if not Path(filename).exists:
         raise FileNotFoundError("'{}' does not exist.".format(filename))
@@ -430,8 +437,12 @@ def load_tn(obj: Any,
             return load_tn(obj, **options)
 
         # Is it a file?
-        if Path(obj).exists():
-            return load_tn(load_file(obj), **options)
+        try:
+            validate_filepath(obj, platform='auto')
+            if Path(obj).exists():
+                return load_tn(load_file(obj), **options)
+        except ValidationError:
+            pass
 
     # Is it JSON?
     if isinstance(obj, dict):
@@ -599,6 +610,13 @@ def dump_results(tn: TensorNetwork,
         output_format).lower()
     if output_format not in ['raw', 'json']:
         raise ValueError(f'"{output_format=}" not supported.')
+
+    # Validate filename
+    if output_filename:
+        try:
+            validate_filepath(output_filename, platform='auto')
+        except ValidationError as e:
+            raise ValueError("'filename is not valid' ({})".format(e))
 
     # Check if filename already exists
     output_filename = None if output_filename is None else Path(output_filename)
