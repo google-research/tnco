@@ -48,6 +48,7 @@ dependencies = [
   "autoray",
   "fire",
   "more_itertools",
+  "pathvalidate",
   "rich"
 ]
 
