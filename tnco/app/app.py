@@ -120,10 +120,6 @@ def load_file(filename: str) -> Any:
         if binary[:2] == b'BZ':
             return load(bz2.decompress(binary))
 
-        # Is pickle?
-        if binary[0] == 128 and binary[1] >= 2:
-            return pickle.loads(binary)
-
         # Is json?
         try:
             return json.loads(binary.decode())
