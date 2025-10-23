@@ -105,6 +105,20 @@ For all the possible options run:
 $ tnco --help
 ```
 
+## How do I cite `TNCO`?
+
+@article{GoogleQuantumAI2025Observation,
+  author  = {{Google Quantum AI and Collaborators}},
+  title   = {{Observation of constructive interference at the edge of quantum ergodicity}},
+  journal = {Nature},
+  year    = {2025},
+  month   = {oct},
+  volume  = {646},
+  pages   = {825--830},
+  doi     = {10.1038/s41586-025-09526-6},
+  url     = {https://doi.org/10.1038/s41586-025-09526-6}
+}
+
 ## Contact
 
 TNCO was developed by [Salvatore Mandrà](https://github.com/s-mandra) in 2024.
