@@ -88,7 +88,7 @@ opt = Optimizer(method='sa')
 tn, res = opt.optimize(tn, betas=(0, 100), n_steps=100, n_runs=8)
 ```
 
-Multiple formats are supported; see `tnco.app.load_tn` for further details. For
+Multiple input formats are supported; see `tnco.app.load_tn` for further details. For
 a more detailed example, see
 [examples/Optimization.ipynb](examples/Optimization.ipynb).
 
