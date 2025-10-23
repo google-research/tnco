@@ -105,31 +105,6 @@ For all the possible options run:
 $ tnco --help
 ```
 
-## How do I cite `TNCO`?
-
-```
-@article{abanin2025observation,
-  author  = {Abanin, Dmitry A and
-             Acharya, Rajeev and
-             Aghababaie-Beni, Laleh and
-             Aigeldinger, Georg and
-             Ajoy, Ashok and
-             Alcaraz, Ross and
-             Aleiner, Igor and
-             Andersen, Trond I and
-             Ansmann, Markus and
-             Arute, Frank and others},
-  title   = {{Observation of constructive interference at the edge of quantum ergodicity}},
-  journal = {Nature},
-  year    = {2025},
-  month   = {oct},
-  volume  = {646},
-  pages   = {825--830},
-  doi     = {10.1038/s41586-025-09526-6},
-  url     = {https://doi.org/10.1038/s41586-025-09526-6}
-}
-```
-
 ## Contact
 
 TNCO was developed by [Salvatore Mandrà](https://github.com/s-mandra) in 2024.
