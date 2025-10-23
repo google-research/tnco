@@ -48,10 +48,16 @@ while [[ $# -ne 0 ]]; do
 done
 
 # Fix clang-format version
-CLANG_FORMAT=19.1.3
+CLANG_FORMAT_VERSION=19.1.3
 
 # Fix yapf version
-YAPF=0.43.0
+YAPF_VERSION=0.43.0
+
+# Fix isort version
+ISORT_VERSION=7.0.0
+
+# Fix ruff version
+RUFF_VERSION=0.14.1
 
 FAILED="\033[91m[FAILED]\033[0m"
 OK="\033[92m[  OK  ]\033[0m"
@@ -59,21 +65,33 @@ WARNING="\033[93m[WARNIN]\033[0m"
 
 # Install
 if [[ -n ${INSTALL} ]]; then
-  pip install clang-format==${CLANG_FORMAT} \
-              yapf==${YAPF} \
-              isort \
-              ruff
+  pip install clang-format==${CLANG_FORMAT_VERSION} \
+              yapf==${YAPF_VERSION} \
+              isort==${ISORT_VERSION} \
+              ruff==${RUFF_VERSION}
 fi
 
 # Check clang-format version
-if [[ $(clang-format --version 2>/dev/null | awk "{ print (\$3 == \"${CLANG_FORMAT}\") }") != 1 ]]; then
-  echo "clang-format==${CLANG_FORMAT} is required" >&2
+if [[ $(clang-format --version 2>/dev/null | awk "{ print (\$3 == \"${CLANG_FORMAT_VERSION}\") }") != 1 ]]; then
+  echo "clang-format==${CLANG_FORMAT_VERSION} is required" >&2
   exit 1
 fi
 
 # Check yapf version
-if [[ $(yapf --version 2>/dev/null | awk "{ print (\$2 == \"${YAPF}\") }") != 1 ]]; then
-  echo "yapf==${YAPF} is required" >&2
+if [[ $(yapf --version 2>/dev/null | awk "{ print (\$2 == \"${YAPF_VERSION}\") }") != 1 ]]; then
+  echo "yapf==${YAPF_VERSION} is required" >&2
+  exit 1
+fi
+
+# Check isort version
+if [[ $(isort --version 2>/dev/null | grep -i version | awk "{ print (\$2 == \"${ISORT_VERSION}\") }") != 1 ]]; then
+  echo "isort==${ISORT_VERSION} is required" >&2
+  exit 1
+fi
+
+# Check ruff version
+if [[ $(ruff --version 2>/dev/null | awk "{ print (\$2 == \"${RUFF_VERSION}\") }") != 1 ]]; then
+  echo "isort==${RUFF_VERSION} is required" >&2
   exit 1
 fi
 
