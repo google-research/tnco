@@ -12,24 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tnco.app.app import (BaseContractionResults, JSONEncoder as
-                          BaseJSONEncoder, BaseOptimizer)
-from typing import Union, Tuple, Iterable, Optional, Any, List, FrozenSet
-from tnco.optimize.finite_width.cost_model import SimpleCostModel
-from tnco.optimize.finite_width import Optimizer as OptimizerImpl
-from tnco.optimize.prob import SimulatedAnnealing
-from tnco.ctree import ContractionTree
-from tnco.parallel import Parallel
-from dataclasses import dataclass
-import tnco.utils.tn as tn_utils
-from tnco.typing import Index
-from time import perf_counter
-import more_itertools as mit
-from random import Random
 import functools as fts
-from sys import stderr
-import operator as op
 import json
+import operator as op
+from dataclasses import dataclass
+from random import Random
+from sys import stderr
+from time import perf_counter
+from typing import Any, FrozenSet, Iterable, List, Optional, Tuple, Union
+
+import more_itertools as mit
+
+import tnco.utils.tn as tn_utils
+from tnco.app.app import BaseContractionResults, BaseOptimizer
+from tnco.app.app import JSONEncoder as BaseJSONEncoder
+from tnco.ctree import ContractionTree
+from tnco.optimize.finite_width import Optimizer as OptimizerImpl
+from tnco.optimize.finite_width.cost_model import SimpleCostModel
+from tnco.optimize.prob import SimulatedAnnealing
+from tnco.parallel import Parallel
+from tnco.typing import Index
 
 
 class JSONEncoder(BaseJSONEncoder):

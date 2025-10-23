@@ -12,20 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Set, Iterable, Dict, Union, FrozenSet, Tuple
-from tnco.ordered_frozenset import OrderedFrozenSet
-from rich.progress import track, Progress
-from tnco.typing import Index, IndexName
-from tnco.ctree import ContractionTree
-from collections import defaultdict
-from rich.console import Console
-from string import ascii_letters
-import more_itertools as mit
-from random import Random
-import itertools as its
 import functools as fts
+import itertools as its
 import operator as op
 import pickle
+from collections import defaultdict
+from random import Random
+from string import ascii_letters
+from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, Union
+
+import more_itertools as mit
+from rich.console import Console
+from rich.progress import Progress, track
+
+from tnco.ctree import ContractionTree
+from tnco.ordered_frozenset import OrderedFrozenSet
+from tnco.typing import Index, IndexName
 
 __all__ = [
     'get_connected_components', 'generate_random_inds',

@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from more_itertools import unique_everseen
-from typing import Iterable, Any
 from itertools import chain
+from typing import Any, Iterable
+
+from more_itertools import unique_everseen
 
 __all__ = ['OrderedFrozenSet']
 

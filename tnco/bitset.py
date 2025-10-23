@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Iterable, Union
-from tnco_core import Bitset as Bitset_
+from typing import Iterable, Optional, Union
+
 import more_itertools as mit
+from tnco_core import Bitset as Bitset_
 
 __all__ = ['Bitset']
 

@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import more_itertools as mit
-from random import Random
 import itertools as its
+from random import Random
+
+import more_itertools as mit
 import pytest
 
 # Get global seed
-from conftest import global_seed, fraction_n_tests
+from conftest import fraction_n_tests, global_seed
 
 rng = Random(global_seed)
 
@@ -32,14 +33,15 @@ def sample_seeds(k, /):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(100))
 def test_InfiniteMemoryContraction(seed, **kwargs):
-    from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
-    from tnco.utils.tn import get_random_contraction_path
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.optimize.infinite_memory import Optimizer
-    from tnco.optimize.prob import SimulatedAnnealing
-    from tnco.ctree import ContractionTree
     from collections import Counter
     from decimal import Decimal
+
+    from tnco.ctree import ContractionTree
+    from tnco.optimize.infinite_memory import Optimizer
+    from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
+    from tnco.optimize.prob import SimulatedAnnealing
+    from tnco.tests.utils import generate_random_tensors
+    from tnco.utils.tn import get_random_contraction_path
 
     # Get rng
     rng = Random(seed)
@@ -170,14 +172,15 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(100))
 def test_FiniteWidthContraction(seed, **kwargs):
-    from tnco.optimize.finite_width.cost_model import SimpleCostModel
-    from tnco.utils.tn import get_random_contraction_path
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.optimize.finite_width import Optimizer
-    from tnco.optimize.prob import SimulatedAnnealing
-    from tnco.ctree import ContractionTree
     from collections import Counter
     from decimal import Decimal
+
+    from tnco.ctree import ContractionTree
+    from tnco.optimize.finite_width import Optimizer
+    from tnco.optimize.finite_width.cost_model import SimpleCostModel
+    from tnco.optimize.prob import SimulatedAnnealing
+    from tnco.tests.utils import generate_random_tensors
+    from tnco.utils.tn import get_random_contraction_path
 
     # Get rng
     rng = Random(seed)

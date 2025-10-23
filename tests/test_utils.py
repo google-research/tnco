@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from quimb.tensor import Tensor, TensorNetwork
-import more_itertools as mit
-from random import Random
 import functools as fts
 import itertools as its
 import operator as op
+from random import Random
+
+import more_itertools as mit
 import numpy as np
 import pytest
+from quimb.tensor import Tensor, TensorNetwork
 
 # Get global seed
-from conftest import global_seed, fraction_n_tests
+from conftest import fraction_n_tests, global_seed
 
 rng = Random(global_seed)
 
@@ -34,9 +35,10 @@ def sample_seeds(k, /):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_GenerateRandomTensors(seed: int, **kwargs):
+    from collections import Counter
+
     from tnco.tests.utils import (generate_random_tensors,
                                   get_connected_components)
-    from collections import Counter
 
     # Initialize RNG
     rng = Random(seed)
@@ -169,10 +171,11 @@ def test_GenerateRandomTensors(seed: int, **kwargs):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(500))
 def test_GetRandomContractionPath(seed: int, **kwargs):
+    from collections import Counter
+
     from tnco.tests.utils import (generate_random_tensors,
                                   get_connected_components)
     from tnco.utils.tn import get_random_contraction_path
-    from collections import Counter
 
     # Initialize RNG
     rng = Random(seed)
@@ -330,12 +333,14 @@ def test_GetRandomContractionPath(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_GetRandomContractionTree(seed: int, **kwargs):
+    from collections import Counter, defaultdict
+
+    from tnco_core import ContractionTree as _ContractionTree
+
+    from tnco.ctree import ContractionTree
     from tnco.tests.utils import (generate_random_tensors,
                                   get_connected_components)
-    from tnco_core import ContractionTree as _ContractionTree
     from tnco.utils.tn import get_random_contraction_path
-    from collections import Counter, defaultdict
-    from tnco.ctree import ContractionTree
 
     # Initialize RNG
     rng = Random(seed)
@@ -572,14 +577,15 @@ def test_GetRandomContractionTree(seed: int, **kwargs):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(300))
 def test_OptimizerInfiniteMemory(seed: int, **kwargs):
-    from tnco.optimize.prob import SimulatedAnnealing, Greedy, BaseProbability
-    from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
+    import pickle
+    from decimal import Decimal
+
+    from tnco.ctree import ContractionTree
     from tnco.optimize.infinite_memory import Optimizer
+    from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
+    from tnco.optimize.prob import BaseProbability, Greedy, SimulatedAnnealing
     from tnco.tests.utils import generate_random_tensors
     from tnco.utils.tn import get_random_contraction_path
-    from tnco.ctree import ContractionTree
-    from decimal import Decimal
-    import pickle
 
     def log2(x):
         return float(Decimal(x).log10() / Decimal(2).log10())
@@ -778,14 +784,15 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(300))
 def test_OptimizerFiniteWidth(seed: int, **kwargs):
-    from tnco.optimize.prob import SimulatedAnnealing, Greedy
-    from tnco.optimize.finite_width.cost_model import SimpleCostModel
+    import pickle
+    from decimal import Decimal
+
+    from tnco.ctree import ContractionTree
     from tnco.optimize.finite_width import Optimizer
+    from tnco.optimize.finite_width.cost_model import SimpleCostModel
+    from tnco.optimize.prob import Greedy, SimulatedAnnealing
     from tnco.tests.utils import generate_random_tensors
     from tnco.utils.tn import get_random_contraction_path
-    from tnco.ctree import ContractionTree
-    from decimal import Decimal
-    import pickle
 
     def log2(x):
         return float(Decimal(x).log10() / Decimal(2).log10())
@@ -965,10 +972,11 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_ReadInds(seed: int, **kwargs):
-    from tnco.tests.utils import generate_random_tensors, generate_random_inds
     from collections import defaultdict
-    from tnco.utils.tn import read_inds
     from random import Random
+
+    from tnco.tests.utils import generate_random_inds, generate_random_tensors
+    from tnco.utils.tn import read_inds
 
     # Initialize RNG
     rng = Random(seed)
@@ -1167,8 +1175,8 @@ def test_GetEinsumPath(seed):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_Fuse(seed, **kwargs):
-    from tnco.tests.utils import (get_connected_components,
-                                  generate_random_tensors)
+    from tnco.tests.utils import (generate_random_tensors,
+                                  get_connected_components)
     from tnco.utils.tensor import get_einsum_path
     from tnco.utils.tn import fuse
 
@@ -1414,9 +1422,9 @@ def test_TensorSVD(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_GetLargestIntermediate(seed: int, **kwargs):
+    from tnco.ctree import ContractionTree
     from tnco.tests.utils import generate_random_tensors
     from tnco.utils.tn import get_random_contraction_path
-    from tnco.ctree import ContractionTree
 
     # Initialize RNG
     rng = Random(seed)
@@ -1478,10 +1486,9 @@ def test_GetLargestIntermediate(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(400))
 def test_DecomposeHyperIndsTN(seed: int, **kwargs):
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.utils.tn import get_random_contraction_path
-    from tnco.utils.tn import decompose_hyper_inds
     from tnco.ctree import ContractionTree
+    from tnco.tests.utils import generate_random_tensors
+    from tnco.utils.tn import decompose_hyper_inds, get_random_contraction_path
 
     # Initialize RNG
     rng = Random(seed)
@@ -1571,8 +1578,8 @@ def test_DecomposeHyperIndsTN(seed: int, **kwargs):
     # Get contraction without decomposing, and decompose only at the end
     array_1 = tn.contract(output_inds=output_inds)
     if len(output_inds):
-        from tnco.utils.tensor import decompose_hyper_inds as \
-                                        tensor_decompose_hyper_inds
+        from tnco.utils.tensor import \
+            decompose_hyper_inds as tensor_decompose_hyper_inds
         array_1 = (lambda x: (Tensor(*x[0]), x[1]))(tensor_decompose_hyper_inds(
             array_1.data, array_1.inds))[0]
 
@@ -1606,10 +1613,11 @@ def test_DecomposeHyperIndsTN(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(400))
 def test_merge_contraction_paths(seed, **kwargs):
+    from quimb.tensor import Tensor, TensorNetwork
+
+    from tnco.tests.utils import generate_random_tensors
     from tnco.utils.tn import (get_random_contraction_path,
                                merge_contraction_paths)
-    from tnco.tests.utils import generate_random_tensors
-    from quimb.tensor import Tensor, TensorNetwork
 
     # Initialize random number generator
     rng = Random(seed)

@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from inspect import Signature, Parameter, signature
-from more_itertools import value_chain
-from tnco.app import Optimizer
+from inspect import Parameter, Signature, signature
 from typing import Callable
+
 from fire import Fire
+from more_itertools import value_chain
+
+from tnco.app import Optimizer
 
 
 def wraps(fn: Callable) -> Callable:

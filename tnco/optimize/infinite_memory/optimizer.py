@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union, TypeVar, NoReturn, Any
-from tnco.ctree import ContractionTree
-from .cost_model import BaseCostModel
 from importlib import import_module
+from typing import Any, NoReturn, Optional, TypeVar, Union
+
+from tnco.ctree import ContractionTree
+
+from .cost_model import BaseCostModel
 
 __all__ = ['Optimizer']
 

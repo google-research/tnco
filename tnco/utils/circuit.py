@@ -12,20 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Tuple, Optional, Iterable, Union, Dict, FrozenSet, List)
-from tnco.ordered_frozenset import OrderedFrozenSet
-from tnco.typing import Qubit, Matrix, Index, Array
-import tnco.utils.tensor as tensor_utils
-from collections import defaultdict
-from rich.console import Console
-from rich.progress import track
-import tnco.utils.tn as tn_utils
-import more_itertools as mit
 import functools as fts
 import itertools as its
-import operator as op
-import autoray as ar
 import math
+import operator as op
+from collections import defaultdict
+from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
+
+import autoray as ar
+import more_itertools as mit
+from rich.console import Console
+from rich.progress import track
+
+import tnco.utils.tensor as tensor_utils
+import tnco.utils.tn as tn_utils
+from tnco.ordered_frozenset import OrderedFrozenSet
+from tnco.typing import Array, Index, Matrix, Qubit
 
 __all__ = ['commute']
 

@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Literal, Optional, Iterable, Dict, Union, FrozenSet
 from importlib import import_module
+from typing import Dict, FrozenSet, Iterable, Literal, Optional, Union
+
+import more_itertools as mit
+
 from tnco.bitset import Bitset
 from tnco.typing import Index
-import more_itertools as mit
 
 __all__ = ['SimpleCostModel']
 

@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from quimb.tensor import Tensor
-import more_itertools as mit
-from random import Random
 import itertools as its
+from random import Random
+
+import cirq
+import more_itertools as mit
 import numpy as np
 import pytest
-import cirq
+from quimb.tensor import Tensor
 
 # Get global seed
-from conftest import global_seed, fraction_n_tests
+from conftest import fraction_n_tests, global_seed
 
 rng = Random(global_seed)
 
@@ -119,6 +120,7 @@ def test_Same(seed, **kwargs):
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_LoadArbitraryInitialFinalState(seed, **kwargs):
     from quimb.tensor import Tensor, TensorNetwork
+
     from tnco.utils.circuit import load
 
     # Get rng
@@ -250,6 +252,7 @@ def test_LoadArbitraryInitialFinalState(seed, **kwargs):
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_LoadUnitary(seed, **kwargs):
     from quimb.tensor import Tensor, TensorNetwork
+
     from tnco.utils.circuit import load
 
     # Get rng
@@ -346,10 +349,11 @@ def test_LoadUnitary(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_LoadQisKit(seed):
-    from tnco.utils.circuit import load as load_circuit
+    import qiskit
     from qiskit.circuit.random import random_circuit
     from quimb.tensor import Tensor, TensorNetwork
-    import qiskit
+
+    from tnco.utils.circuit import load as load_circuit
 
     # Set number of qubits and depth of the circuit
     n_qubits = 6

@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Iterable, Tuple, List, FrozenSet, Dict
-from tnco.typing import Index, Array
-from string import ascii_letters
-import more_itertools as mit
-from random import Random
 import functools as fts
 import itertools as its
 import operator as op
+from random import Random
+from string import ascii_letters
+from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple
+
 import autoray as ar
+import more_itertools as mit
+
+from tnco.typing import Array, Index
 
 __all__ = ['decompose_hyper_inds', 'get_einsum_path', 'svd']
 

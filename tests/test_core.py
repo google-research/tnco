@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import more_itertools as mit
-from random import Random
-import itertools as its
 import functools as fts
+import itertools as its
 import operator as op
+from random import Random
+
+import more_itertools as mit
 import pytest
 
 # Get global seed
-from conftest import global_seed, fraction_n_tests
+from conftest import fraction_n_tests, global_seed
 
 rng = Random(global_seed)
 
@@ -32,8 +33,9 @@ def sample_seeds(k, /):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_float1024(seed):
-    from tnco_core import float1024
     from random import Random
+
+    from tnco_core import float1024
 
     # Check if two variables are close
     def isclose(x, y):
@@ -113,9 +115,10 @@ def test_float1024(seed):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_Bitset(seed: int, **kwargs):
-    from tnco.bitset import Bitset
-    from random import Random
     import pickle
+    from random import Random
+
+    from tnco.bitset import Bitset
 
     # Get random number generator
     rng = Random(seed)
@@ -260,12 +263,16 @@ def test_Node(seed: int):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_ContractionTree(seed: int, **kwargs):
+    from copy import deepcopy
+
+    from tnco_core import Bitset
+    from tnco_core import ContractionTree as ContractionTree_
+    from tnco_core import Node
+    from tnco_core import Tree as Tree_
+
+    from tnco.ctree import ContractionTree
     from tnco.tests.utils import generate_random_tensors
     from tnco.utils.tn import get_random_contraction_path
-    from tnco_core import (Tree as Tree_, ContractionTree as ContractionTree_,
-                           Node, Bitset)
-    from tnco.ctree import ContractionTree
-    from copy import deepcopy
 
     # Check empty ContractionTree
     empty_ctree = ContractionTree_()
@@ -371,9 +378,10 @@ def test_ContractionTree(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(400))
 def test_SimpleCostModel(seed, **kwargs):
+    import pickle
+
     from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
     from tnco.tests.utils import generate_random_inds
-    import pickle
 
     def rel_error(x, y, *, atol=1e-5):
         if x == 0 or y == 0:
@@ -495,9 +503,10 @@ def test_SimpleCostModel(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(400))
 def test_SimpleCostModelFiniteWidth(seed, **kwargs):
+    import pickle
+
     from tnco.optimize.finite_width.cost_model import SimpleCostModel
     from tnco.tests.utils import generate_random_inds
-    import pickle
 
     def rel_error(x, y, *, atol=1e-5):
         if x == 0 or y == 0:
@@ -750,8 +759,9 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(1000))
 def test_Probability(seed):
-    from tnco.optimize.prob import Greedy, SimulatedAnnealing, BaseProbability
     import pickle
+
+    from tnco.optimize.prob import BaseProbability, Greedy, SimulatedAnnealing
 
     def abs_error(x, y, atol=1e-5):
         return abs(x - y) < atol
@@ -818,8 +828,9 @@ def test_Probability(seed):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_all_close(seed: int, **kwargs):
-    from tnco_core.utils import all_close, all_logclose
     from math import exp
+
+    from tnco_core.utils import all_close, all_logclose
 
     # Initialize rng
     rng = Random(seed)

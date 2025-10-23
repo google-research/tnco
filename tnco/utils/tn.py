@@ -12,20 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Iterable, Optional, List, Tuple, Union, Dict, FrozenSet)
-from tnco.ordered_frozenset import OrderedFrozenSet
-from tnco.typing import Index, TensorName, Array
-from collections import Counter, defaultdict
-from rich.progress import Progress, track
-import tnco.utils.tensor as tensor_utils
-from rich.console import Console
-import more_itertools as mit
-from random import Random
 import functools as fts
 import itertools as its
-import operator as op
-import autoray as ar
 import math
+import operator as op
+from collections import Counter, defaultdict
+from random import Random
+from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
+
+import autoray as ar
+import more_itertools as mit
+from rich.console import Console
+from rich.progress import Progress, track
+
+import tnco.utils.tensor as tensor_utils
+from tnco.ordered_frozenset import OrderedFrozenSet
+from tnco.typing import Array, Index, TensorName
 
 __all__ = [
     'get_random_contraction_path', 'read_inds', 'fuse', 'decompose_hyper_inds',
