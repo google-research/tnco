@@ -11,7 +11,7 @@
 
 `TNCO` is a heuristic tool that optimizes tensor network contraction paths. It
 represents the contraction as a tree – with the initial tensors as leaves and
-the final tensor as the root -- and explores possible paths by manipulating
+the final tensor as the root – and explores possible paths by manipulating
 this tree's structure. While the optimization is performed using simulated
 annealing, the framework is extensible to other methods. `TNCO` supports
 optimization with or without memory constraints, and can automatically
