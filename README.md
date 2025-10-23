@@ -7,7 +7,7 @@
 [![cpp_linter](https://github.com/google-research/tnco/actions/workflows/cpp_linter.yml/badge.svg)](https://github.com/google-research/tnco/actions/workflows/cpp_linter.yml)
 [![codeql](https://github.com/google-research/tnco/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/google-research/tnco/actions/workflows/github-code-scanning/codeql)
 <br>
-[![nature](https://img.shields.io/badge/Nature-https%3A%2F%2Fdoi.org%2F10.1038%2Fs41586--025--09526--6-green)](https://doi.org/10.1038/s41586-025-09526-6)
+[![nature](https://img.shields.io/badge/Nature-https%3A%2F%2Fdoi.org%2F10.1038%2Fs41586--025--09526--6-darkblue)](https://doi.org/10.1038/s41586-025-09526-6)
 
 `TNCO` is a heuristic tool that optimizes tensor network contraction paths. It
 represents the contraction as a tree -- with the initial tensors as leaves and
