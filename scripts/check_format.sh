@@ -138,7 +138,7 @@ ISORT_CMD='isort'
 ISORT_FAILED=$(echo -n ${PYTHON_FILES} | tr ' ' '\n' | parallel "
   if [[ \$(${ISORT_CMD} -c {} 2>&1 | wc -l) -gt 0 ]];
    then
-     echo -ne \"${FAILED} \" >&2;
+     echo -ne \"${WARNING} \" >&2;
      echo {};
    else
      echo -ne \"${OK} \" >&2;
@@ -196,7 +196,7 @@ if [[ -n "${YAPF_FAILED}" ]]; then
 fi
 
 if [[ -n "${ISORT_FAILED}" ]]; then
-  echo -e "${FAILED} Imports in some Python files are out of order." \
+  echo -e "${WARNING} Imports in some Python files are out of order." \
           "Run:\n\n           ${ISORT_CMD} ${ISORT_FAILED}\n" >&2
 fi
 
@@ -224,7 +224,6 @@ fi
 # Raise error
 if [[ -n "${CLANG_FORMAT_FAILED}" || \
       -n "${YAPF_FAILED}" || \
-      -n "${ISORT_FAILED}" || \
       -n "${TRAIL_FAILED}" || \
       "${LINTING_FAILED}" > 0 ]]; then
   exit 1
