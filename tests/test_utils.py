@@ -12,17 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from quimb.tensor import Tensor, TensorNetwork
-import more_itertools as mit
-from random import Random
 import functools as fts
 import itertools as its
 import operator as op
+import pickle
+from collections import Counter, defaultdict
+from decimal import Decimal
+from math import log2
+from random import Random
+
+import more_itertools as mit
 import numpy as np
 import pytest
+from quimb.tensor import Tensor, TensorNetwork
+from tnco_core import ContractionTree as ContractionTree_
 
-# Get global seed
-from conftest import global_seed, fraction_n_tests
+from conftest import fraction_n_tests, global_seed  # Get global seed
+from tnco.ctree import ContractionTree
+from tnco.optimize.finite_width import Optimizer as FW_Optimizer
+from tnco.optimize.finite_width.cost_model import \
+    SimpleCostModel as FW_SimpleCostModel
+from tnco.optimize.infinite_memory import Optimizer as IM_Optimizer
+from tnco.optimize.infinite_memory.cost_model import \
+    SimpleCostModel as IM_SimpleCostModel
+from tnco.optimize.prob import BaseProbability, Greedy, SimulatedAnnealing
+from tnco.ordered_frozenset import OrderedFrozenSet
+from tnco.tests.utils import (generate_random_inds, generate_random_tensors,
+                              get_connected_components,
+                              is_valid_contraction_tree)
+from tnco.utils.tensor import \
+    decompose_hyper_inds as tensor_decompose_hyper_inds
+from tnco.utils.tensor import get_einsum_path, svd
+from tnco.utils.tn import contract
+from tnco.utils.tn import decompose_hyper_inds as tn_decompose_hyper_inds
+from tnco.utils.tn import (fuse, get_random_contraction_path,
+                           merge_contraction_paths, read_inds)
 
 rng = Random(global_seed)
 
@@ -34,10 +58,6 @@ def sample_seeds(k, /):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_GenerateRandomTensors(seed: int, **kwargs):
-    from tnco.tests.utils import (generate_random_tensors,
-                                  get_connected_components)
-    from collections import Counter
-
     # Initialize RNG
     rng = Random(seed)
 
@@ -169,11 +189,6 @@ def test_GenerateRandomTensors(seed: int, **kwargs):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(500))
 def test_GetRandomContractionPath(seed: int, **kwargs):
-    from tnco.tests.utils import (generate_random_tensors,
-                                  get_connected_components)
-    from tnco.utils.tn import get_random_contraction_path
-    from collections import Counter
-
     # Initialize RNG
     rng = Random(seed)
 
@@ -330,13 +345,6 @@ def test_GetRandomContractionPath(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_GetRandomContractionTree(seed: int, **kwargs):
-    from tnco.tests.utils import (generate_random_tensors,
-                                  get_connected_components)
-    from tnco_core import ContractionTree as _ContractionTree
-    from tnco.utils.tn import get_random_contraction_path
-    from collections import Counter, defaultdict
-    from tnco.ctree import ContractionTree
-
     # Initialize RNG
     rng = Random(seed)
 
@@ -445,14 +453,14 @@ def test_GetRandomContractionTree(seed: int, **kwargs):
     # Check dimensions of core
     assert all(
         map(
-            lambda ctree: type(_ContractionTree(ctree).dims) is
+            lambda ctree: type(ContractionTree_(ctree).dims) is
             (int if isinstance(dims, int) else list), ctrees))
     assert all(
-        map(lambda ctree: _ContractionTree(ctree).dims == dims,
+        map(lambda ctree: ContractionTree_(ctree).dims == dims,
             ctrees)) if isinstance(dims, int) else all(
                 map(
                     lambda ctree: list(map(ctree.dims.get, ctree._inds_order))
-                    == _ContractionTree(ctree).dims, ctrees))
+                    == ContractionTree_(ctree).dims, ctrees))
 
     # Calling twice should give the same answer
     assert ctrees == [
@@ -468,8 +476,6 @@ def test_GetRandomContractionTree(seed: int, **kwargs):
 
     # Check if contraction trees are valid
     for ctree_, cc_ in zip(ctrees, cc):
-        from tnco.tests.utils import is_valid_contraction_tree
-
         ts_inds_ = tuple(map(lambda x: ts_inds[x], cc_))
         all_inds_ = frozenset(mit.flatten(ts_inds_))
         output_inds_ = output_inds & all_inds_
@@ -572,14 +578,6 @@ def test_GetRandomContractionTree(seed: int, **kwargs):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(300))
 def test_OptimizerInfiniteMemory(seed: int, **kwargs):
-    from tnco.optimize.prob import SimulatedAnnealing, Greedy, BaseProbability
-    from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
-    from tnco.optimize.infinite_memory import Optimizer
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.utils.tn import get_random_contraction_path
-    from tnco.ctree import ContractionTree
-    from decimal import Decimal
-    import pickle
 
     def log2(x):
         return float(Decimal(x).log10() / Decimal(2).log10())
@@ -658,10 +656,10 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
     leaf_inds = ctree.inds[:ctree.n_leaves]
 
     # Get optimizers
-    opt = Optimizer(ctree,
-                    SimpleCostModel(cost_type=cost_type),
-                    seed=seed,
-                    disable_shared_inds=disable_shared_inds)
+    opt = IM_Optimizer(ctree,
+                       IM_SimpleCostModel(cost_type=cost_type),
+                       seed=seed,
+                       disable_shared_inds=disable_shared_inds)
 
     # Check type
     assert opt.cmodel.cost_type == cost_type
@@ -677,10 +675,10 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
                log2(PySimpleContractionCost(ctree))) < atol
 
     # Calling twice should give the same
-    assert opt == Optimizer(ctree,
-                            SimpleCostModel(cost_type=cost_type),
-                            seed=seed,
-                            disable_shared_inds=disable_shared_inds)
+    assert opt == IM_Optimizer(ctree,
+                               IM_SimpleCostModel(cost_type=cost_type),
+                               seed=seed,
+                               disable_shared_inds=disable_shared_inds)
 
     # Greedy optimization
     greedy = Greedy(cost_type=cost_type)
@@ -778,14 +776,6 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(300))
 def test_OptimizerFiniteWidth(seed: int, **kwargs):
-    from tnco.optimize.prob import SimulatedAnnealing, Greedy
-    from tnco.optimize.finite_width.cost_model import SimpleCostModel
-    from tnco.optimize.finite_width import Optimizer
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.utils.tn import get_random_contraction_path
-    from tnco.ctree import ContractionTree
-    from decimal import Decimal
-    import pickle
 
     def log2(x):
         return float(Decimal(x).log10() / Decimal(2).log10())
@@ -825,7 +815,6 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
         return cost
 
     def get_width(inds, dims):
-        from math import log2
         if isinstance(dims, int):
             return log2(dims) * len(inds)
         return sum(map(lambda x: log2(dims[x]), inds))
@@ -876,12 +865,12 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
                         ctree.inds)) * rng.random()
 
     # Get optimizers
-    opt = Optimizer(ctree,
-                    SimpleCostModel(max_width=max_width,
-                                    width_type=width_type,
-                                    cost_type=cost_type),
-                    seed=seed,
-                    disable_shared_inds=disable_shared_inds)
+    opt = FW_Optimizer(ctree,
+                       FW_SimpleCostModel(max_width=max_width,
+                                          width_type=width_type,
+                                          cost_type=cost_type),
+                       seed=seed,
+                       disable_shared_inds=disable_shared_inds)
 
     # Check type
     assert opt.cmodel.cost_type == cost_type
@@ -900,12 +889,12 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
         log2(PySimpleContractionCost(ctree, opt.slices))) < atol
 
     # Calling twice should give the same
-    assert opt == Optimizer(ctree,
-                            SimpleCostModel(max_width=max_width,
-                                            cost_type=cost_type,
-                                            width_type=width_type),
-                            seed=seed,
-                            disable_shared_inds=disable_shared_inds)
+    assert opt == FW_Optimizer(ctree,
+                               FW_SimpleCostModel(max_width=max_width,
+                                                  cost_type=cost_type,
+                                                  width_type=width_type),
+                               seed=seed,
+                               disable_shared_inds=disable_shared_inds)
 
     # Greedy optimization
     greedy = Greedy(cost_type=cost_type)
@@ -965,11 +954,6 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_ReadInds(seed: int, **kwargs):
-    from tnco.tests.utils import generate_random_tensors, generate_random_inds
-    from collections import defaultdict
-    from tnco.utils.tn import read_inds
-    from random import Random
-
     # Initialize RNG
     rng = Random(seed)
 
@@ -1050,9 +1034,6 @@ def test_ReadInds(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_DecomposeHyperInds(seed):
-    from tnco.tests.utils import generate_random_inds
-    from tnco.utils.tensor import decompose_hyper_inds
-
     # Initialize random generator
     rng = Random(seed)
     np_rng = np.random.default_rng(seed=seed)
@@ -1086,7 +1067,7 @@ def test_DecomposeHyperInds(seed):
 
     # Get decomposition
     (d_array,
-     d_inds), merged_inds = decompose_hyper_inds(array.data, array.inds)
+     d_inds), merged_inds = tensor_decompose_hyper_inds(array.data, array.inds)
 
     # Check number of inds associated to hyper-inds
     assert len(merged_inds) == 1 and len(mit.nth(merged_inds.values(),
@@ -1108,9 +1089,6 @@ def test_DecomposeHyperInds(seed):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_GetEinsumPath(seed):
-    from tnco.tests.utils import generate_random_inds
-    from tnco.utils.tensor import get_einsum_path
-
     # Initialize random generator
     rng = Random(seed)
     np_rng = np.random.default_rng(seed=seed)
@@ -1165,16 +1143,10 @@ def test_GetEinsumPath(seed):
         atol=1e-5)
 
 
+@pytest.mark.timeout(30)
+@pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_Fuse(seed, **kwargs):
-    from tnco.tests.utils import (get_connected_components,
-                                  generate_random_tensors)
-    from tnco.utils.tensor import get_einsum_path
-    from tnco.utils.tn import fuse
-
-    # Force fuse to return the fused indices
-    fuse = fts.partial(fuse, return_fused_inds=True)
-
     # Fuse tensors
     def fuse_(arrays, path, fused_inds):
         for (px, py), iz in zip(path, fused_inds):
@@ -1233,7 +1205,6 @@ def test_Fuse(seed, **kwargs):
 
     # How to get the weight
     def get_width(xs):
-        from math import log2
         return log2(dims) * len(xs) if isinstance(dims, int) else sum(
             map(log2, map(dims.get, xs)))
 
@@ -1279,7 +1250,8 @@ def test_Fuse(seed, **kwargs):
                                             (x, d + 1), dims.items())),
                             0,
                             output_inds=output_inds,
-                            seed=seed)
+                            seed=seed,
+                            return_fused_inds=True)
     assert len(path) == len(fused_inds) == 0
 
     # Fuse with given width
@@ -1287,15 +1259,21 @@ def test_Fuse(seed, **kwargs):
                             dims,
                             max_width,
                             output_inds=output_inds,
-                            seed=seed)
+                            seed=seed,
+                            return_fused_inds=True)
     # If k = 2, it should return the same results, even if output_inds are not
     # provided
     if k == 2:
-        assert fuse(ts_inds, dims, max_width, seed=seed) == (path, fused_inds)
+        assert fuse(ts_inds, dims, max_width, seed=seed,
+                    return_fused_inds=True) == (path, fused_inds)
 
     # Calling fuse twice should give the same result
-    assert fuse(ts_inds, dims, max_width, output_inds=output_inds,
-                seed=seed) == (path, fused_inds)
+    assert fuse(ts_inds,
+                dims,
+                max_width,
+                output_inds=output_inds,
+                seed=seed,
+                return_fused_inds=True) == (path, fused_inds)
 
     if max(map(get_width, fused_inds)) <= 16:
         # Get final fused tensor
@@ -1326,7 +1304,8 @@ def test_Fuse(seed, **kwargs):
                             dims,
                             float('inf'),
                             output_inds=output_inds,
-                            seed=seed)
+                            seed=seed,
+                            return_fused_inds=True)
 
     if max(map(get_width, fused_inds)) <= 16:
         # Get final fused tensor
@@ -1355,9 +1334,6 @@ def test_Fuse(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_TensorSVD(seed, **kwargs):
-    from tnco.tests.utils import generate_random_inds
-    from tnco.utils.tensor import svd
-
     # Get generator
     rng = Random(seed)
     np_rng = np.random.default_rng(seed)
@@ -1414,10 +1390,6 @@ def test_TensorSVD(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_GetLargestIntermediate(seed: int, **kwargs):
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.utils.tn import get_random_contraction_path
-    from tnco.ctree import ContractionTree
-
     # Initialize RNG
     rng = Random(seed)
 
@@ -1454,7 +1426,6 @@ def test_GetLargestIntermediate(seed: int, **kwargs):
 
     # How to get the width
     def width(xs):
-        from math import log2
         return len(xs) * log2(dims) if isinstance(dims, int) else sum(
             map(log2, map(dims.get, xs)))
 
@@ -1478,11 +1449,6 @@ def test_GetLargestIntermediate(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(400))
 def test_DecomposeHyperIndsTN(seed: int, **kwargs):
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.utils.tn import get_random_contraction_path
-    from tnco.utils.tn import decompose_hyper_inds
-    from tnco.ctree import ContractionTree
-
     # Initialize RNG
     rng = Random(seed)
     np_rng = np.random.default_rng(seed=seed)
@@ -1571,13 +1537,11 @@ def test_DecomposeHyperIndsTN(seed: int, **kwargs):
     # Get contraction without decomposing, and decompose only at the end
     array_1 = tn.contract(output_inds=output_inds)
     if len(output_inds):
-        from tnco.utils.tensor import decompose_hyper_inds as \
-                                        tensor_decompose_hyper_inds
         array_1 = (lambda x: (Tensor(*x[0]), x[1]))(tensor_decompose_hyper_inds(
             array_1.data, array_1.inds))[0]
 
     # Decompose tn
-    new_arrays, new_ts_inds, hyper_inds_map_2 = decompose_hyper_inds(
+    new_arrays, new_ts_inds, hyper_inds_map_2 = tn_decompose_hyper_inds(
         *mit.transpose(map(lambda t: (t.data, t.inds), tn)))
 
     # Get new output inds
@@ -1606,11 +1570,6 @@ def test_DecomposeHyperIndsTN(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(400))
 def test_merge_contraction_paths(seed, **kwargs):
-    from tnco.utils.tn import (get_random_contraction_path,
-                               merge_contraction_paths)
-    from tnco.tests.utils import generate_random_tensors
-    from quimb.tensor import Tensor, TensorNetwork
-
     # Initialize random number generator
     rng = Random(seed)
 
@@ -1674,9 +1633,6 @@ def test_merge_contraction_paths(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_Contract(seed, **kwargs):
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.utils.tn import contract, fuse
-
     # Initialize RNG
     rng = Random(seed)
 
@@ -1716,7 +1672,6 @@ def test_Contract(seed, **kwargs):
 
     # How to get the weight
     def get_width(xs):
-        from math import log2
         return log2(dims) * len(xs) if isinstance(dims, int) else sum(
             map(log2, map(dims.get, xs)))
 
@@ -1770,9 +1725,6 @@ def test_Contract(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(2_000))
 def test_OrderedFrozenSet(seed):
-    from tnco.ordered_frozenset import OrderedFrozenSet
-    from tnco.tests.utils import generate_random_inds
-
     # Get rng
     rng = Random(seed)
 

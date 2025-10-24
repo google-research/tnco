@@ -12,28 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathvalidate import validate_filepath, ValidationError
-from typing import Optional, Dict, Tuple, Union, List, Any
-from tnco.app.tn import Tensor, TensorNetwork
-import tnco.utils.circuit as circuit_utils
-from tnco.typing import Qubit, Matrix
-from collections.abc import Iterator
-from importlib import import_module
-from dataclasses import dataclass
-import tnco.utils.tn as tn_utils
-import more_itertools as mit
-from decimal import Decimal
-from warnings import warn
-from pathlib import Path
-import functools as fts
-import itertools as its
-import pickle
-import json
-import gzip
 import bz2
-import sys
-import re
+import functools as fts
+import gzip
 import io
+import itertools as its
+import json
+import pickle
+import re
+import sys
+from collections.abc import Iterator
+from dataclasses import dataclass
+from decimal import Decimal
+from importlib import import_module
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
+from warnings import warn
+
+import more_itertools as mit
+from pathvalidate import ValidationError, validate_filepath
+
+import tnco.utils.circuit as circuit_utils
+import tnco.utils.tn as tn_utils
+from tnco.app.tn import Tensor, TensorNetwork
+from tnco.typing import Matrix, Qubit
 
 __all__ = ['Optimizer']
 

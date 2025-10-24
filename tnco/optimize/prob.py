@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Literal, Optional
 from importlib import import_module
+from typing import Literal, Optional
 
 __all__ = ['BaseProbability', 'Greedy', 'SimulatedAnnealing']
 

@@ -12,21 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tnco.app.app import (BaseContractionResults, JSONEncoder as
-                          BaseJSONEncoder, BaseOptimizer)
-from typing import Union, Tuple, Iterable, Optional, Any, List
-from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
-from tnco.optimize.infinite_memory import Optimizer as OptimizerImpl
-from tnco.optimize.prob import SimulatedAnnealing
-from tnco.ctree import ContractionTree
-from tnco.parallel import Parallel
+import json
 from dataclasses import dataclass
-import tnco.utils.tn as tn_utils
-from time import perf_counter
-import more_itertools as mit
 from random import Random
 from sys import stderr
-import json
+from time import perf_counter
+from typing import Any, Iterable, List, Optional, Tuple, Union
+
+import more_itertools as mit
+
+import tnco.utils.tn as tn_utils
+from tnco.app.app import BaseContractionResults, BaseOptimizer
+from tnco.app.app import JSONEncoder as BaseJSONEncoder
+from tnco.ctree import ContractionTree
+from tnco.optimize.infinite_memory import Optimizer as OptimizerImpl
+from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
+from tnco.optimize.prob import SimulatedAnnealing
+from tnco.parallel import Parallel
 
 
 class JSONEncoder(BaseJSONEncoder):

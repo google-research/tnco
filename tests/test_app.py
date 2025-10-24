@@ -12,16 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from quimb.tensor import Tensor, TensorNetwork
-import more_itertools as mit
-from random import Random
 import functools as fts
 import itertools as its
+import json
+import pickle
+from decimal import Decimal
+from random import Random
+from tempfile import NamedTemporaryFile
+
+import cirq
+import more_itertools as mit
 import numpy as np
 import pytest
+from cirq.contrib.qasm_import import circuit_from_qasm
+from quimb.tensor import Tensor, TensorNetwork
 
-# Get global seed
-from conftest import global_seed, fraction_n_tests
+from conftest import fraction_n_tests, global_seed  # Get global seed
+from tnco.app import Optimizer
+from tnco.app import Tensor as TS
+from tnco.app import TensorNetwork as TN
+from tnco.app import load_tn
+from tnco.tests.utils import generate_random_tensors
 
 rng = Random(global_seed)
 
@@ -33,10 +44,6 @@ def sample_seeds(k, /):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_LoadTN_CirqCircuit(seed):
-    from cirq.contrib.qasm_import import circuit_from_qasm
-    from tempfile import NamedTemporaryFile
-    from tnco.app import load_tn
-    import cirq
 
     def check_tn(U, tn):
         tn = TensorNetwork(map(Tensor, tn.arrays,
@@ -94,12 +101,6 @@ def test_LoadTN_CirqCircuit(seed):
 
 @pytest.mark.parametrize('seed', sample_seeds(400))
 def test_OptimizeTN(seed, **kwargs):
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.app import Tensor as TS, TensorNetwork as TN, load_tn, Optimizer
-    from decimal import Decimal
-    import pickle
-    import json
-
     # How to convert inds
     def convert_index(x):
         if isinstance(x, (str, int, frozenset)):

@@ -12,20 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Tuple, Dict, List, Optional, Iterable, Union, Callable,
-                    NoReturn, Any, FrozenSet)
-from tnco_core import Node, ContractionTree as _ContractionTree
-from tnco_core.utils import traverse, get_contraction
-from rich.progress import Progress, track
-from types import MappingProxyType
-from rich.console import Console
-from collections import Counter
-from tnco.typing import Index
-import more_itertools as mit
 import functools as fts
 import itertools as its
-import operator as op
 import math
+import operator as op
+from collections import Counter
+from types import MappingProxyType
+from typing import (Any, Callable, Dict, FrozenSet, Iterable, List, NoReturn,
+                    Optional, Tuple, Union)
+
+import more_itertools as mit
+from rich.console import Console
+from rich.progress import Progress, track
+from tnco_core import ContractionTree as _ContractionTree
+from tnco_core import Node
+from tnco_core.utils import get_contraction, traverse
+
+from tnco.typing import Index
 
 __all__ = ['ContractionTree', 'traverse_tree']
 

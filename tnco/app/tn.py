@@ -12,16 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Dict, Tuple, FrozenSet, Any, List
-from tnco.typing import Index, Matrix, Array
-from types import MappingProxyType
-from dataclasses import dataclass
-from collections import Counter
-import more_itertools as mit
 import itertools as its
-import operator as op
-import autoray as ar
 import json
+import operator as op
+from collections import Counter
+from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple
+
+import autoray as ar
+import more_itertools as mit
+
+from tnco.typing import Array, Index, Matrix
 
 __all__ = ['Tensor', 'TensorNetwork']
 

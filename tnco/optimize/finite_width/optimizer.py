@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Optional, Literal, Union, TypeVar, Iterable, NoReturn,
-                    FrozenSet, Any)
-from tnco.ctree import ContractionTree
-from .cost_model import BaseCostModel
 from importlib import import_module
+from typing import (Any, FrozenSet, Iterable, Literal, NoReturn, Optional,
+                    TypeVar, Union)
+
 from tnco.bitset import Bitset
+from tnco.ctree import ContractionTree
 from tnco.typing import Index
+
+from .cost_model import BaseCostModel
 
 __all__ = ['Optimizer']
 

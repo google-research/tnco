@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tnco.app.app import Optimizer, load_tn, dump_results
+from tnco.app.app import Optimizer, dump_results, load_tn
 from tnco.app.tn import Tensor, TensorNetwork
 
 __all__ = ['Tensor', 'TensorNetwork', 'load_tn', 'dump_results', 'Optimizer']

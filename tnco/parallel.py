@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Tuple, Union, Iterable, NoReturn
-from rich.progress import Progress, TextColumn, TimeElapsedColumn
+import itertools as its
 from multiprocessing.shared_memory import SharedMemory
 from struct import calcsize, pack_into, unpack_from
-from threading import Timer, TIMEOUT_MAX
-from rich.console import Console
-from threading import Thread
-import more_itertools as mit
-from warnings import warn
-import itertools as its
+from threading import TIMEOUT_MAX, Thread, Timer
 from time import sleep
+from typing import Callable, Iterable, NoReturn, Optional, Tuple, Union
+from warnings import warn
+
+import more_itertools as mit
+from rich.console import Console
+from rich.progress import Progress, TextColumn, TimeElapsedColumn
 
 __all__ = ['Buffer', 'Parallel']
 

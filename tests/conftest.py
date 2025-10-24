@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from random import randrange
-from os import environ
 import signal
+from os import environ
+from random import randrange
+
 import pytest
 
 # Global seed
