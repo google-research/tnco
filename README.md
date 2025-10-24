@@ -33,11 +33,11 @@ Before installing `TNCO`, you must have the following system-level dependencies:
 
 `TNCO` can be easily installed using `pip`:
 ```
-pip install git+https://github.com/google-research/tnco
+pip install "tnco @ git+https://github.com/google-research/tnco"
 ```
 for the latest development version, or
 ```
-pip install git+https://github.com/google-research/tnco@version
+pip install "tnco @ git+https://github.com/google-research/tnco@version"
 ```
 where `version` is one of the available
 [versions](https://github.com/google-research/tnco/tags). `TNCO` can also be installed
@@ -49,7 +49,7 @@ pip install tnco-main.zip
 dependency and is not installed by default. To install TNCO with joblib, use
 the `[parallel]` extra:
 ```
-pip install git+https://github.com/google-research/tnco[parallel]
+pip install "tnco[parallel] @ git+https://github.com/google-research/tnco"
 ```
 
 ### Install `TNCO` using `conda`
