@@ -13,13 +13,24 @@
 # limitations under the License.
 
 import itertools as its
+from collections import Counter
+from decimal import Decimal
 from random import Random
 
 import more_itertools as mit
 import pytest
 
-# Get global seed
-from conftest import fraction_n_tests, global_seed
+from conftest import fraction_n_tests, global_seed  # Get global seed
+from tnco.ctree import ContractionTree
+from tnco.optimize.finite_width import Optimizer as FW_Optimizer
+from tnco.optimize.finite_width.cost_model import \
+    SimpleCostModel as FW_SimpleCostModel
+from tnco.optimize.infinite_memory import Optimizer as IM_Optimizer
+from tnco.optimize.infinite_memory.cost_model import \
+    SimpleCostModel as IM_SimpleCostModel
+from tnco.optimize.prob import SimulatedAnnealing
+from tnco.tests.utils import generate_random_tensors
+from tnco.utils.tn import get_random_contraction_path
 
 rng = Random(global_seed)
 
@@ -33,16 +44,6 @@ def sample_seeds(k, /):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(100))
 def test_InfiniteMemoryContraction(seed, **kwargs):
-    from collections import Counter
-    from decimal import Decimal
-
-    from tnco.ctree import ContractionTree
-    from tnco.optimize.infinite_memory import Optimizer
-    from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
-    from tnco.optimize.prob import SimulatedAnnealing
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.utils.tn import get_random_contraction_path
-
     # Get rng
     rng = Random(seed)
 
@@ -101,10 +102,10 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
                             check_shared_inds=True)
 
     # Get optimizers
-    opt = Optimizer(ctree,
-                    SimpleCostModel(cost_type=cost_type),
-                    seed=seed,
-                    disable_shared_inds=disable_shared_inds)
+    opt = IM_Optimizer(ctree,
+                       IM_SimpleCostModel(cost_type=cost_type),
+                       seed=seed,
+                       disable_shared_inds=disable_shared_inds)
 
     # Optimize (sa)
     sa = SimulatedAnnealing(cost_type=cost_type)
@@ -129,7 +130,7 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
             its.repeat(dims))) if isinstance(dims, int) else dims
 
     def get_contraction_cost(x, y, z, dims):
-        return SimpleCostModel().contraction_cost(x, y, z, dims)
+        return IM_SimpleCostModel().contraction_cost(x, y, z, dims)
 
     # For each contraction
     total_cost = 0
@@ -172,16 +173,6 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
 @pytest.mark.usefixtures("timeout")
 @pytest.mark.parametrize('seed', sample_seeds(100))
 def test_FiniteWidthContraction(seed, **kwargs):
-    from collections import Counter
-    from decimal import Decimal
-
-    from tnco.ctree import ContractionTree
-    from tnco.optimize.finite_width import Optimizer
-    from tnco.optimize.finite_width.cost_model import SimpleCostModel
-    from tnco.optimize.prob import SimulatedAnnealing
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.utils.tn import get_random_contraction_path
-
     # Get rng
     rng = Random(seed)
 
@@ -234,11 +225,11 @@ def test_FiniteWidthContraction(seed, **kwargs):
         skip_slices = rng.sample(skip_slices, k=len(skip_slices) // 10)
 
     def get_width(xs):
-        return SimpleCostModel(cost_type=cost_type,
-                               width_type=width_type,
-                               sparse_inds=sparse_inds,
-                               n_projs=n_projs,
-                               max_width=0).width(xs, dims)
+        return FW_SimpleCostModel(cost_type=cost_type,
+                                  width_type=width_type,
+                                  sparse_inds=sparse_inds,
+                                  n_projs=n_projs,
+                                  max_width=0).width(xs, dims)
 
     # Get max width (3-digits of precision)
     max_width = int(max(map(get_width, ts_inds)) * 1000) / 1000
@@ -261,15 +252,15 @@ def test_FiniteWidthContraction(seed, **kwargs):
 
     # Get optimizers
     try:
-        opt = Optimizer(ctree,
-                        SimpleCostModel(cost_type=cost_type,
-                                        width_type=width_type,
-                                        sparse_inds=sparse_inds,
-                                        n_projs=n_projs,
-                                        max_width=max_width),
-                        skip_slices=skip_slices,
-                        seed=seed,
-                        disable_shared_inds=disable_shared_inds)
+        opt = FW_Optimizer(ctree,
+                           FW_SimpleCostModel(cost_type=cost_type,
+                                              width_type=width_type,
+                                              sparse_inds=sparse_inds,
+                                              n_projs=n_projs,
+                                              max_width=max_width),
+                           skip_slices=skip_slices,
+                           seed=seed,
+                           disable_shared_inds=disable_shared_inds)
 
     # Skip test if too many indices are skipped
     except ValueError as e:
@@ -304,12 +295,12 @@ def test_FiniteWidthContraction(seed, **kwargs):
             its.repeat(dims))) if isinstance(dims, int) else dims
 
     def get_contraction_cost(x, y, z, dims, slices):
-        return SimpleCostModel(cost_type=cost_type,
-                               width_type=width_type,
-                               sparse_inds=sparse_inds,
-                               n_projs=n_projs,
-                               max_width=max_width).contraction_cost(
-                                   x, y, z, dims, slices)
+        return FW_SimpleCostModel(cost_type=cost_type,
+                                  width_type=width_type,
+                                  sparse_inds=sparse_inds,
+                                  n_projs=n_projs,
+                                  max_width=max_width).contraction_cost(
+                                      x, y, z, dims, slices)
 
     # For each contraction
     total_cost = 0

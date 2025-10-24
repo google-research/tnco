@@ -15,13 +15,30 @@
 import functools as fts
 import itertools as its
 import operator as op
+import pickle
+from copy import deepcopy
+from math import exp, log2
 from random import Random
 
 import more_itertools as mit
 import pytest
+from tnco_core import Bitset as Bitset_
+from tnco_core import ContractionTree as ContractionTree_
+from tnco_core import Node
+from tnco_core import Tree as Tree_
+from tnco_core import float1024
+from tnco_core.utils import all_close, all_logclose
 
-# Get global seed
-from conftest import fraction_n_tests, global_seed
+from conftest import fraction_n_tests, global_seed  # Get global seed
+from tnco.bitset import Bitset
+from tnco.ctree import ContractionTree, traverse_tree
+from tnco.optimize.finite_width.cost_model import \
+    SimpleCostModel as FW_SimpleCostModel
+from tnco.optimize.infinite_memory.cost_model import \
+    SimpleCostModel as IM_SimpleCostModel
+from tnco.optimize.prob import BaseProbability, Greedy, SimulatedAnnealing
+from tnco.tests.utils import generate_random_inds, generate_random_tensors
+from tnco.utils.tn import get_random_contraction_path
 
 rng = Random(global_seed)
 
@@ -33,10 +50,6 @@ def sample_seeds(k, /):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_float1024(seed):
-    from random import Random
-
-    from tnco_core import float1024
-
     # Check if two variables are close
     def isclose(x, y):
         return abs(x - y) < 1e-10
@@ -115,11 +128,6 @@ def test_float1024(seed):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_Bitset(seed: int, **kwargs):
-    import pickle
-    from random import Random
-
-    from tnco.bitset import Bitset
-
     # Get random number generator
     rng = Random(seed)
 
@@ -193,8 +201,6 @@ def test_Bitset(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_Node(seed: int):
-    from tnco_core import Node
-
     # Check empty node
     empty_node = Node()
     assert empty_node.is_leaf()
@@ -263,22 +269,11 @@ def test_Node(seed: int):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_ContractionTree(seed: int, **kwargs):
-    from copy import deepcopy
-
-    from tnco_core import Bitset
-    from tnco_core import ContractionTree as ContractionTree_
-    from tnco_core import Node
-    from tnco_core import Tree as Tree_
-
-    from tnco.ctree import ContractionTree
-    from tnco.tests.utils import generate_random_tensors
-    from tnco.utils.tn import get_random_contraction_path
-
     # Check empty ContractionTree
     empty_ctree = ContractionTree_()
     assert empty_ctree.is_valid()
     assert empty_ctree.dims == 1
-    assert empty_ctree.inds == [Bitset()]
+    assert empty_ctree.inds == [Bitset_()]
     assert empty_ctree.n_inds == 0
     assert empty_ctree.n_leaves == 1
     assert empty_ctree.nodes == [Node()]
@@ -338,8 +333,6 @@ def test_ContractionTree(seed: int, **kwargs):
 
     # Check traverse_tree
     def test_TraverseTree(ctree):
-        from tnco.ctree import traverse_tree
-
         all_pos = set(range(len(ctree.nodes)))
 
         def check(pos):
@@ -378,10 +371,6 @@ def test_ContractionTree(seed: int, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(400))
 def test_SimpleCostModel(seed, **kwargs):
-    import pickle
-
-    from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
-    from tnco.tests.utils import generate_random_inds
 
     def rel_error(x, y, *, atol=1e-5):
         if x == 0 or y == 0:
@@ -431,17 +420,17 @@ def test_SimpleCostModel(seed, **kwargs):
 
     # Check types
     assert all(
-        SimpleCostModel(
+        IM_SimpleCostModel(
             cost_type=f'{ct_}').__get_core__('').cost_type == f'{ct_}'
         for ct_ in ('float32', 'float64', 'float128', 'float1024'))
     assert all(
-        SimpleCostModel(sparse_inds=(), n_projs=None, cost_type=f'{ct_}').
+        IM_SimpleCostModel(sparse_inds=(), n_projs=None, cost_type=f'{ct_}').
         __get_core__('').cost_type == f'{ct_}'
         for ct_ in ('float32', 'float64', 'float128', 'float1024'))
 
     # How to get the model
     def get_model(*args, **kwargs):
-        return SimpleCostModel(*args, cost_type=cost_type, **kwargs)
+        return IM_SimpleCostModel(*args, cost_type=cost_type, **kwargs)
 
     # How to get random indices
     def random_xyz_inds():
@@ -463,14 +452,14 @@ def test_SimpleCostModel(seed, **kwargs):
 
     # These should fail
     try:
-        SimpleCostModel(sparse_inds=(1,))
+        IM_SimpleCostModel(sparse_inds=(1,))
     except ValueError as e:
         assert str(
             e) == "'n_projs' must be specified if 'sparse_inds' is provided."
     else:
         assert False
     try:
-        SimpleCostModel(n_projs=123)
+        IM_SimpleCostModel(n_projs=123)
     except ValueError as e:
         assert str(
             e
@@ -498,15 +487,12 @@ def test_SimpleCostModel(seed, **kwargs):
         assert rel_error(
             get_model(sparse_inds=sparse_,
                       n_projs=max_n_projs_).contraction_cost(*xs_, dims),
-            SimpleCostModel(cost_type=cost_type).contraction_cost(*xs_, dims))
+            IM_SimpleCostModel(cost_type=cost_type).contraction_cost(
+                *xs_, dims))
 
 
 @pytest.mark.parametrize('seed', sample_seeds(400))
 def test_SimpleCostModelFiniteWidth(seed, **kwargs):
-    import pickle
-
-    from tnco.optimize.finite_width.cost_model import SimpleCostModel
-    from tnco.tests.utils import generate_random_inds
 
     def rel_error(x, y, *, atol=1e-5):
         if x == 0 or y == 0:
@@ -543,7 +529,6 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
                    n_projs) * cost_(all_inds - sparse_inds)
 
     def get_width(inds, dims, sparse_inds=(), n_projs=1, slices=None):
-        from math import log2
 
         def width_(inds):
             if isinstance(dims, int):
@@ -581,7 +566,7 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
             lambda ct, wt, m: m.cost_type == ct and m.width_type == wt,
             its.starmap(
                 lambda ct, wt:
-                (ct, wt, SimpleCostModel(0, cost_type=ct, width_type=wt)),
+                (ct, wt, FW_SimpleCostModel(0, cost_type=ct, width_type=wt)),
                 its.product(['float32', 'float64', 'float128', 'float1024'],
                             ['float32', 'float64', 'float128']))))
     assert all(
@@ -589,20 +574,20 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
             lambda ct, wt, m: m.cost_type == ct and m.width_type == wt,
             its.starmap(
                 lambda ct, wt: (ct, wt,
-                                SimpleCostModel(0,
-                                                sparse_inds=(),
-                                                n_projs=None,
-                                                cost_type=ct,
-                                                width_type=wt)),
+                                FW_SimpleCostModel(0,
+                                                   sparse_inds=(),
+                                                   n_projs=None,
+                                                   cost_type=ct,
+                                                   width_type=wt)),
                 its.product(['float32', 'float64', 'float128', 'float1024'],
                             ['float32', 'float64', 'float128']))))
 
     # How to get the model
     def get_model(*args, **kwargs):
-        return SimpleCostModel(*args,
-                               cost_type=cost_type,
-                               width_type=width_type,
-                               **kwargs)
+        return FW_SimpleCostModel(*args,
+                                  cost_type=cost_type,
+                                  width_type=width_type,
+                                  **kwargs)
 
     # How to get random indices
     def random_xyzs_inds():
@@ -643,14 +628,14 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
 
     # These should fail
     try:
-        SimpleCostModel(0, sparse_inds=(1,))
+        FW_SimpleCostModel(0, sparse_inds=(1,))
     except ValueError as e:
         assert str(
             e) == "'n_projs' must be specified if 'sparse_inds' is provided."
     else:
         assert False
     try:
-        SimpleCostModel(0, n_projs=123)
+        FW_SimpleCostModel(0, n_projs=123)
     except ValueError as e:
         assert str(
             e
@@ -710,7 +695,8 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
         zip(inds, rng.choices(range(1, 10), k=n_vars)))
 
     # Initialize cost model
-    cmodel = SimpleCostModel(max_width=10 * rng.random(), width_type='float128')
+    cmodel = FW_SimpleCostModel(max_width=10 * rng.random(),
+                                width_type='float128')
 
     # Check if correct
     for index in rng.sample(tuple(inds), k=len(inds)):
@@ -738,10 +724,10 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
     sparse_inds = rng.sample(tuple(inds), k=n_vars // 3)
 
     # Initialize cost model
-    cmodel = SimpleCostModel(max_width=10 * rng.random(),
-                             sparse_inds=sparse_inds,
-                             n_projs=rng.randrange(10, 100),
-                             width_type='float128')
+    cmodel = FW_SimpleCostModel(max_width=10 * rng.random(),
+                                sparse_inds=sparse_inds,
+                                n_projs=rng.randrange(10, 100),
+                                width_type='float128')
 
     # Check if correct
     for index in rng.sample(tuple(inds), k=len(inds)):
@@ -759,9 +745,6 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(1000))
 def test_Probability(seed):
-    import pickle
-
-    from tnco.optimize.prob import BaseProbability, Greedy, SimulatedAnnealing
 
     def abs_error(x, y, atol=1e-5):
         return abs(x - y) < atol
@@ -828,10 +811,6 @@ def test_Probability(seed):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_all_close(seed: int, **kwargs):
-    from math import exp
-
-    from tnco_core.utils import all_close, all_logclose
-
     # Initialize rng
     rng = Random(seed)
 

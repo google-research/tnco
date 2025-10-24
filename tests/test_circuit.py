@@ -13,16 +13,19 @@
 # limitations under the License.
 
 import itertools as its
+from math import sqrt
 from random import Random
 
 import cirq
 import more_itertools as mit
 import numpy as np
 import pytest
-from quimb.tensor import Tensor
+import qiskit
+from qiskit.circuit.random import random_circuit
+from quimb.tensor import Tensor, TensorNetwork
 
-# Get global seed
-from conftest import fraction_n_tests, global_seed
+from conftest import fraction_n_tests, global_seed  # Get global seed
+from tnco.utils.circuit import commute, load, same
 
 rng = Random(global_seed)
 
@@ -34,8 +37,6 @@ def sample_seeds(k, /):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_Commute(seed, **kwargs):
-    from tnco.utils.circuit import commute
-
     # Commutation using cirq
     def commute_(gate_A, gate_B, *, use_matrix_commutation=True, atol=1e-5):
         if use_matrix_commutation:
@@ -77,8 +78,6 @@ def test_Commute(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_Same(seed, **kwargs):
-    from tnco.utils.circuit import same
-
     # Same using quimb
     def same_(gate_A, gate_B, atol=1e-5):
         gate_A = Tensor(
@@ -119,10 +118,6 @@ def test_Same(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_LoadArbitraryInitialFinalState(seed, **kwargs):
-    from quimb.tensor import Tensor, TensorNetwork
-
-    from tnco.utils.circuit import load
-
     # Get rng
     rng = Random(seed)
     np_rng = np.random.default_rng(seed)
@@ -196,7 +191,6 @@ def test_LoadArbitraryInitialFinalState(seed, **kwargs):
         seed=seed)
 
     def get_state(x):
-        from math import sqrt
         valid_token = {
             '0': [1, 0],
             '1': [0, 1],
@@ -251,10 +245,6 @@ def test_LoadArbitraryInitialFinalState(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_LoadUnitary(seed, **kwargs):
-    from quimb.tensor import Tensor, TensorNetwork
-
-    from tnco.utils.circuit import load
-
     # Get rng
     rng = Random(seed)
 
@@ -349,12 +339,6 @@ def test_LoadUnitary(seed, **kwargs):
 
 @pytest.mark.parametrize('seed', sample_seeds(200))
 def test_LoadQisKit(seed):
-    import qiskit
-    from qiskit.circuit.random import random_circuit
-    from quimb.tensor import Tensor, TensorNetwork
-
-    from tnco.utils.circuit import load as load_circuit
-
     # Set number of qubits and depth of the circuit
     n_qubits = 6
     circuit_depth = 12
@@ -379,9 +363,9 @@ def test_LoadQisKit(seed):
                 circuit)))
 
     # Load TN
-    arrays, ts_inds, output_inds = load_circuit(circuit,
-                                                initial_state=None,
-                                                final_state=None)
+    arrays, ts_inds, output_inds = load(circuit,
+                                        initial_state=None,
+                                        final_state=None)
 
     # Contract TN
     tn = TensorNetwork(map(Tensor, arrays,
