@@ -23,7 +23,7 @@
 
 #include "base.hpp"
 
-namespace tnco::optimize::prob::sa {
+namespace tnco::optimize::prob::mh {
 
 // Rename pybind11
 namespace py = pybind11;
@@ -85,4 +85,4 @@ void init(py::module &m, const std::string &name) {
           }));
 }
 
-}  // namespace tnco::optimize::prob::sa
+}  // namespace tnco::optimize::prob::mh

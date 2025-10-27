@@ -35,7 +35,7 @@ from tnco.optimize.finite_width.cost_model import \
 from tnco.optimize.infinite_memory import Optimizer as IM_Optimizer
 from tnco.optimize.infinite_memory.cost_model import \
     SimpleCostModel as IM_SimpleCostModel
-from tnco.optimize.prob import BaseProbability, Greedy, SimulatedAnnealing
+from tnco.optimize.prob import BaseProbability, Greedy, MetropolisHastings
 from tnco.ordered_frozenset import OrderedFrozenSet
 from tnco.tests.utils import (generate_random_inds, generate_random_tensors,
                               get_connected_components,
@@ -716,12 +716,12 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
     assert opt.prng_state == opt_copy.prng_state
     assert opt.disable_shared_inds == opt_copy.disable_shared_inds
 
-    # Optimize (sa)
-    sa = SimulatedAnnealing(cost_type=cost_type)
+    # Optimize (mh)
+    mh = MetropolisHastings(cost_type=cost_type)
     for beta_ in range(100):
-        sa.beta = beta_
-        opt.update(sa)
-        opt_copy.update(sa)
+        mh.beta = beta_
+        opt.update(mh)
+        opt_copy.update(mh)
         assert opt.is_valid() and opt_copy.is_valid()
         assert opt.ctree == opt_copy.ctree
         # This could fail because rounding errors in floating values could lead
@@ -927,11 +927,11 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
     # Check equality
     assert opt == opt_copy
 
-    # Optimize (sa)
-    sa = SimulatedAnnealing(cost_type=cost_type)
+    # Optimize (mh)
+    mh = MetropolisHastings(cost_type=cost_type)
     for beta_ in range(100):
-        sa.beta = beta_
-        opt.update(sa, update_slices=(beta_ % 10 == 0))
+        mh.beta = beta_
+        opt.update(mh, update_slices=(beta_ % 10 == 0))
         assert opt.is_valid()
         # This could fail because rounding errors in floating values could lead
         # to two different min ctree

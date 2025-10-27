@@ -15,7 +15,7 @@
 from importlib import import_module
 from typing import Literal, Optional
 
-__all__ = ['BaseProbability', 'Greedy', 'SimulatedAnnealing']
+__all__ = ['BaseProbability', 'Greedy', 'MetropolisHastings']
 
 
 def BaseProbability(*,
@@ -65,12 +65,12 @@ def Greedy(*,
     return getattr(mod, 'Greedy_' + cost_type)()
 
 
-def SimulatedAnnealing(beta: float = 0,
+def MetropolisHastings(beta: float = 0,
                        *,
                        cost_type: Optional[Literal['float32', 'float64',
                                                    'float128',
                                                    'float1024']] = 'float64'):
-    """Simulated Annealing.
+    """Metropolis-Hastings probability.
 
     Accept a move using the Metropolis-Hastings probability.
 
@@ -87,4 +87,4 @@ def SimulatedAnnealing(beta: float = 0,
     mod = import_module("tnco_core.optimize.prob")
 
     # Return object
-    return getattr(mod, 'SimulatedAnnealing_' + cost_type)(beta)
+    return getattr(mod, 'MetropolisHastings_' + cost_type)(beta)
