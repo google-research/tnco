@@ -317,9 +317,12 @@ def Parallel(core: Callable,
         else:
             results = list(
                 map(
-                    lambda idx, xs: core_(
-                        *xs[:-1], idx=idx, status=status, **xs[-1], **buffers),
-                    range(n_runs), args))
+                    lambda idx, xs: core_(*xs[:-1],
+                                          idx=idx,
+                                          status=status,
+                                          stop=stop,
+                                          **xs[-1],
+                                          **buffers), range(n_runs), args))
 
         # Close progressbar
         if verbose >= 2:
