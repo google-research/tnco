@@ -210,10 +210,6 @@ if [[ -n ${FIX} ]]; then
     echo -en "\033[92m[FIXING]\033[0m Python: "${YAPF_FAILED}"\n"
     ${YAPF_CMD} -i ${YAPF_FAILED}
   fi
-  if [[ -n "${ISORT_FAILED}" ]]; then
-    echo -en "\033[92m[FIXING]\033[0m Python: "${ISORT_FAILED}"\n"
-    ${ISORT_CMD} ${ISORT_FAILED} >/dev/null
-  fi
   if [[ "${LINTING_FAILED}" > 0 ]]; then
     echo -en "\033[92m[FIXING]\033[0m Ruff\n"
     ruff check tnco/ tests/ --fix
