@@ -22,8 +22,7 @@ from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
 import autoray as ar
 import more_itertools as mit
-from rich.console import Console
-from rich.progress import Progress, track
+from tqdm.auto import tqdm
 
 import tnco.utils.tensor as tensor_utils
 from tnco.ordered_frozenset import OrderedFrozenSet
@@ -148,10 +147,9 @@ def get_random_contraction_path(
     contraction = []
 
     # While there are available tensors ...
-    with Progress(disable=(verbose <= 0), console=Console(stderr=True)) as pbar:
-        total_pbar = len(avail_tensors)
-        task = pbar.add_task("Getting contraction path...", total=total_pbar)
-
+    with tqdm(disable=(verbose <= 0),
+              total=(total_pbar := len(avail_tensors)),
+              desc="Getting contraction path") as pbar:
         while avail_tensors:
             if px is None or not adj[px]:
                 # Get a random available posistion
@@ -213,10 +211,12 @@ def get_random_contraction_path(
             px = pz
 
             # Update progressbar
-            pbar.update(task, completed=total_pbar - len(avail_tensors))
+            pbar.n = total_pbar - len(avail_tensors)
+            pbar.update(0)
 
-        # Last update of the progressbar
-        pbar.update(task, completed=total_pbar, refresh=True)
+        # Last update
+        pbar.n = total_pbar
+        pbar.update(0)
 
         # Check output inds
         assert ts_inds[-1].issubset(output_inds)
@@ -474,10 +474,9 @@ def fuse(
     all_merged_tensors = []
 
     # While there are available indices to contract
-    with Progress(disable=(verbose <= 0), console=Console(stderr=True)) as pbar:
-        total_pbar = len(avail_inds)
-        task = pbar.add_task("Fusing tensors...", total=total_pbar)
-
+    with tqdm(disable=(verbose <= 0),
+              total=(total_pbar := len(avail_inds)),
+              desc="Fusing tensors") as pbar:
         while avail_inds:
             # Select random position
             index = avail_inds.pop(rng.randrange(len(avail_inds)))
@@ -560,10 +559,12 @@ def fuse(
             all_merged_tensors.append((px, py, tz))
 
             # Update pbar
-            pbar.update(task, completed=total_pbar - len(avail_inds))
+            pbar.n = total_pbar - len(avail_inds)
+            pbar.update(0)
 
-        # Final update
-        pbar.update(task, completed=total_pbar, refresh=True)
+        # Last update
+        pbar.n = total_pbar
+        pbar.update(0)
 
     # No excluded index should appear in merged
     assert not all_merged_inds & exclude_inds
@@ -768,11 +769,10 @@ def contract(
         raise ValueError("'output_inds' is not consistent with 'ts_inds'.")
 
     # Contract
-    for x, y in track(map(sorted, path),
-                      console=Console(stderr=True),
-                      description="Contracting...",
-                      total=len(path),
-                      disable=(verbose <= 0)):
+    for x, y in tqdm(map(sorted, path),
+                     desc="Contracting...",
+                     total=len(path),
+                     disable=(verbose <= 0)):
         if x == y:
             raise ValueError("'path' is not valid.")
 

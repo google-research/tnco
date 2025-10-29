@@ -193,7 +193,7 @@ class Optimizer(BaseOptimizer):
                     opt.update(prob)
 
                     # Update status
-                    status[idx] = n / len(betas)
+                    status[idx] = (n + 1) / len(betas)
                     log2_total_cost[idx] = opt.log2_min_total_cost
 
                 # Stop clock
@@ -228,15 +228,14 @@ class Optimizer(BaseOptimizer):
             print("# Optimizing ...", file=stderr, flush=True, end='')
 
         # Run simulations
-        results = Parallel(
-            core_,
-            seed=seeds,
-            n_jobs=self.n_jobs,
-            timeout=timeout,
-            description="Optimizing...",
-            text="[red]LOG2(COST)={task.fields[log2_total_cost]:1.2f}",
-            buffers=[('log2_total_cost', 'f')],
-            verbose=self.verbose - 1)
+        results = Parallel(core_,
+                           seed=seeds,
+                           n_jobs=self.n_jobs,
+                           timeout=timeout,
+                           description="Optimizing",
+                           text="LOG2(COST)={log2_total_cost:1.2f}",
+                           buffers=[('log2_total_cost', 'f')],
+                           verbose=self.verbose - 1)
 
         if self.verbose == 1:
             print(" Done!", file=stderr, flush=True)

@@ -21,8 +21,7 @@ from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
 import autoray as ar
 import more_itertools as mit
-from rich.console import Console
-from rich.progress import track
+from tqdm.auto import tqdm
 
 import tnco.utils.tensor as tensor_utils
 import tnco.utils.tn as tn_utils
@@ -249,11 +248,10 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
     changes = False
 
     # For each gate ...
-    for gate_ in track(circuit,
-                       console=Console(stderr=True),
-                       disable=(verbose <= 0),
-                       transient=True,
-                       description="Building TN..."):
+    for gate_ in tqdm(circuit,
+                      disable=(verbose <= 0),
+                      leave=False,
+                      desc="Building TN"):
 
         # Get adjoint
         gate_adj_ = (ar.do('asarray', gate_[0]).conj().T, gate_[1])

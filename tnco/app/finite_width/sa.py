@@ -178,7 +178,8 @@ class Optimizer(BaseOptimizer):
         # Get probability
         prob = SimulatedAnnealing(cost_type=self.cost_type)
 
-        def core_(seed, *, idx, status, stop, log2_total_cost):
+        def core_(seed, *, idx, status, stop, log2_total_cost, max_width,
+                  n_slices):
             # Initialize results
             results = dict(cost=[],
                            disconnected_costs=[],
@@ -215,8 +216,10 @@ class Optimizer(BaseOptimizer):
                     opt.update(prob, update_slices=(n % update_slices == 0))
 
                     # Update status
-                    status[idx] = n / len(betas)
+                    status[idx] = (n + 1) / len(betas)
                     log2_total_cost[idx] = opt.log2_min_total_cost
+                    max_width[idx] = opt.min_ctree.max_width()
+                    n_slices[idx] = len(opt.min_slices)
 
                 # Stop clock
                 runtime = perf_counter() - runtime
@@ -264,9 +267,11 @@ class Optimizer(BaseOptimizer):
             seed=seeds,
             n_jobs=self.n_jobs,
             timeout=timeout,
-            description="Optimizing...",
-            text="[red]LOG2(COST)={task.fields[log2_total_cost]:1.2f}",
-            buffers=[('log2_total_cost', 'f')],
+            description="Optimizing",
+            text=
+            "LOG2(COST)={log2_total_cost:1.2f}, MW={max_width}, NS={n_slices}",
+            buffers=[('log2_total_cost', 'f'), ('max_width', 'f'),
+                     ('n_slices', 'i')],
             verbose=self.verbose - 1)
 
         if self.verbose == 1:

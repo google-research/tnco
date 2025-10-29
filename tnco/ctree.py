@@ -22,13 +22,12 @@ from typing import (Any, Callable, Dict, FrozenSet, Iterable, List, NoReturn,
                     Optional, Tuple, Union)
 
 import more_itertools as mit
-from rich.console import Console
-from rich.progress import Progress, track
+from tqdm.auto import tqdm
+
+from tnco.typing import Index
 from tnco_core import ContractionTree as _ContractionTree
 from tnco_core import Node
 from tnco_core.utils import get_contraction, traverse
-
-from tnco.typing import Index
 
 __all__ = ['ContractionTree', 'traverse_tree']
 
@@ -150,12 +149,10 @@ class ContractionTree(_ContractionTree):
             ts_inds.extend([None] *
                            (max(mit.flatten(contraction)) - n_tensors + 1))
 
-            for tx_, ty_, tz_ in track(
-                    contraction,
-                    console=Console(stderr=True),
-                    disable=(verbose <= 0),
-                    total=len(contraction),
-                    description="Creating intermediate tensors..."):
+            for tx_, ty_, tz_ in tqdm(contraction,
+                                      disable=(verbose <= 0),
+                                      total=len(contraction),
+                                      desc="Creating intermediate tensors"):
                 # Get inds
                 ix_ = frozenset(ts_inds[tx_])
                 iy_ = frozenset(ts_inds[ty_])
@@ -408,16 +405,14 @@ def traverse_tree(ctree: ContractionTree,
         callback: The 'callback' function to call.
         verbose: Verbose output.
     """
-    with Progress(disable=(verbose <= 0), console=Console(stderr=True)) as pbar:
-        task = pbar.add_task("Exploring contraction tree...", total=len(ctree))
+    with tqdm(disable=(verbose <= 0),
+              total=len(ctree),
+              desc="Exploring contraction tree") as pbar:
 
         # Add pbar to callback
         def callback_(pos: int):
-            pbar.update(task, advance=1)
+            pbar.update()
             callback(pos)
 
         # Traverse ctree
         traverse(ctree, callback_)
-
-        # Final update of pbar
-        pbar.update(task, refresh=True)

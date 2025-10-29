@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import itertools as its
+import operator as op
 from multiprocessing.shared_memory import SharedMemory
 from struct import calcsize, pack_into, unpack_from
 from threading import TIMEOUT_MAX, Thread, Timer
@@ -21,8 +22,7 @@ from typing import Callable, Iterable, NoReturn, Optional, Tuple, Union
 from warnings import warn
 
 import more_itertools as mit
-from rich.console import Console
-from rich.progress import Progress, TextColumn, TimeElapsedColumn
+from tqdm.auto import tqdm
 
 __all__ = ['Buffer', 'Parallel']
 
@@ -114,7 +114,7 @@ def Parallel(core: Callable,
             All the arguments 'args' and keyword arguments 'kwargs' are passed
             to the 'core'.
         description: Description to use.
-        text: 'rich.progress.TextColumn' for its format.
+        text: Text to append to the progress bar.
         n_jobs: Number of processes to use. By default, all available cores are
             used. If 'n_jobs' is a positive number, 'n_jobs' processes will be
             used. If 'n_jobs' is negative, 'n_cpus + n_jobs + 1' will be used.
@@ -132,8 +132,9 @@ def Parallel(core: Callable,
         leave: If 'True', progress bars are kept at the end of the process.
 
     Examples:
-        def example(x, *, idx, status, stop):
+        def example(x, *, idx, status, stop, log_buffer):
             from time import sleep
+            from math import log
 
             # Exit if stop is already set
             if stop[idx]:
@@ -146,7 +147,10 @@ def Parallel(core: Callable,
             for n in range(100):
                 sleep(0.05)
                 x += x
-                status[idx] = n/100
+                status[idx] = (n + 1)/100
+
+                # Update buffer
+                log_buffer[idx] = log(n + 1)
 
                 # If stop is set, break loop
                 if stop[idx]:
@@ -155,7 +159,14 @@ def Parallel(core: Callable,
             # Return results
             return x
 
-        Parallel(example, x=range(10), n_jobs=4, verbose=3, timeout=2)
+        Parallel(example,
+                 x=range(10),
+                 n_jobs=4,
+                 description="Example",
+                 text="LOG={log_buffer:1.2f}",
+                 buffers=[('log_buffer', 'f')],
+                 verbose=3,
+                 timeout=2)
         > [0,
         >  1099511627776,
         >  2199023255552,
@@ -205,10 +216,13 @@ def Parallel(core: Callable,
     status = Buffer([0] * n_runs, 'f')
 
     # Initialize stop
-    stop = Buffer([False] * n_runs, 'b')
+    stop = Buffer([False] * n_runs, '?')
 
-    # Initialize completed
-    completed = Buffer([0] * n_runs, '?')
+    # Initialize proc_status:
+    # 0: Not started
+    # 1: Started
+    # 2: Completed
+    proc_status = Buffer([0] * n_runs, 'b')
 
     # Get buffers
     buffers = dict(
@@ -223,117 +237,102 @@ def Parallel(core: Callable,
     timer = Timer(TIMEOUT_MAX if timeout is None else timeout, timer_helper)
     timer.start()
 
-    with Progress(TextColumn('[blue][{task.fields[idx]}/' + str(len(args)) +
-                             ']'),
-                  *Progress.get_default_columns(),
-                  TimeElapsedColumn(),
-                  TextColumn(text),
-                  console=Console(stderr=True),
-                  disable=(verbose <= 1),
-                  auto_refresh=False,
-                  transient=not leave) as progress:
+    # Update progressbar
+    def update_progress():
+        # Set format for progress bar
+        bar_format = "{desc}: {percentage:3.0f}% |{bar}| "
+        bar_format += "[{elapsed}<{remaining}, {rate_fmt}{postfix}]"
 
-        # Update progressbar
-        def update_progress():
-            # Initialize tasks
-            tasks = {}
+        # Initialize map of progress bars
+        pbars = {}
 
-            def get_task(idx):
-                if idx not in tasks:
-                    tasks[idx] = progress.add_task(
-                        description,
-                        total=1,
-                        idx=idx + 1,
-                        **dict(zip(buffers, its.repeat(float('nan')))))
-                return tasks.get(idx)
+        # While there are active procs
+        while any(map(lambda x: x < 2, proc_status)):
 
-            def update_task(idx, completed):
-                if (task := get_task(idx)) is not None:
-                    progress.update(task,
-                                    completed=completed,
-                                    idx=idx + 1,
-                                    **dict(
-                                        map(lambda k: (k, buffers[k][idx]),
-                                            buffers)))
+            # Add a progress bar for all the active procs without it
+            for idx in map(
+                    op.itemgetter(0),
+                    filter(lambda x: x[1] == 1 and x[0] not in pbars,
+                           enumerate(proc_status))):
+                pbars[idx] = tqdm(total=1,
+                                  bar_format=bar_format,
+                                  leave=leave,
+                                  desc='{} [{}/{}]'.format(
+                                      description, idx + 1, len(proc_status)))
 
-            def remove_task(idx):
-                if not leave and tasks.get(idx) is not None:
-                    progress.remove_task(tasks.pop(idx))
-                    tasks[idx] = None
+            # Update all active progress bars
+            for idx, pbar in pbars.items():
+                pbar.n = status[idx]
+                pbar.postfix = text.format(**dict(
+                    its.starmap(lambda k, v: (k, v[idx]), buffers.items())))
+                pbar.update(0)
 
-            def full_update():
-                for idx_, (c_, s_) in enumerate(zip(completed, status)):
-                    if s_ > 0:
-                        update_task(idx_, status[idx_])
-                    if c_:
-                        remove_task(idx_)
+            # Remove all progress bars for procs that are completed
+            for idx in map(
+                    op.itemgetter(0),
+                    filter(lambda x: x[1] == 2 and x[0] in pbars,
+                           enumerate(proc_status))):
+                pbars[idx].close()
+                del pbars[idx]
 
-                # Refresh progress
-                progress.refresh()
+            # Sleep for a bit
+            sleep(1 / refresh_per_second)
 
-            # While there are active tasks
-            while any(not c_ for c_ in completed):
-                # Perform full update
-                full_update()
+        # Perform last full update
+        for idx, pbar in pbars.items():
+            pbars[idx].n = status[idx]
+            pbars[idx].update(0)
+            pbars[idx].close()
 
-                # Sleep for a bit
-                sleep(1 / refresh_per_second)
+    # Start progressbar
+    if verbose >= 2:
+        updater = Thread(target=update_progress, daemon=True)
+        updater.start()
 
-            # Perform last full update
-            full_update()
+    def core_(*args, idx, **kwargs):
+        # Set proc_status to 'start'
+        proc_status[idx] = 1
 
-            # Last checks
-            assert not timer.is_alive() or not tasks or (
-                len(tasks) == n_runs and sorted(tasks) == list(range(n_runs)))
-            assert leave or all(v_ is None for v_ in tasks.values())
+        # Get results
+        results = core(*args, idx=idx, **kwargs)
 
-        # Start progressbar
-        if verbose >= 2:
-            updater = Thread(target=update_progress, daemon=True)
-            updater.start()
+        # Set proc_status to 'complete'
+        proc_status[idx] = 2
 
-        def core_(*args, idx, **kwargs):
-            # Get results
-            results = core(*args, idx=idx, **kwargs)
+        # Return results
+        return results
 
-            # Set completed to true
-            completed[idx] = True
+    # Get results (parallel)
+    if use_joblib:
+        with parallel_config(backend='loky',
+                             n_jobs=n_jobs,
+                             verbose=(10 if verbose == 1 else False)):
+            results = Parallel()(map(
+                lambda idx, xs: delayed(core_)(*xs[:-1],
+                                               idx=idx,
+                                               status=status,
+                                               stop=stop,
+                                               **xs[-1],
+                                               **buffers), range(n_runs), args))
 
-            # Return results
-            return results
+    # Get results (sequential)
+    else:
+        results = list(
+            map(
+                lambda idx, xs: core_(*xs[:-1],
+                                      idx=idx,
+                                      status=status,
+                                      stop=stop,
+                                      **xs[-1],
+                                      **buffers), range(n_runs), args))
 
-        # Get results (parallel)
-        if use_joblib:
-            with parallel_config(backend='loky',
-                                 n_jobs=n_jobs,
-                                 verbose=(10 if verbose == 1 else False)):
-                results = Parallel()(map(
-                    lambda idx, xs: delayed(core_)(*xs[:-1],
-                                                   idx=idx,
-                                                   status=status,
-                                                   stop=stop,
-                                                   **xs[-1],
-                                                   **buffers), range(n_runs),
-                    args))
-
-        # Get results (sequential)
-        else:
-            results = list(
-                map(
-                    lambda idx, xs: core_(*xs[:-1],
-                                          idx=idx,
-                                          status=status,
-                                          stop=stop,
-                                          **xs[-1],
-                                          **buffers), range(n_runs), args))
-
-        # Close progressbar
-        if verbose >= 2:
-            updater.join()
+    # Close progressbar
+    if verbose >= 2:
+        updater.join()
 
     # Close buffers
     status.shm.unlink()
-    completed.shm.unlink()
+    proc_status.shm.unlink()
     stop.shm.unlink()
     mit.consume(map(lambda buffer: buffer.shm.unlink(), buffers.values()))
 

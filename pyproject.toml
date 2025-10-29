@@ -49,7 +49,7 @@ dependencies = [
   "fire",
   "more_itertools",
   "pathvalidate",
-  "rich"
+  "tqdm"
 ]
 
 [project.optional-dependencies]

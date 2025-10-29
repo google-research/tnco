@@ -22,8 +22,7 @@ from string import ascii_letters
 from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, Union
 
 import more_itertools as mit
-from rich.console import Console
-from rich.progress import Progress, track
+from tqdm.auto import tqdm
 
 from tnco.ctree import ContractionTree
 from tnco.ordered_frozenset import OrderedFrozenSet
@@ -60,10 +59,7 @@ def get_connected_components(ts_inds: Iterable[List[Index]],
     index2color = {}
     color2index = {}
 
-    for inds_ in track(ts_inds,
-                       description="Finding CC...",
-                       console=Console(stderr=True),
-                       disable=(verbose <= 0)):
+    for inds_ in tqdm(ts_inds, desc="Finding CC", disable=(verbose <= 0)):
 
         # If empty, just skip it
         if not len(inds_):
@@ -218,10 +214,7 @@ def generate_random_tensors(
     all_output_inds = []
 
     # Generate single cc
-    for _ in track(range(n_cc),
-                   console=Console(stderr=True),
-                   disable=(verbose <= 0),
-                   description="Generating CC..."):
+    for _ in tqdm(range(n_cc), disable=(verbose <= 0), desc="Generating CC"):
 
         # Generate the connected component first
         avail_tensors: Set[int] = set(range(n_tensors))
@@ -298,10 +291,8 @@ def generate_random_tensors(
 
     # Randomize names of inds
     if randomize_names:
-        with Progress(disable=(verbose <= 0),
-                      console=Console(stderr=True)) as pbar:
-            task = pbar.add_task("Randomizing names...", total=3)
-
+        with tqdm(disable=(verbose <= 0), total=3,
+                  desc="Randomizing names") as pbar:
             # Initialize map
             all_inds_ = OrderedFrozenSet(mit.flatten(all_tensors))
             inds_map_ = dict(
@@ -309,17 +300,15 @@ def generate_random_tensors(
                     all_inds_,
                     generate_random_inds(len(all_inds_),
                                          seed=rng.randrange(2**32))))
-            pbar.update(task, advance=1)
+            pbar.update()
 
             # Update names
             all_tensors = list(
                 map(lambda xs: tuple(map(inds_map_.get, xs)), all_tensors))
-            pbar.update(task, advance=1)
+            pbar.update()
 
             all_output_inds = frozenset(map(inds_map_.get, all_output_inds))
-            pbar.update(task, advance=1)
-
-            pbar.update(task, refresh=True)
+            pbar.update()
 
     # All tensors should be unique
     assert mit.ilen(mit.unique_everseen(all_tensors)) == len(all_tensors)
