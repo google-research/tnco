@@ -86,9 +86,7 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
         sparse_inds = rng.sample(sparse_inds, k=len(sparse_inds) // 4)
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds,
-                                        seed=seed,
-                                        merge_paths=False)
+    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
 
     # There should be only one cc
     assert len(paths) == 1
@@ -234,9 +232,7 @@ def test_FiniteWidthContraction(seed, **kwargs):
     max_width = int(max(map(get_width, ts_inds)) * 1000) / 1000
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds,
-                                        seed=seed,
-                                        merge_paths=False)
+    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
 
     # There should be only one cc
     assert len(paths) == 1
