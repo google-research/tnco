@@ -177,10 +177,10 @@ if [[ -n ${TRAIL_FAILED} ]]; then
 fi
 
 # Linting
-ruff check tnco/ tests/ >/dev/null
-LINTING_FAILED=$?
+ruff check tnco/ tests/ | grep -vi 'all checks passed' >&2
+LINTING_FAILED=${PIPESTATUS[0]}
 if [[ ${LINTING_FAILED} -eq 0 ]]; then
-  echo -e "${OK} (ruff) All tests passed."
+  echo -e "${OK} (ruff) All checks passed."
 else
   echo -e "${FAILED} (ruff) Linting failed."
 fi
