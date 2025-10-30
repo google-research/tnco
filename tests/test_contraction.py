@@ -87,7 +87,6 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
-                                        output_inds,
                                         seed=seed,
                                         merge_paths=False)
 
@@ -236,7 +235,6 @@ def test_FiniteWidthContraction(seed, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
-                                        output_inds,
                                         seed=seed,
                                         merge_paths=False)
 
