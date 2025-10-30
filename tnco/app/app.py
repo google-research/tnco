@@ -441,6 +441,12 @@ def load_tn(obj: Any,
         except ValidationError:
             pass
 
+        # Is it JSON?
+        try:
+            return load_tn(json.loads(obj), **options)
+        except json.JSONDecodeError:
+            pass
+
     # Is it JSON?
     if isinstance(obj, dict):
 
