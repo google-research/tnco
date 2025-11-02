@@ -25,7 +25,6 @@ import more_itertools as mit
 import numpy as np
 import pytest
 from quimb.tensor import Tensor, TensorNetwork
-from tnco_core import ContractionTree as ContractionTree_
 
 from conftest import fraction_n_tests, global_seed  # Get global seed
 from tnco.ctree import ContractionTree
@@ -47,6 +46,7 @@ from tnco.utils.tn import contract
 from tnco.utils.tn import decompose_hyper_inds as tn_decompose_hyper_inds
 from tnco.utils.tn import (fuse, get_random_contraction_path,
                            merge_contraction_paths, read_inds)
+from tnco_core import ContractionTree as ContractionTree_
 
 rng = Random(global_seed)
 

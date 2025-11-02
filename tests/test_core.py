@@ -22,12 +22,6 @@ from random import Random
 
 import more_itertools as mit
 import pytest
-from tnco_core import Bitset as Bitset_
-from tnco_core import ContractionTree as ContractionTree_
-from tnco_core import Node
-from tnco_core import Tree as Tree_
-from tnco_core import float1024
-from tnco_core.utils import all_close, all_logclose
 
 from conftest import fraction_n_tests, global_seed  # Get global seed
 from tnco.bitset import Bitset
@@ -39,6 +33,12 @@ from tnco.optimize.infinite_memory.cost_model import \
 from tnco.optimize.prob import BaseProbability, Greedy, MetropolisHastings
 from tnco.tests.utils import generate_random_inds, generate_random_tensors
 from tnco.utils.tn import get_random_contraction_path
+from tnco_core import Bitset as Bitset_
+from tnco_core import ContractionTree as ContractionTree_
+from tnco_core import Node
+from tnco_core import Tree as Tree_
+from tnco_core import float1024
+from tnco_core.utils import all_close, all_logclose
 
 rng = Random(global_seed)
 
