@@ -22,12 +22,6 @@ from random import Random
 
 import more_itertools as mit
 import pytest
-from tnco_core import Bitset as Bitset_
-from tnco_core import ContractionTree as ContractionTree_
-from tnco_core import Node
-from tnco_core import Tree as Tree_
-from tnco_core import float1024
-from tnco_core.utils import all_close, all_logclose
 
 from conftest import fraction_n_tests, global_seed  # Get global seed
 from tnco.bitset import Bitset
@@ -36,9 +30,15 @@ from tnco.optimize.finite_width.cost_model import \
     SimpleCostModel as FW_SimpleCostModel
 from tnco.optimize.infinite_memory.cost_model import \
     SimpleCostModel as IM_SimpleCostModel
-from tnco.optimize.prob import BaseProbability, Greedy, SimulatedAnnealing
+from tnco.optimize.prob import BaseProbability, Greedy, MetropolisHastings
 from tnco.tests.utils import generate_random_inds, generate_random_tensors
 from tnco.utils.tn import get_random_contraction_path
+from tnco_core import Bitset as Bitset_
+from tnco_core import ContractionTree as ContractionTree_
+from tnco_core import Node
+from tnco_core import Tree as Tree_
+from tnco_core import float1024
+from tnco_core.utils import all_close, all_logclose
 
 rng = Random(global_seed)
 
@@ -776,37 +776,37 @@ def test_Probability(seed):
 
     # Check initialization
     assert all(
-        map(lambda beta: SimulatedAnnealing(beta).beta == beta,
+        map(lambda beta: MetropolisHastings(beta).beta == beta,
             mit.repeatfunc(rng.uniform, 1000, 0, 100)))
 
-    # Check sa probability
+    # Check mh probability
     assert all(
         map(
             lambda beta, d, c: abs_error(
-                SimulatedAnnealing(beta)(d, c), 1
+                MetropolisHastings(beta)(d, c), 1
                 if d <= 0 else (1 + d / c)**-beta) and pickle.loads(
-                    pickle.dumps(SimulatedAnnealing(beta))).beta == beta,
+                    pickle.dumps(MetropolisHastings(beta))).beta == beta,
             mit.repeatfunc(rng.uniform, 1000, 0, 100),
             mit.repeatfunc(rng.uniform, 1000, -100, 100),
             mit.repeatfunc(rng.uniform, 1000, 0, 100)))
 
-    def check_sa(sa, beta, delta_cost, old_cost):
-        sa.beta = beta
+    def check_sa(mh, beta, delta_cost, old_cost):
+        mh.beta = beta
         return abs_error(
-            sa(delta_cost, old_cost), 1 if delta_cost <= 0 else
+            mh(delta_cost, old_cost), 1 if delta_cost <= 0 else
             (1 + delta_cost / old_cost)**-beta)
 
     # Check assignment of beta
-    sa = SimulatedAnnealing()
+    mh = MetropolisHastings()
     assert all(
-        map(lambda beta, d, c: check_sa(sa, beta, d, c),
+        map(lambda beta, d, c: check_sa(mh, beta, d, c),
             mit.repeatfunc(rng.uniform, 1000, 0, 100),
             mit.repeatfunc(rng.uniform, 1000, -100, 100),
             mit.repeatfunc(rng.uniform, 1000, 0, 100)))
 
     # Check types
     for cost_type_ in ['float32', 'float64', 'float128', 'float1024']:
-        assert SimulatedAnnealing(cost_type=cost_type_).cost_type == cost_type_
+        assert MetropolisHastings(cost_type=cost_type_).cost_type == cost_type_
 
 
 @pytest.mark.parametrize('seed', sample_seeds(200))

@@ -14,8 +14,11 @@
 
 from importlib import import_module
 from typing import Literal, Optional
+from warnings import warn
 
-__all__ = ['BaseProbability', 'Greedy', 'SimulatedAnnealing']
+__all__ = [
+    'BaseProbability', 'Greedy', 'SimulatedAnnealing', 'MetropolisHastings'
+]
 
 
 def BaseProbability(*,
@@ -70,7 +73,29 @@ def SimulatedAnnealing(beta: float = 0,
                        cost_type: Optional[Literal['float32', 'float64',
                                                    'float128',
                                                    'float1024']] = 'float64'):
-    """Simulated Annealing.
+    """Simulated Annealing. (Deprecated in 'v0.2', see 'MetropolisHastings')
+
+    Accept a move using the Metropolis-Hastings probability.
+
+    Args:
+        cost_type: Type to use for the cost.
+    """
+    warn(
+        "'SimulatedAnnealing' is deprecated, and it will be "
+        "removed in 'v0.2'. Please use 'MetropolisHastings'.",
+        DeprecationWarning,
+        stacklevel=2)
+
+    # Return object
+    return MetropolisHastings(beta, cost_type=cost_type)
+
+
+def MetropolisHastings(beta: float = 0,
+                       *,
+                       cost_type: Optional[Literal['float32', 'float64',
+                                                   'float128',
+                                                   'float1024']] = 'float64'):
+    """Metropolis-Hastings probability.
 
     Accept a move using the Metropolis-Hastings probability.
 
@@ -87,4 +112,4 @@ def SimulatedAnnealing(beta: float = 0,
     mod = import_module("tnco_core.optimize.prob")
 
     # Return object
-    return getattr(mod, 'SimulatedAnnealing_' + cost_type)(beta)
+    return getattr(mod, 'MetropolisHastings_' + cost_type)(beta)

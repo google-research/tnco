@@ -19,7 +19,7 @@
 
 #include "base.hpp"
 #include "greedy.hpp"
-#include "sa.hpp"
+#include "mh.hpp"
 
 namespace tnco::optimize::prob {
 
@@ -37,7 +37,7 @@ auto core(py::module &m) -> void {
   // Initialize
   base::init<CostType>(m, "BaseProbability" + sfx);
   greedy::init<CostType>(m, "Greedy" + sfx);
-  sa::init<CostType>(m, "SimulatedAnnealing" + sfx);
+  mh::init<CostType>(m, "MetropolisHastings" + sfx);
 }
 
 auto init(py::module &m) -> void { EXPAND_COST_TYPE(core, m); }
