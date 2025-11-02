@@ -26,7 +26,7 @@ parallelize runs on multiple threads.
 
 `TNCO` was used to demonstrate the first verifiable quantum advantage in 2025
 (Abanin et al., "Observation of constructive interference at the edge of
-quantum ergodicity", Nature vol. 646, 2025).
+quantum ergodicity", [Nature vol. 646, 2025](https://doi.org/10.1038/s41586-025-09526-6)).
 
 ## Installation
 
