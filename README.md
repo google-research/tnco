@@ -26,7 +26,7 @@ parallelize runs on multiple threads.
 
 `TNCO` was used to demonstrate the first verifiable quantum advantage in 2025
 (Abanin et al., "Observation of constructive interference at the edge of
-quantum ergodicity", Nature vol. 646, 2025).
+quantum ergodicity", [Nature vol. 646, 2025](https://doi.org/10.1038/s41586-025-09526-6)).
 
 ## Installation
 
@@ -129,3 +129,10 @@ eligible for the [Google Open Source Software Vulnerability Rewards
 Program](https://bughunters.google.com/open-source-security).
 
 Copyright 2025 Google LLC.
+
+<div align="center">
+  <a href="https://quantumai.google">
+    <img width="15%" alt="Google Quantum AI"
+         src="./docs/images/quantum-ai-vertical.svg">
+  </a>
+</div>

@@ -28,7 +28,7 @@ from tnco.optimize.finite_width.cost_model import \
 from tnco.optimize.infinite_memory import Optimizer as IM_Optimizer
 from tnco.optimize.infinite_memory.cost_model import \
     SimpleCostModel as IM_SimpleCostModel
-from tnco.optimize.prob import SimulatedAnnealing
+from tnco.optimize.prob import MetropolisHastings
 from tnco.tests.utils import generate_random_tensors
 from tnco.utils.tn import get_random_contraction_path
 
@@ -104,14 +104,14 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
                        seed=seed,
                        disable_shared_inds=disable_shared_inds)
 
-    # Optimize (sa)
-    sa = SimulatedAnnealing(cost_type=cost_type)
+    # Optimize (mh)
+    mh = MetropolisHastings(cost_type=cost_type)
     beta = (0, 100)
     n_steps = 1000
 
     for i_ in range(n_steps):
-        sa.beta = (beta[1] - beta[0]) * i_ / n_steps + beta[0]
-        opt.update(sa)
+        mh.beta = (beta[1] - beta[0]) * i_ / n_steps + beta[0]
+        opt.update(mh)
 
     # Get hyper-count
     hyper_count = dict(
@@ -262,14 +262,14 @@ def test_FiniteWidthContraction(seed, **kwargs):
             pytest.skip("Too many indices in 'skip_slices'.")
         raise e
 
-    # Optimize (sa)
-    sa = SimulatedAnnealing(cost_type=cost_type)
+    # Optimize (mh)
+    mh = MetropolisHastings(cost_type=cost_type)
     beta = (0, 100)
     n_steps = 1000
 
     for i_ in range(n_steps):
-        sa.beta = (beta[1] - beta[0]) * i_ / n_steps + beta[0]
-        opt.update(sa, update_slices=(i_ % 10 == 0))
+        mh.beta = (beta[1] - beta[0]) * i_ / n_steps + beta[0]
+        opt.update(mh, update_slices=(i_ % 10 == 0))
 
         # Check that slices that are marked to be skipped are actually skipped
         assert not opt.slices & opt.skip_slices

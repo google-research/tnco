@@ -29,7 +29,7 @@ from tnco.app.app import JSONEncoder as BaseJSONEncoder
 from tnco.ctree import ContractionTree
 from tnco.optimize.finite_width import Optimizer as OptimizerImpl
 from tnco.optimize.finite_width.cost_model import SimpleCostModel
-from tnco.optimize.prob import SimulatedAnnealing
+from tnco.optimize.prob import MetropolisHastings
 from tnco.parallel import Parallel
 from tnco.typing import Index
 
@@ -176,7 +176,7 @@ class Optimizer(BaseOptimizer):
                                  n_projs=n_projs)
 
         # Get probability
-        prob = SimulatedAnnealing(cost_type=self.cost_type)
+        prob = MetropolisHastings(cost_type=self.cost_type)
 
         def core_(seed, *, idx, status, stop, log2_total_cost):
             # Initialize results

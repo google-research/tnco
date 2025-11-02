@@ -406,9 +406,19 @@ try:
 
     @load.register
     def _(circuit: cirq.Circuit, *args, **kwargs):
+        # Define gates to ignore
+        def ignore_gate(gate):
+            # Ignore measurement gates
+            if cirq.is_measurement(gate):
+                return True
+
+            return False
+
         # Create circuit
-        circuit = map(lambda g: (cirq.unitary(g), g.qubits),
-                      circuit.all_operations())
+        circuit = map(
+            lambda g: (cirq.unitary(g), g.qubits),
+            filter(lambda gate: not ignore_gate(gate),
+                   circuit.all_operations()))
 
         # Load TN
         return load(circuit, *args, **kwargs)
