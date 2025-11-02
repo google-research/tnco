@@ -71,7 +71,7 @@ void init(py::module &m, const std::string &name) {
       .def_readwrite("beta", &self_type::beta)
       .def("__repr__",
            [](const self_type &self) -> auto {
-             return "SimulatedAnnealing(beta=" + tnco::to_string(self.beta) +
+             return "MetropolisHastings(beta=" + tnco::to_string(self.beta) +
                     ", cost_type=" + type_to_str<cost_type>() + ")";
            })
       .def("__eq__",
