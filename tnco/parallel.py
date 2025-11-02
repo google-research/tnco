@@ -168,12 +168,15 @@ def Parallel(core: Callable,
         >  'stopped']
     """
     # Try to load joblib
-    try:
-        from joblib import Parallel, delayed, parallel_config
-        use_joblib = True
-    except ImportError:
-        warn("Cannot load 'joblib'. Falling to sequential.")
+    if n_jobs == 1:
         use_joblib = False
+    else:
+        try:
+            from joblib import Parallel, delayed, parallel_config
+            use_joblib = True
+        except ImportError:
+            warn("Cannot load 'joblib'. Falling to sequential.")
+            use_joblib = False
 
     # If code is run from IPython, we can use a larger number of refresh per
     # second. Otherwise, let's use a smaller number of refresh per seconds to
@@ -317,9 +320,12 @@ def Parallel(core: Callable,
         else:
             results = list(
                 map(
-                    lambda idx, xs: core_(
-                        *xs[:-1], idx=idx, status=status, **xs[-1], **buffers),
-                    range(n_runs), args))
+                    lambda idx, xs: core_(*xs[:-1],
+                                          idx=idx,
+                                          status=status,
+                                          stop=stop,
+                                          **xs[-1],
+                                          **buffers), range(n_runs), args))
 
         # Close progressbar
         if verbose >= 2:

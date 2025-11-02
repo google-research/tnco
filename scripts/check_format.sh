@@ -177,10 +177,10 @@ if [[ -n ${TRAIL_FAILED} ]]; then
 fi
 
 # Linting
-ruff check tnco/ tests/ >/dev/null
-LINTING_FAILED=$?
+ruff check tnco/ tests/ | grep -vi 'all checks passed' >&2
+LINTING_FAILED=${PIPESTATUS[0]}
 if [[ ${LINTING_FAILED} -eq 0 ]]; then
-  echo -e "${OK} (ruff) All tests passed."
+  echo -e "${OK} (ruff) All checks passed."
 else
   echo -e "${FAILED} (ruff) Linting failed."
 fi
@@ -209,10 +209,6 @@ if [[ -n ${FIX} ]]; then
   if [[ -n "${YAPF_FAILED}" ]]; then
     echo -en "\033[92m[FIXING]\033[0m Python: "${YAPF_FAILED}"\n"
     ${YAPF_CMD} -i ${YAPF_FAILED}
-  fi
-  if [[ -n "${ISORT_FAILED}" ]]; then
-    echo -en "\033[92m[FIXING]\033[0m Python: "${ISORT_FAILED}"\n"
-    ${ISORT_CMD} ${ISORT_FAILED} >/dev/null
   fi
   if [[ "${LINTING_FAILED}" > 0 ]]; then
     echo -en "\033[92m[FIXING]\033[0m Ruff\n"

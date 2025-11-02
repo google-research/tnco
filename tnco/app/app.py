@@ -32,7 +32,6 @@ from warnings import warn
 import more_itertools as mit
 from pathvalidate import ValidationError, validate_filepath
 
-import tnco.utils.circuit as circuit_utils
 import tnco.utils.tn as tn_utils
 from tnco.app.tn import Tensor, TensorNetwork
 from tnco.typing import Matrix, Qubit
@@ -442,6 +441,12 @@ def load_tn(obj: Any,
         except ValidationError:
             pass
 
+        # Is it JSON?
+        try:
+            return load_tn(json.loads(obj), **options)
+        except json.JSONDecodeError:
+            pass
+
     # Is it JSON?
     if isinstance(obj, dict):
 
@@ -469,17 +474,18 @@ def load_tn(obj: Any,
 
     # Is it a list of gates?
     if all(map(is_gate, obj)):
+        from tnco.utils.circuit import load
+
         # Convert circuit to tn
-        arrays, ts_inds, output_inds = circuit_utils.load(
-            obj,
-            initial_state=initial_state,
-            final_state=final_state,
-            simplify=simplify_circuit,
-            decompose_hyper_inds=False,
-            fuse=False,
-            atol=atol,
-            seed=seed,
-            verbose=verbose)
+        arrays, ts_inds, output_inds = load(obj,
+                                            initial_state=initial_state,
+                                            final_state=final_state,
+                                            simplify=simplify_circuit,
+                                            decompose_hyper_inds=False,
+                                            fuse=False,
+                                            atol=atol,
+                                            seed=seed,
+                                            verbose=verbose)
 
         # Get tensor network
         tn = TensorNetwork(map(lambda xs, a: Tensor(xs, array=a), ts_inds,
@@ -494,18 +500,19 @@ def load_tn(obj: Any,
             obj).__name__ == 'Circuit':
         from cirq import Circuit
 
+        from tnco.utils.circuit import load
+
         if isinstance(obj, Circuit):
             # Convert circuit to tn
-            arrays, ts_inds, output_inds = circuit_utils.load(
-                obj,
-                initial_state=initial_state,
-                final_state=final_state,
-                simplify=simplify_circuit,
-                decompose_hyper_inds=False,
-                fuse=False,
-                atol=atol,
-                seed=seed,
-                verbose=verbose)
+            arrays, ts_inds, output_inds = load(obj,
+                                                initial_state=initial_state,
+                                                final_state=final_state,
+                                                simplify=simplify_circuit,
+                                                decompose_hyper_inds=False,
+                                                fuse=False,
+                                                atol=atol,
+                                                seed=seed,
+                                                verbose=verbose)
 
             # Get tensor network
             tn = TensorNetwork(map(lambda xs, a: Tensor(xs, array=a), ts_inds,
@@ -520,18 +527,19 @@ def load_tn(obj: Any,
             obj).__name__ == 'QuantumCircuit':
         from qiskit import QuantumCircuit
 
+        from tnco.utils.circuit import load
+
         if isinstance(obj, QuantumCircuit):
             # Convert circuit to tn
-            arrays, ts_inds, output_inds = circuit_utils.load(
-                obj,
-                initial_state=initial_state,
-                final_state=final_state,
-                simplify=simplify_circuit,
-                decompose_hyper_inds=False,
-                fuse=False,
-                atol=atol,
-                seed=seed,
-                verbose=verbose)
+            arrays, ts_inds, output_inds = load(obj,
+                                                initial_state=initial_state,
+                                                final_state=final_state,
+                                                simplify=simplify_circuit,
+                                                decompose_hyper_inds=False,
+                                                fuse=False,
+                                                atol=atol,
+                                                seed=seed,
+                                                verbose=verbose)
 
             # Get tensor network
             tn = TensorNetwork(map(lambda xs, a: Tensor(xs, array=a), ts_inds,

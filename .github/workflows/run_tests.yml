@@ -76,7 +76,7 @@ jobs:
         == '3.x'
       run: |
         pip install pytest-sugar
-        PYTEST_FRACTION_N_TESTS=2 pytest --verbose --timeout=180 -n $((2 * $(nproc))) tests/*.py
+        PYTEST_FRACTION_N_TESTS=2 pytest --verbose --timeout=180 -n auto tests/*.py
 
     - name: Run CLI for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
         matrix.python-version }} (${{ matrix.target }})
