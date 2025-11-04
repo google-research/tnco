@@ -102,8 +102,8 @@ jobs:
                                               --output-filename=res_${SEED}_2.json
 
         # Check difference
-        diff <(cat res_1.json | jq . | grep -v runtime) \
-             <(cat res_2.json | jq . | grep -v runtime)
+        diff <(cat res_${SEED}_1.json | jq . | grep -v runtime) \
+             <(cat res_${SEED}_2.json | jq . | grep -v runtime)
 
     - name: Run Example for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
         matrix.python-version }} (${{ matrix.target }})
