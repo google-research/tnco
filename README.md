@@ -12,7 +12,8 @@ higher](https://img.shields.io/badge/Python-3.8+-fcbc2c.svg?style=flat-square&lo
 [![run_tests](https://github.com/google-research/tnco/actions/workflows/run_tests.yml/badge.svg)](https://github.com/google-research/tnco/actions/workflows/run_tests.yml)
 [![cpp_linter](https://github.com/google-research/tnco/actions/workflows/cpp_linter.yml/badge.svg)](https://github.com/google-research/tnco/actions/workflows/cpp_linter.yml)
 [![codeql](https://github.com/google-research/tnco/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/google-research/tnco/actions/workflows/github-code-scanning/codeql)<br>
-[![Published in Nature](https://img.shields.io/badge/10.1038%2Fs41586--025--09526--6-gray.svg?label=Nature&logo=doi&logoColor=white&style=flat-square&colorA=gray&colorB=3c60b1)](https://doi.org/10.1038/s41586-025-09526-6)
+[![Published in Nature](https://img.shields.io/badge/10.1038%2Fs41586--025--09526--6-gray.svg?label=Nature&logo=doi&logoColor=white&style=flat-square&colorA=gray&colorB=3c60b1)](https://doi.org/10.1038/s41586-025-09526-6)<br>
+Try now with: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/google-research/tnco/main?urlpath=%2Fdoc%2Ftree%2Fexamples%2FOptimization.ipynb)
 
 </div>
 
