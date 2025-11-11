@@ -228,25 +228,11 @@ def test_GetRandomContractionPath(seed: int, **kwargs):
     for x_ in output_inds:
         hyper_count[x_] += 1
 
-    # This should fail when hyper-inds are present
-    if k > 2:
-        try:
-            get_random_contraction_path(ts_inds)
-        except ValueError as e:
-            assert str(
-                e
-            ) == "'output_inds' must be provided " \
-                 "if 'ts_inds' has hyper-indices."
-
     # Get contraction
-    paths = get_random_contraction_path(ts_inds,
-                                        output_inds,
-                                        seed=seed,
-                                        merge_paths=False)
+    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
 
     # Calling twice should give the same answer with the same seed
     assert paths == get_random_contraction_path(ts_inds,
-                                                output_inds,
                                                 seed=seed,
                                                 merge_paths=False)
 
@@ -324,7 +310,6 @@ def test_GetRandomContractionPath(seed: int, **kwargs):
 
     # Get raw contraction
     contractions = get_random_contraction_path(ts_inds,
-                                               output_inds,
                                                seed=seed,
                                                _return_contraction=True)
 
@@ -396,10 +381,7 @@ def test_GetRandomContractionTree(seed: int, **kwargs):
         hyper_count[x_] += 1
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds,
-                                        output_inds,
-                                        seed=seed,
-                                        merge_paths=False)
+    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
 
     # Check number of connected components
     assert len(paths) == n_cc
@@ -637,10 +619,7 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
                     1, 8)
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds,
-                                        output_inds,
-                                        seed=seed,
-                                        merge_paths=False)
+    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
 
     # There should be only one cc
     assert len(paths) == 1
@@ -842,10 +821,7 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
                     1, 8)
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds,
-                                        output_inds,
-                                        seed=seed,
-                                        merge_paths=False)
+    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
 
     # There should be only one cc
     assert len(paths) == 1
@@ -1430,10 +1406,7 @@ def test_GetLargestIntermediate(seed: int, **kwargs):
             map(log2, map(dims.get, xs)))
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds,
-                                        output_inds,
-                                        seed=seed,
-                                        merge_paths=False)
+    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
     assert len(paths) == 1
 
     # Get contraction tree
@@ -1485,10 +1458,7 @@ def test_DecomposeHyperIndsTN(seed: int, **kwargs):
                     2, 3)
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds,
-                                        output_inds,
-                                        seed=seed,
-                                        merge_paths=False)
+    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
     assert len(paths) == 1
 
     # Skip if too large
@@ -1609,10 +1579,7 @@ def test_merge_contraction_paths(seed, **kwargs):
             ts_inds))
 
     # Get paths
-    paths = get_random_contraction_path(ts_inds,
-                                        output_inds,
-                                        seed=seed,
-                                        merge_paths=False)
+    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
 
     # Get tensor network
     tn = TensorNetwork(map(Tensor, arrays, ts_inds))
