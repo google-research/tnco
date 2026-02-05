@@ -188,7 +188,6 @@ class Optimizer(BaseOptimizer):
 
             # Get random contraction path
             for path in tn_utils.get_random_contraction_path(tn.ts_inds,
-                                                             tn.output_inds,
                                                              merge_paths=False,
                                                              seed=seed):
 
