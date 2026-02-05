@@ -68,8 +68,9 @@ class ContractionResults(BaseContractionResults):
             tensor network for each disconnected path.
         disconnected_paths: The number of total disconnected paths is equal to
             the number of connected components in the optimized tensor network.
-            Each path is in the SSA format and assume that each path is run
-            independently using all the tensors in the original tensor network.
+            Each path is in linear (einsum) format and assume that each
+            path is run independently using all the tensors in the
+            original tensor network.
     """
     disconnected_costs: List[float]
     disconnected_paths: List[List[Tuple[int, int]]]
