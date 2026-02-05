@@ -29,7 +29,7 @@ import tnco.utils.tn as tn_utils
 from tnco.ordered_frozenset import OrderedFrozenSet
 from tnco.typing import Array, Index, Matrix, Qubit
 
-__all__ = ['commute']
+__all__ = ['commute', 'same', 'load']
 
 
 def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
