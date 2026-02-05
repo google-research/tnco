@@ -67,10 +67,11 @@ def get_random_contraction_path(
         verbose: Verbose output.
 
     Returns:
-        If 'merge_path=True', return a single path in the SSA format.
-        Otherwise, return multuple paths in the SSA format for each connected
-        component. Each path guarantees that only tensors that share at least
-        one index are included in the path.
+        If 'merge_path=True', return a single path in linear (einsum)
+        format. Otherwise, return multuple paths in linear (einsum)
+        format for each connected component. Each path guarantees that
+        only tensors that share at least one index are included in the
+        path.
     """
     if output_inds is not None:
         warn(
@@ -222,27 +223,27 @@ def get_random_contraction_path(
         return paths
 
     # Normalize paths
-    ssa_paths = []
+    linear_paths = []
     for i, path in enumerate(paths):
-        ssa_path = []
+        linear_path = []
         loc = list(range(n_tensors))
         for x, y, z in track(
                 path,
-                description="Convert to SSA path ({}/{}) ...".format(
-                    i + 1, len(paths)),
+                description="Convert to linear (einsum) path ({}/{}) ...".
+                format(i + 1, len(paths)),
                 disable=(verbose <= 1),
                 console=Console(stderr=True)):
             px, py = sorted(map(lambda x: bisect_left(loc, x), (x, y)))
             loc.pop(py)
             loc.pop(px)
             loc.append(z)
-            ssa_path.append((px, py))
-        ssa_paths.append(ssa_path)
+            linear_path.append((px, py))
+        linear_paths.append(linear_path)
 
     # Merge paths if needed
     return merge_contraction_paths(
-        n_tensors, ssa_paths, autocomplete=autocomplete, verbose=verbose -
-        1) if merge_paths else ssa_paths
+        n_tensors, linear_paths, autocomplete=autocomplete, verbose=verbose -
+        1) if merge_paths else linear_paths
 
 
 def merge_contraction_paths(
@@ -257,13 +258,13 @@ def merge_contraction_paths(
 
     Args:
         n_tensors: Number of total tensors
-        paths: Contraction paths to merge in the SSA format.
+        paths: Contraction paths to merge in linear (einsum) format.
         autocomplete: If 'True', the merged path will include the contraction
             of the disconnected tensors.
         verbose: Verbose output.
 
     Returns:
-        Merged path in the SSA format.
+        Merged path in linear (einsum) format.
 
     Raises:
         ValueError: If 'paths' are not valid or not disconnected.
@@ -397,8 +398,9 @@ def fuse(
         verbose: Verbose output.
 
     Returns:
-        The contraction path in the SSA format. If 'return_fused_inds=True',
-        also return the corresponding indices of the fused tensors.
+        The contraction path in linear (einsum) format. If
+        'return_fused_inds=True', also return the corresponding indices
+        of the fused tensors.
 
     Raises:
         ValueError: If arguments are not consistent with each other.
@@ -689,7 +691,8 @@ def contract(
     Contract tensor network following 'path'.
 
     Args:
-        path: Path to follow for the contraction in the SSA format.
+        path: Path to follow for the contraction in linear (einsum)
+            format.
         ts_inds: Indices associated to 'arrays'.
         output_inds: Output indices (optional if 'ts_inds' does not have
             hyper-indices).

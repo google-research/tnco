@@ -337,9 +337,9 @@ class ContractionTree(_ContractionTree):
                     its.repeat(dims) if isinstance(dims, int) else dims)))
 
     def path(self) -> List[Tuple[int, int]]:
-        """Return contraction path in SSA format.
+        """Return contraction path in linear (einsum) format.
 
-        Return contraction path in SSA format.
+        Return contraction path in linear (einsum) format.
 
         Returns:
             The contraction path.
@@ -373,7 +373,7 @@ class ContractionTree(_ContractionTree):
             all_pos.pop(pos_[0])
             all_pos.append(z_)
 
-        # Return path in SSA format
+        # Return path in linear (einsum) format
         return path
 
     def max_width(self) -> float:

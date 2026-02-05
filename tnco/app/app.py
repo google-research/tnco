@@ -63,7 +63,7 @@ class BaseContractionResults:
             'path'.
         runtime_s: The number of seconds it took to optimize the tensor network
             and get 'path'.
-        path: A path in SSA format with an expected cost of 'cost'.
+        path: A path in linear (einsum) format with an expected cost of 'cost'.
     """
     cost: float
     runtime_s: float
