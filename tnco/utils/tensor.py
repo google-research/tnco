@@ -131,6 +131,11 @@ def decompose_hyper_inds(
     array = ar.do('stack',
                   list(map(lambda x: array[x, x], range(array.shape[0]))))
 
+    # Permutations have the characteristic that all elements in 'array' are 1.
+    # If that's the case, just return an empty array
+    if ar.do('allclose', array, 1, atol=atol):
+        return (ar.do('ones_like', array, shape=()), ()), _hyper_inds
+
     # Call again
     return decompose_hyper_inds(array, inds, _hyper_inds=_hyper_inds)
 
