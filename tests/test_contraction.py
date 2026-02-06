@@ -29,7 +29,7 @@ from tnco.optimize.infinite_memory import Optimizer as IM_Optimizer
 from tnco.optimize.infinite_memory.cost_model import \
     SimpleCostModel as IM_SimpleCostModel
 from tnco.optimize.prob import MetropolisHastings
-from tnco.tests.utils import generate_random_tensors
+from tnco.testing.utils import generate_random_tensors
 from tnco.utils.tn import get_random_contraction_path
 
 rng = Random(global_seed)

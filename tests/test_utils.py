@@ -36,9 +36,9 @@ from tnco.optimize.infinite_memory.cost_model import \
     SimpleCostModel as IM_SimpleCostModel
 from tnco.optimize.prob import BaseProbability, Greedy, MetropolisHastings
 from tnco.ordered_frozenset import OrderedFrozenSet
-from tnco.tests.utils import (generate_random_inds, generate_random_tensors,
-                              get_connected_components,
-                              is_valid_contraction_tree)
+from tnco.testing.utils import (generate_random_inds, generate_random_tensors,
+                                get_connected_components,
+                                is_valid_contraction_tree)
 from tnco.utils.tensor import \
     decompose_hyper_inds as tensor_decompose_hyper_inds
 from tnco.utils.tensor import get_einsum_path, svd

@@ -32,7 +32,7 @@ from tnco.app import Optimizer
 from tnco.app import Tensor as TS
 from tnco.app import TensorNetwork as TN
 from tnco.app import load_tn
-from tnco.tests.utils import generate_random_tensors
+from tnco.testing.utils import generate_random_tensors
 
 rng = Random(global_seed)
 

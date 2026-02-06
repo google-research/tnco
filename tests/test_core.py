@@ -31,7 +31,7 @@ from tnco.optimize.finite_width.cost_model import \
 from tnco.optimize.infinite_memory.cost_model import \
     SimpleCostModel as IM_SimpleCostModel
 from tnco.optimize.prob import BaseProbability, Greedy, MetropolisHastings
-from tnco.tests.utils import generate_random_inds, generate_random_tensors
+from tnco.testing.utils import generate_random_inds, generate_random_tensors
 from tnco.utils.tn import get_random_contraction_path
 from tnco_core import Bitset as Bitset_
 from tnco_core import ContractionTree as ContractionTree_
