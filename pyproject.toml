@@ -67,6 +67,7 @@ testing = [
   "numpy",
   "ply",
   "pytest",
+  "pytest-repeat",
   "pytest-timeout",
   "pytest-xdist",
   "qiskit",

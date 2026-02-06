@@ -223,61 +223,72 @@ def generate_random_tensors(
                    disable=(verbose <= 0),
                    description="Generating CC..."):
 
-        # Generate the connected component first
-        avail_tensors: Set[int] = set(range(n_tensors))
-        used_tensors: Set[int] = set()
-        inds: List[List[int]] = []
+        for _ in range(10):
 
-        inds.append(rng.sample(list(avail_tensors), k=k))
-        avail_tensors -= set(inds[-1])
-        used_tensors |= set(inds[-1])
-        for _ in range(n_tensors - k):
-            x_ = rng.sample(list(avail_tensors), k=1)[0]
-            inds.append(rng.sample(list(used_tensors), k=k - 1) + [x_])
-            avail_tensors -= {x_}
-            used_tensors |= {x_}
+            # Generate the connected component first
+            avail_tensors: Set[int] = set(range(n_tensors))
+            used_tensors: Set[int] = set()
+            inds: List[List[int]] = []
 
-        # All tensors should be present
-        assert used_tensors == set(
-            range(n_tensors)) and not avail_tensors and set(
-                mit.flatten(inds)) == set(range(n_tensors))
+            inds.append(rng.sample(list(avail_tensors), k=k))
+            avail_tensors -= set(inds[-1])
+            used_tensors |= set(inds[-1])
+            for _ in range(n_tensors - k):
+                x_ = rng.sample(list(avail_tensors), k=1)[0]
+                inds.append(rng.sample(list(used_tensors), k=k - 1) + [x_])
+                avail_tensors -= {x_}
+                used_tensors |= {x_}
 
-        # Check number of inds
-        assert len(inds) == n_tensors + 1 - k
+            # All tensors should be present
+            assert used_tensors == set(
+                range(n_tensors)) and not avail_tensors and set(
+                    mit.flatten(inds)) == set(range(n_tensors))
 
-        # Add the remaining inds (escluding output inds)
-        inds.extend(
-            rng.sample(range(n_tensors), k=k)
-            for _ in range(n_inds - len(inds) - n_output_inds))
+            # Check number of inds
+            assert len(inds) == n_tensors + 1 - k
 
-        # Add output indices with a dedicated index
-        inds.extend([rng.randrange(n_tensors), '*']
-                    for _ in range(n_nhyper_output_inds))
+            # Add the remaining inds (escluding output inds)
+            inds.extend(
+                rng.sample(range(n_tensors), k=k)
+                for _ in range(n_inds - len(inds) - n_output_inds))
 
-        # Add output hyper-indices
-        inds.extend(
-            rng.sample(range(n_tensors), k=k - 1) + ['*']
-            for _ in range(n_hyper_output_inds))
+            # Add output indices with a dedicated index
+            inds.extend([rng.randrange(n_tensors), '*']
+                        for _ in range(n_nhyper_output_inds))
 
-        # Check
-        assert len(inds) == n_inds
+            # Add output hyper-indices
+            inds.extend(
+                rng.sample(range(n_tensors), k=k - 1) + ['*']
+                for _ in range(n_hyper_output_inds))
 
-        # Get tensors from inds
-        tensors = defaultdict(list)
+            # Check
+            assert len(inds) == n_inds
 
-        for x_, ts_ in enumerate(inds):
-            for t_ in ts_:
-                tensors[t_].append(x_)
+            # Get tensors from inds
+            tensors = defaultdict(list)
 
-        # Check number of output inds
-        assert len(tensors['*']) == n_output_inds
+            for x_, ts_ in enumerate(inds):
+                for t_ in ts_:
+                    tensors[t_].append(x_)
 
-        # Get output inds
-        output_inds = frozenset(tensors.pop('*'))
+            # Check number of output inds
+            assert len(tensors['*']) == n_output_inds
 
-        # Return
-        all_tensors.append(list(map(tuple, map(permutation, tensors.values()))))
-        all_output_inds.append(output_inds)
+            # Get output inds
+            output_inds = frozenset(tensors.pop('*'))
+
+            # Get tensors
+            tensors = list(map(tuple, map(permutation, tensors.values())))
+
+            # Update
+            if mit.ilen(mit.unique_everseen(tensors)) == n_tensors:
+                all_tensors.append(tensors)
+                all_output_inds.append(output_inds)
+                break
+
+        # Just give up
+        else:
+            raise ValueError("Cannot generate random tensors.")
 
     # Combine the tensors
     all_tensors = fts.reduce(

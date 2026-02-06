@@ -13,31 +13,8 @@
 # limitations under the License.
 
 import signal
-from os import environ
-from random import randrange
 
 import pytest
-
-# Global seed
-global_seed = None
-fraction_n_tests = 0.1
-
-
-def pytest_configure(config):
-    # Randomize hash seed
-    environ["PYTEST_SEED"] = environ.get("PYTEST_SEED", str(randrange(2**32)))
-
-
-def pytest_sessionstart(session):
-    # Assign global seed
-    global global_seed
-    global_seed = environ["PYTEST_SEED"]
-    print(f'seed: {global_seed}')
-
-    # Set maximum number of tests
-    global fraction_n_tests
-    fraction_n_tests = float(environ.get('PYTEST_FRACTION_N_TESTS', 10)) / 100
-    print(f'fraction_n_tests: {fraction_n_tests * 100:1.0f}%')
 
 
 @pytest.fixture

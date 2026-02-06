@@ -17,6 +17,7 @@ import itertools as its
 import json
 import pickle
 from decimal import Decimal
+from os import environ
 from random import Random
 from tempfile import NamedTemporaryFile
 
@@ -26,24 +27,36 @@ import numpy as np
 import pytest
 from cirq.contrib.qasm_import import circuit_from_qasm
 from quimb.tensor import Tensor, TensorNetwork
-
-from conftest import fraction_n_tests, global_seed  # Get global seed
 from tnco.app import Optimizer
 from tnco.app import Tensor as TS
 from tnco.app import TensorNetwork as TN
 from tnco.app import load_tn
-from tnco.tests.utils import generate_random_tensors
+from tnco.testing.utils import generate_random_tensors
 
-rng = Random(global_seed)
+# Initialize RNG
+rng = Random(
+    environ.get('PYTEST_SEED') +
+    environ.get('PYTEST_XDIST_WORKER') if 'PYTEST_SEED' in environ else None)
+
+# Fix max number of repetitions
+max_repeat = max(1, float(environ.get('PYTEST_MAX_REPEAT', 'inf')))
+
+# Fix ratio of number of tests
+fraction_n_tests = max(
+    min(float(environ.get('PYTEST_FRACTION_N_TESTS', '1')), 1), 0)
 
 
-def sample_seeds(k, /):
-    k = int(max(1, k * fraction_n_tests))
-    return rng.sample(range(2**32), k=k)
+def repeat(n: int):
+    return pytest.mark.repeat(max(min(n * fraction_n_tests, max_repeat), 1))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_LoadTN_CirqCircuit(seed):
+@pytest.fixture
+def random_seed():
+    return rng.randrange(2**32)
+
+
+@repeat(20)
+def test_LoadTN_CirqCircuit(random_seed):
 
     def check_tn(U, tn):
         tn = TensorNetwork(map(Tensor, tn.arrays,
@@ -52,7 +65,7 @@ def test_LoadTN_CirqCircuit(seed):
         np.testing.assert_allclose(U.ravel(), tn.data.ravel(), atol=1e-5)
 
     # Get RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Get random seed
     circuit_seed = rng.randrange(2**30)
@@ -99,8 +112,8 @@ def test_LoadTN_CirqCircuit(seed):
              load_tn_(circuit.to_qasm()))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(400))
-def test_OptimizeTN(seed, **kwargs):
+@repeat(40)
+def test_OptimizeTN(random_seed, **kwargs):
     # How to convert inds
     def convert_index(x):
         if isinstance(x, (str, int, frozenset)):
@@ -119,10 +132,10 @@ def test_OptimizeTN(seed, **kwargs):
             return x
 
     # Get rng
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Get numpy rng
-    rng_np = np.random.default_rng(seed)
+    rng_np = np.random.default_rng(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(5, 10))
@@ -164,7 +177,7 @@ def test_OptimizeTN(seed, **kwargs):
         n_cc=n_cc,
         n_output_inds=n_output_inds,
         randomize_names=randomize_names,
-        seed=seed)
+        seed=random_seed)
 
     # Get random dimensions
     dims = dict(
