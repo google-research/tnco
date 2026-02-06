@@ -91,7 +91,7 @@ fi
 
 # Check ruff version
 if [[ $(ruff --version 2>/dev/null | awk "{ print (\$2 == \"${RUFF_VERSION}\") }") != 1 ]]; then
-  echo "isort==${RUFF_VERSION} is required" >&2
+  echo "ruff==${RUFF_VERSION} is required" >&2
   exit 1
 fi
 
