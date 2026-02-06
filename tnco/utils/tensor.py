@@ -131,6 +131,11 @@ def decompose_hyper_inds(
     array = ar.do('stack',
                   list(map(lambda x: array[x, x], range(array.shape[0]))))
 
+    # In permutations, all elements in 'array' are the same
+    if array.size and ar.do('allclose', array, array.ravel()[0], atol=atol):
+        return (array.ravel()[0] * ar.do('ones_like', array, shape=()),
+                ()), _hyper_inds
+
     # Call again
     return decompose_hyper_inds(array, inds, _hyper_inds=_hyper_inds)
 
