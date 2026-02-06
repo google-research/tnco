@@ -19,14 +19,13 @@ import pickle
 from collections import Counter, defaultdict
 from decimal import Decimal
 from math import log2
+from os import environ
 from random import Random
 
 import more_itertools as mit
 import numpy as np
 import pytest
 from quimb.tensor import Tensor, TensorNetwork
-
-from conftest import fraction_n_tests, global_seed  # Get global seed
 from tnco.ctree import ContractionTree
 from tnco.optimize.finite_width import Optimizer as FW_Optimizer
 from tnco.optimize.finite_width.cost_model import \
@@ -48,18 +47,32 @@ from tnco.utils.tn import (fuse, get_random_contraction_path,
                            merge_contraction_paths, read_inds)
 from tnco_core import ContractionTree as ContractionTree_
 
-rng = Random(global_seed)
+# Initialize RNG
+rng = Random(
+    environ.get('PYTEST_SEED') +
+    environ.get('PYTEST_XDIST_WORKER') if 'PYTEST_SEED' in environ else None)
+
+# Fix max number of repetitions
+max_repeat = max(1, float(environ.get('PYTEST_MAX_REPEAT', 'inf')))
+
+# Fix ratio of number of tests
+fraction_n_tests = max(
+    min(float(environ.get('PYTEST_FRACTION_N_TESTS', '1')), 1), 0)
 
 
-def sample_seeds(k, /):
-    k = int(max(1, k * fraction_n_tests))
-    return rng.sample(range(2**32), k=k)
+def repeat(n: int):
+    return pytest.mark.repeat(max(min(n * fraction_n_tests, max_repeat), 1))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_GenerateRandomTensors(seed: int, **kwargs):
+@pytest.fixture
+def random_seed():
+    return rng.randrange(2**32)
+
+
+@repeat(20)
+def test_GenerateRandomTensors(random_seed: int, **kwargs):
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(100, 300))
@@ -68,7 +81,6 @@ def test_GenerateRandomTensors(seed: int, **kwargs):
     n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 100))
     n_cc = kwargs.get('n_cc', rng.randint(1, 5))
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
-    seed = rng.randrange(2**32)
 
     # Get tensors and the dimension of the inds
     try:
@@ -79,7 +91,7 @@ def test_GenerateRandomTensors(seed: int, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -132,7 +144,7 @@ def test_GenerateRandomTensors(seed: int, **kwargs):
         n_output_inds=n_output_inds,
         n_cc=n_cc,
         randomize_names=randomize_names,
-        seed=seed)
+        seed=random_seed)
 
     # Get connected components
     cc = get_connected_components(ts_inds)
@@ -187,10 +199,10 @@ def test_GenerateRandomTensors(seed: int, **kwargs):
 
 @pytest.mark.timeout(30)
 @pytest.mark.usefixtures("timeout")
-@pytest.mark.parametrize('seed', sample_seeds(500))
-def test_GetRandomContractionPath(seed: int, **kwargs):
+@repeat(50)
+def test_GetRandomContractionPath(random_seed: int, **kwargs):
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(100, 300))
@@ -199,7 +211,6 @@ def test_GetRandomContractionPath(seed: int, **kwargs):
     n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 100))
     n_cc = kwargs.get('n_cc', rng.randint(1, 5))
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
-    seed = rng.randrange(2**32)
 
     # Generate random tensors
     try:
@@ -210,7 +221,7 @@ def test_GetRandomContractionPath(seed: int, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -229,11 +240,13 @@ def test_GetRandomContractionPath(seed: int, **kwargs):
         hyper_count[x_] += 1
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
+    paths = get_random_contraction_path(ts_inds,
+                                        seed=random_seed,
+                                        merge_paths=False)
 
     # Calling twice should give the same answer with the same seed
     assert paths == get_random_contraction_path(ts_inds,
-                                                seed=seed,
+                                                seed=random_seed,
                                                 merge_paths=False)
 
     # Check number of connected components
@@ -310,7 +323,7 @@ def test_GetRandomContractionPath(seed: int, **kwargs):
 
     # Get raw contraction
     contractions = get_random_contraction_path(ts_inds,
-                                               seed=seed,
+                                               seed=random_seed,
                                                _return_contraction=True)
 
     # Check number of connected components
@@ -328,10 +341,10 @@ def test_GetRandomContractionPath(seed: int, **kwargs):
         sum(x_ == y_ for y_ in contr_cc) == 1 for x_ in map(frozenset, cc))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_GetRandomContractionTree(seed: int, **kwargs):
+@repeat(20)
+def test_GetRandomContractionTree(random_seed: int, **kwargs):
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(100, 300))
@@ -341,7 +354,6 @@ def test_GetRandomContractionTree(seed: int, **kwargs):
     n_cc = kwargs.get('n_cc', rng.randint(1, 5))
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
     verbose = kwargs.get('verbose', False)
-    seed = rng.randrange(2**32)
 
     # Get tensors
     try:
@@ -352,7 +364,7 @@ def test_GetRandomContractionTree(seed: int, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -381,7 +393,9 @@ def test_GetRandomContractionTree(seed: int, **kwargs):
         hyper_count[x_] += 1
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
+    paths = get_random_contraction_path(ts_inds,
+                                        seed=random_seed,
+                                        merge_paths=False)
 
     # Check number of connected components
     assert len(paths) == n_cc
@@ -558,14 +572,14 @@ def test_GetRandomContractionTree(seed: int, **kwargs):
 
 @pytest.mark.timeout(30)
 @pytest.mark.usefixtures("timeout")
-@pytest.mark.parametrize('seed', sample_seeds(300))
-def test_OptimizerInfiniteMemory(seed: int, **kwargs):
+@repeat(30)
+def test_OptimizerInfiniteMemory(random_seed: int, **kwargs):
 
     def log2(x):
         return float(Decimal(x).log10() / Decimal(2).log10())
 
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(50, 100))
@@ -579,7 +593,6 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
     atol = kwargs.get('atol', 1e-5)
     cost_type = kwargs.get('cost_type',
                            rng.choice(['float64', 'float128', 'float1024']))
-    seed = rng.randrange(2**32)
 
     # Get cost given contraction tree
     def PySimpleContractionCost(ctree):
@@ -605,7 +618,7 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -619,7 +632,9 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
                     1, 8)
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
+    paths = get_random_contraction_path(ts_inds,
+                                        seed=random_seed,
+                                        merge_paths=False)
 
     # There should be only one cc
     assert len(paths) == 1
@@ -637,7 +652,7 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
     # Get optimizers
     opt = IM_Optimizer(ctree,
                        IM_SimpleCostModel(cost_type=cost_type),
-                       seed=seed,
+                       seed=random_seed,
                        disable_shared_inds=disable_shared_inds)
 
     # Check type
@@ -656,7 +671,7 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
     # Calling twice should give the same
     assert opt == IM_Optimizer(ctree,
                                IM_SimpleCostModel(cost_type=cost_type),
-                               seed=seed,
+                               seed=random_seed,
                                disable_shared_inds=disable_shared_inds)
 
     # Greedy optimization
@@ -753,14 +768,14 @@ def test_OptimizerInfiniteMemory(seed: int, **kwargs):
 
 @pytest.mark.timeout(30)
 @pytest.mark.usefixtures("timeout")
-@pytest.mark.parametrize('seed', sample_seeds(300))
-def test_OptimizerFiniteWidth(seed: int, **kwargs):
+@repeat(30)
+def test_OptimizerFiniteWidth(random_seed: int, **kwargs):
 
     def log2(x):
         return float(Decimal(x).log10() / Decimal(2).log10())
 
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(50, 100))
@@ -775,7 +790,6 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
     cost_type = kwargs.get('cost_type',
                            rng.choice(['float64', 'float128', 'float1024']))
     width_type = kwargs.get('width_type', rng.choice(['float64', 'float128']))
-    seed = rng.randrange(2**32)
 
     # Get cost given contraction tree
     def PySimpleContractionCost(ctree, slices):
@@ -807,7 +821,7 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -821,7 +835,9 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
                     1, 8)
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
+    paths = get_random_contraction_path(ts_inds,
+                                        seed=random_seed,
+                                        merge_paths=False)
 
     # There should be only one cc
     assert len(paths) == 1
@@ -845,7 +861,7 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
                        FW_SimpleCostModel(max_width=max_width,
                                           width_type=width_type,
                                           cost_type=cost_type),
-                       seed=seed,
+                       seed=random_seed,
                        disable_shared_inds=disable_shared_inds)
 
     # Check type
@@ -869,7 +885,7 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
                                FW_SimpleCostModel(max_width=max_width,
                                                   cost_type=cost_type,
                                                   width_type=width_type),
-                               seed=seed,
+                               seed=random_seed,
                                disable_shared_inds=disable_shared_inds)
 
     # Greedy optimization
@@ -928,10 +944,10 @@ def test_OptimizerFiniteWidth(seed: int, **kwargs):
     assert opt.min_ctree.inds[:opt.min_ctree.n_leaves] == leaf_inds
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_ReadInds(seed: int, **kwargs):
+@repeat(20)
+def test_ReadInds(random_seed: int, **kwargs):
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(100, 300))
@@ -943,7 +959,6 @@ def test_ReadInds(seed: int, **kwargs):
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
     output_index_token = generate_random_inds(1, seed=rng.randrange(2**32))[0]
     sparse_index_token = generate_random_inds(1, seed=rng.randrange(2**32))[0]
-    seed = rng.randrange(2**32)
 
     # Get tensors and the dimension of the inds
     try:
@@ -954,7 +969,7 @@ def test_ReadInds(seed: int, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -1008,11 +1023,11 @@ def test_ReadInds(seed: int, **kwargs):
     assert dims == dims_
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_DecomposeHyperInds(seed):
+@repeat(20)
+def test_DecomposeHyperInds(random_seed):
     # Initialize random generator
-    rng = Random(seed)
-    np_rng = np.random.default_rng(seed=seed)
+    rng = Random(random_seed)
+    np_rng = np.random.default_rng(seed=random_seed)
 
     # How to permute
     def permutation(x):
@@ -1063,11 +1078,11 @@ def test_DecomposeHyperInds(seed):
     np.testing.assert_allclose((d_array_ex - d_array).data, 0, atol=1e-5)
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_GetEinsumPath(seed):
+@repeat(20)
+def test_GetEinsumPath(random_seed):
     # Initialize random generator
-    rng = Random(seed)
-    np_rng = np.random.default_rng(seed=seed)
+    rng = Random(random_seed)
+    np_rng = np.random.default_rng(seed=random_seed)
 
     # How to permute
     def permutation(x):
@@ -1121,8 +1136,8 @@ def test_GetEinsumPath(seed):
 
 @pytest.mark.timeout(30)
 @pytest.mark.usefixtures("timeout")
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_Fuse(seed, **kwargs):
+@repeat(20)
+def test_Fuse(random_seed, **kwargs):
     # Fuse tensors
     def fuse_(arrays, path, fused_inds):
         for (px, py), iz in zip(path, fused_inds):
@@ -1143,7 +1158,7 @@ def test_Fuse(seed, **kwargs):
         return arrays
 
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(10, 15))
@@ -1152,10 +1167,9 @@ def test_Fuse(seed, **kwargs):
     n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 5))
     n_cc = kwargs.get('n_cc', rng.randint(1, 4))
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
-    seed = rng.randrange(2**32)
 
     # Initialize numpy rng
-    np_rng = np.random.default_rng(seed)
+    np_rng = np.random.default_rng(random_seed)
 
     # Get tensors
     try:
@@ -1166,7 +1180,7 @@ def test_Fuse(seed, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -1226,7 +1240,7 @@ def test_Fuse(seed, **kwargs):
                                             (x, d + 1), dims.items())),
                             0,
                             output_inds=output_inds,
-                            seed=seed,
+                            seed=random_seed,
                             return_fused_inds=True)
     assert len(path) == len(fused_inds) == 0
 
@@ -1235,12 +1249,15 @@ def test_Fuse(seed, **kwargs):
                             dims,
                             max_width,
                             output_inds=output_inds,
-                            seed=seed,
+                            seed=random_seed,
                             return_fused_inds=True)
     # If k = 2, it should return the same results, even if output_inds are not
     # provided
     if k == 2:
-        assert fuse(ts_inds, dims, max_width, seed=seed,
+        assert fuse(ts_inds,
+                    dims,
+                    max_width,
+                    seed=random_seed,
                     return_fused_inds=True) == (path, fused_inds)
 
     # Calling fuse twice should give the same result
@@ -1248,7 +1265,7 @@ def test_Fuse(seed, **kwargs):
                 dims,
                 max_width,
                 output_inds=output_inds,
-                seed=seed,
+                seed=random_seed,
                 return_fused_inds=True) == (path, fused_inds)
 
     if max(map(get_width, fused_inds)) <= 16:
@@ -1280,7 +1297,7 @@ def test_Fuse(seed, **kwargs):
                             dims,
                             float('inf'),
                             output_inds=output_inds,
-                            seed=seed,
+                            seed=random_seed,
                             return_fused_inds=True)
 
     if max(map(get_width, fused_inds)) <= 16:
@@ -1308,18 +1325,18 @@ def test_Fuse(seed, **kwargs):
                                    atol=1e-5)
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_TensorSVD(seed, **kwargs):
+@repeat(20)
+def test_TensorSVD(random_seed, **kwargs):
     # Get generator
-    rng = Random(seed)
-    np_rng = np.random.default_rng(seed)
+    rng = Random(random_seed)
+    np_rng = np.random.default_rng(random_seed)
 
     # Set params
     n_inds = kwargs.get('n_inds', rng.randint(1, 6))
     n_left_inds = kwargs.get('n_left_inds', rng.randint(0, n_inds))
 
     # Get random indices
-    *inds, svd_index_name = generate_random_inds(n_inds + 1, seed=seed)
+    *inds, svd_index_name = generate_random_inds(n_inds + 1, seed=random_seed)
     inds = tuple(inds)
     svd_index_name = None if rng.randint(0, 1) else svd_index_name
     left_inds = tuple(rng.sample(inds, k=n_left_inds))
@@ -1364,10 +1381,10 @@ def test_TensorSVD(seed, **kwargs):
     assert len(d_arrays) == 1 and d_arrays[0][1] == new_inds
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_GetLargestIntermediate(seed: int, **kwargs):
+@repeat(20)
+def test_GetLargestIntermediate(random_seed: int, **kwargs):
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(100, 300))
@@ -1376,7 +1393,6 @@ def test_GetLargestIntermediate(seed: int, **kwargs):
     n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 150))
     n_cc = 1
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
-    seed = rng.randrange(2**32)
 
     # Get tensors and the dimension of the inds
     try:
@@ -1387,7 +1403,7 @@ def test_GetLargestIntermediate(seed: int, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -1406,7 +1422,9 @@ def test_GetLargestIntermediate(seed: int, **kwargs):
             map(log2, map(dims.get, xs)))
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
+    paths = get_random_contraction_path(ts_inds,
+                                        seed=random_seed,
+                                        merge_paths=False)
     assert len(paths) == 1
 
     # Get contraction tree
@@ -1420,11 +1438,11 @@ def test_GetLargestIntermediate(seed: int, **kwargs):
     assert abs(max_width - ex_max_width) < 1e-5
 
 
-@pytest.mark.parametrize('seed', sample_seeds(400))
-def test_DecomposeHyperIndsTN(seed: int, **kwargs):
+@repeat(40)
+def test_DecomposeHyperIndsTN(random_seed: int, **kwargs):
     # Initialize RNG
-    rng = Random(seed)
-    np_rng = np.random.default_rng(seed=seed)
+    rng = Random(random_seed)
+    np_rng = np.random.default_rng(seed=random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(10, 20))
@@ -1433,7 +1451,6 @@ def test_DecomposeHyperIndsTN(seed: int, **kwargs):
     n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 10))
     n_cc = 1
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
-    seed = rng.randrange(2**32)
 
     # Get tensors and the dimension of the inds
     try:
@@ -1444,7 +1461,7 @@ def test_DecomposeHyperIndsTN(seed: int, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -1458,7 +1475,9 @@ def test_DecomposeHyperIndsTN(seed: int, **kwargs):
                     2, 3)
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
+    paths = get_random_contraction_path(ts_inds,
+                                        seed=random_seed,
+                                        merge_paths=False)
     assert len(paths) == 1
 
     # Skip if too large
@@ -1538,13 +1557,13 @@ def test_DecomposeHyperIndsTN(seed: int, **kwargs):
     np.testing.assert_allclose(array_1, array_2, atol=1e-5)
 
 
-@pytest.mark.parametrize('seed', sample_seeds(400))
-def test_merge_contraction_paths(seed, **kwargs):
+@repeat(40)
+def test_merge_contraction_paths(random_seed, **kwargs):
     # Initialize random number generator
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize random number generator (numpy)
-    np_rng = np.random.default_rng(seed)
+    np_rng = np.random.default_rng(random_seed)
 
     # Set parameters
     n_tensors = kwargs.get('n_tensors', rng.randint(5, 10))
@@ -1566,7 +1585,7 @@ def test_merge_contraction_paths(seed, **kwargs):
         n_cc=n_cc,
         n_output_inds=n_output_inds,
         randomize_names=randomize_names,
-        seed=seed)
+        seed=random_seed)
 
     # Get random dimensions
     dims = dict(
@@ -1579,7 +1598,9 @@ def test_merge_contraction_paths(seed, **kwargs):
             ts_inds))
 
     # Get paths
-    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
+    paths = get_random_contraction_path(ts_inds,
+                                        seed=random_seed,
+                                        merge_paths=False)
 
     # Get tensor network
     tn = TensorNetwork(map(Tensor, arrays, ts_inds))
@@ -1598,10 +1619,10 @@ def test_merge_contraction_paths(seed, **kwargs):
                                    atol=1e-5)
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_Contract(seed, **kwargs):
+@repeat(20)
+def test_Contract(random_seed, **kwargs):
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(10, 15))
@@ -1610,10 +1631,9 @@ def test_Contract(seed, **kwargs):
     n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 5))
     n_cc = kwargs.get('n_cc', rng.randint(1, 4))
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
-    seed = rng.randrange(2**32)
 
     # Initialize numpy rng
-    np_rng = np.random.default_rng(seed)
+    np_rng = np.random.default_rng(random_seed)
 
     # Get tensors
     try:
@@ -1624,7 +1644,7 @@ def test_Contract(seed, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed)
+            seed=random_seed)
     except ValueError as e:
         if str(e) == "Too few indices.":
             pytest.skip(str(e))
@@ -1665,7 +1685,11 @@ def test_Contract(seed, **kwargs):
     arrays = list(map(lambda a: a / np.sqrt(np.linalg.norm(a.data)), arrays))
 
     # Fuse with given width
-    path = fuse(ts_inds, dims, max_width, output_inds=output_inds, seed=seed)
+    path = fuse(ts_inds,
+                dims,
+                max_width,
+                output_inds=output_inds,
+                seed=random_seed)
 
     # Get tensor network from fused arrays
     fused_ts_inds, fused_output_inds, fused_arrays = contract(
@@ -1690,10 +1714,10 @@ def test_Contract(seed, **kwargs):
         np.testing.assert_allclose(exact_tn, fused_tn, atol=1e-5)
 
 
-@pytest.mark.parametrize('seed', sample_seeds(2_000))
-def test_OrderedFrozenSet(seed):
+@repeat(200)
+def test_OrderedFrozenSet(random_seed):
     # Get rng
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Generate random inds
     n = 500

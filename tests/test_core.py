@@ -18,12 +18,11 @@ import operator as op
 import pickle
 from copy import deepcopy
 from math import exp, log2
+from os import environ
 from random import Random
 
 import more_itertools as mit
 import pytest
-
-from conftest import fraction_n_tests, global_seed  # Get global seed
 from tnco.bitset import Bitset
 from tnco.ctree import ContractionTree, traverse_tree
 from tnco.optimize.finite_width.cost_model import \
@@ -40,22 +39,36 @@ from tnco_core import Tree as Tree_
 from tnco_core import float1024
 from tnco_core.utils import all_close, all_logclose
 
-rng = Random(global_seed)
+# Initialize RNG
+rng = Random(
+    environ.get('PYTEST_SEED') +
+    environ.get('PYTEST_XDIST_WORKER') if 'PYTEST_SEED' in environ else None)
+
+# Fix max number of repetitions
+max_repeat = max(1, float(environ.get('PYTEST_MAX_REPEAT', 'inf')))
+
+# Fix ratio of number of tests
+fraction_n_tests = max(
+    min(float(environ.get('PYTEST_FRACTION_N_TESTS', '1')), 1), 0)
 
 
-def sample_seeds(k, /):
-    k = int(max(1, k * fraction_n_tests))
-    return rng.sample(range(2**32), k=k)
+def repeat(n: int):
+    return pytest.mark.repeat(max(min(n * fraction_n_tests, max_repeat), 1))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_float1024(seed):
+@pytest.fixture
+def random_seed():
+    return rng.randrange(2**32)
+
+
+@repeat(20)
+def test_float1024(random_seed):
     # Check if two variables are close
     def isclose(x, y):
         return abs(x - y) < 1e-10
 
     # Initialize random number generator
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     x = rng.normalvariate(0, 10)
@@ -126,10 +139,10 @@ def test_float1024(seed):
     assert isclose(x, xf)
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_Bitset(seed: int, **kwargs):
+@repeat(20)
+def test_Bitset(random_seed: int, **kwargs):
     # Get random number generator
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_pos = kwargs.get('n_pos', rng.randint(100, 1_000))
@@ -199,8 +212,8 @@ def test_Bitset(seed: int, **kwargs):
     assert all(map(lambda x, y: x == int(y), bs_, str_bs))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_Node(seed: int):
+@repeat(20)
+def test_Node(random_seed: int):
     # Check empty node
     empty_node = Node()
     assert empty_node.is_leaf()
@@ -209,7 +222,7 @@ def test_Node(seed: int):
     assert empty_node.children == (None, None)
 
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     def check_node_1(children, parent):
         if (children[0] >= 0) ^ (children[1] >= 0) or children[0] == children[
@@ -267,8 +280,8 @@ def test_Node(seed: int):
     assert all(check_node_3(rng.randint(-1000, 1000)) for _ in range(10_000))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_ContractionTree(seed: int, **kwargs):
+@repeat(20)
+def test_ContractionTree(random_seed: int, **kwargs):
     # Check empty ContractionTree
     empty_ctree = ContractionTree_()
     assert empty_ctree.is_valid()
@@ -279,7 +292,7 @@ def test_ContractionTree(seed: int, **kwargs):
     assert empty_ctree.nodes == [Node()]
 
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(100, 300))
@@ -289,7 +302,6 @@ def test_ContractionTree(seed: int, **kwargs):
     n_cc = kwargs.get('n_cc', rng.randint(1, 5))
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
     verbose = kwargs.get('verbose', False)
-    seed = rng.randrange(2**32)
 
     # Get tensors
     try:
@@ -300,7 +312,7 @@ def test_ContractionTree(seed: int, **kwargs):
             n_output_inds=n_output_inds,
             n_cc=n_cc,
             randomize_names=randomize_names,
-            seed=seed,
+            seed=random_seed,
             verbose=verbose)
     except ValueError as e:
         if str(e) == "Too few indices.":
@@ -316,7 +328,7 @@ def test_ContractionTree(seed: int, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(tensors,
-                                        seed=seed,
+                                        seed=random_seed,
                                         verbose=verbose,
                                         merge_paths=False)
 
@@ -368,8 +380,8 @@ def test_ContractionTree(seed: int, **kwargs):
     assert all(map(lambda x, y: x != y, ctrees_, ctrees))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(400))
-def test_SimpleCostModel(seed, **kwargs):
+@repeat(40)
+def test_SimpleCostModel(random_seed, **kwargs):
 
     def rel_error(x, y, *, atol=1e-5):
         if x == 0 or y == 0:
@@ -402,7 +414,7 @@ def test_SimpleCostModel(seed, **kwargs):
                    n_projs) * cost_(all_inds - sparse_inds)
 
     # Initialize rng
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Get params
     n_vars = kwargs.get('n_vars', rng.randrange(200, 500))
@@ -490,8 +502,8 @@ def test_SimpleCostModel(seed, **kwargs):
                 *xs_, dims))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(400))
-def test_SimpleCostModelFiniteWidth(seed, **kwargs):
+@repeat(40)
+def test_SimpleCostModelFiniteWidth(random_seed, **kwargs):
 
     def rel_error(x, y, *, atol=1e-5):
         if x == 0 or y == 0:
@@ -543,7 +555,7 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
                    log2(n_projs)) + width_(inds - sparse_inds)
 
     # Initialize rng
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Get params
     n_vars = kwargs.get('n_vars', rng.randrange(200, 500))
@@ -742,14 +754,14 @@ def test_SimpleCostModelFiniteWidth(seed, **kwargs):
         inds -= {index}
 
 
-@pytest.mark.parametrize('seed', sample_seeds(1000))
-def test_Probability(seed):
+@repeat(100)
+def test_Probability(random_seed):
 
     def abs_error(x, y, atol=1e-5):
         return abs(x - y) < atol
 
     # Initialize rng
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize
     base_prob = BaseProbability()
@@ -808,10 +820,10 @@ def test_Probability(seed):
         assert MetropolisHastings(cost_type=cost_type_).cost_type == cost_type_
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_all_close(seed: int, **kwargs):
+@repeat(20)
+def test_all_close(random_seed: int, **kwargs):
     # Initialize rng
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Get params
     n_vars = kwargs.get('n_vars', rng.randrange(10_000, 20_000))

@@ -15,12 +15,11 @@
 import itertools as its
 from collections import Counter
 from decimal import Decimal
+from os import environ
 from random import Random
 
 import more_itertools as mit
 import pytest
-
-from conftest import fraction_n_tests, global_seed  # Get global seed
 from tnco.ctree import ContractionTree
 from tnco.optimize.finite_width import Optimizer as FW_Optimizer
 from tnco.optimize.finite_width.cost_model import \
@@ -32,20 +31,34 @@ from tnco.optimize.prob import MetropolisHastings
 from tnco.testing.utils import generate_random_tensors
 from tnco.utils.tn import get_random_contraction_path
 
-rng = Random(global_seed)
+# Initialize RNG
+rng = Random(
+    environ.get('PYTEST_SEED') +
+    environ.get('PYTEST_XDIST_WORKER') if 'PYTEST_SEED' in environ else None)
+
+# Fix max number of repetitions
+max_repeat = max(1, float(environ.get('PYTEST_MAX_REPEAT', 'inf')))
+
+# Fix ratio of number of tests
+fraction_n_tests = max(
+    min(float(environ.get('PYTEST_FRACTION_N_TESTS', '1')), 1), 0)
 
 
-def sample_seeds(k, /):
-    k = int(max(1, k * fraction_n_tests))
-    return rng.sample(range(2**32), k=k)
+def repeat(n: int):
+    return pytest.mark.repeat(max(min(n * fraction_n_tests, max_repeat), 1))
+
+
+@pytest.fixture
+def random_seed():
+    return rng.randrange(2**32)
 
 
 @pytest.mark.timeout(30)
 @pytest.mark.usefixtures("timeout")
-@pytest.mark.parametrize('seed', sample_seeds(100))
-def test_InfiniteMemoryContraction(seed, **kwargs):
+@repeat(10)
+def test_InfiniteMemoryContraction(random_seed, **kwargs):
     # Get rng
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(50, 150))
@@ -69,7 +82,7 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
         k=k,
         n_output_inds=n_output_inds,
         randomize_names=randomize_names,
-        seed=seed)
+        seed=random_seed)
 
     # Get random dimensions
     dims = dict(
@@ -86,7 +99,9 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
         sparse_inds = rng.sample(sparse_inds, k=len(sparse_inds) // 4)
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
+    paths = get_random_contraction_path(ts_inds,
+                                        seed=random_seed,
+                                        merge_paths=False)
 
     # There should be only one cc
     assert len(paths) == 1
@@ -101,7 +116,7 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
     # Get optimizers
     opt = IM_Optimizer(ctree,
                        IM_SimpleCostModel(cost_type=cost_type),
-                       seed=seed,
+                       seed=random_seed,
                        disable_shared_inds=disable_shared_inds)
 
     # Optimize (mh)
@@ -168,10 +183,10 @@ def test_InfiniteMemoryContraction(seed, **kwargs):
 
 @pytest.mark.timeout(30)
 @pytest.mark.usefixtures("timeout")
-@pytest.mark.parametrize('seed', sample_seeds(100))
-def test_FiniteWidthContraction(seed, **kwargs):
+@repeat(10)
+def test_FiniteWidthContraction(random_seed, **kwargs):
     # Get rng
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Initialize variables
     n_tensors = kwargs.get('n_tensors', rng.randint(50, 150))
@@ -196,7 +211,7 @@ def test_FiniteWidthContraction(seed, **kwargs):
         k=k,
         n_output_inds=n_output_inds,
         randomize_names=randomize_names,
-        seed=seed)
+        seed=random_seed)
 
     # Get random dimensions
     dims = dict(
@@ -232,7 +247,9 @@ def test_FiniteWidthContraction(seed, **kwargs):
     max_width = int(max(map(get_width, ts_inds)) * 1000) / 1000
 
     # Get contraction
-    paths = get_random_contraction_path(ts_inds, seed=seed, merge_paths=False)
+    paths = get_random_contraction_path(ts_inds,
+                                        seed=random_seed,
+                                        merge_paths=False)
 
     # There should be only one cc
     assert len(paths) == 1
@@ -253,7 +270,7 @@ def test_FiniteWidthContraction(seed, **kwargs):
                                               n_projs=n_projs,
                                               max_width=max_width),
                            skip_slices=skip_slices,
-                           seed=seed,
+                           seed=random_seed,
                            disable_shared_inds=disable_shared_inds)
 
     # Skip test if too many indices are skipped

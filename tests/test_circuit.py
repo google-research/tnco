@@ -14,6 +14,7 @@
 
 import itertools as its
 from math import sqrt
+from os import environ
 from random import Random
 
 import cirq
@@ -23,20 +24,32 @@ import pytest
 import qiskit
 from qiskit.circuit.random import random_circuit
 from quimb.tensor import Tensor, TensorNetwork
-
-from conftest import fraction_n_tests, global_seed  # Get global seed
 from tnco.utils.circuit import commute, load, same
 
-rng = Random(global_seed)
+# Initialize RNG
+rng = Random(
+    environ.get('PYTEST_SEED') +
+    environ.get('PYTEST_XDIST_WORKER') if 'PYTEST_SEED' in environ else None)
+
+# Fix max number of repetitions
+max_repeat = max(1, float(environ.get('PYTEST_MAX_REPEAT', 'inf')))
+
+# Fix ratio of number of tests
+fraction_n_tests = max(
+    min(float(environ.get('PYTEST_FRACTION_N_TESTS', '1')), 1), 0)
 
 
-def sample_seeds(k, /):
-    k = int(max(1, k * fraction_n_tests))
-    return rng.sample(range(2**32), k=k)
+def repeat(n: int):
+    return pytest.mark.repeat(max(min(n * fraction_n_tests, max_repeat), 1))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_Commute(seed, **kwargs):
+@pytest.fixture
+def random_seed():
+    return rng.randrange(2**32)
+
+
+@repeat(20)
+def test_Commute(random_seed, **kwargs):
     # Commutation using cirq
     def commute_(gate_A, gate_B, *, use_matrix_commutation=True, atol=1e-5):
         if use_matrix_commutation:
@@ -48,7 +61,7 @@ def test_Commute(seed, **kwargs):
         return not frozenset(gate_A[1]) & frozenset(gate_B[1])
 
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Set parameters
     n_qubits = kwargs.get('n_qubits', 5)
@@ -58,10 +71,9 @@ def test_Commute(seed, **kwargs):
     circuit = tuple(
         map(
             lambda gate: (cirq.unitary(gate), gate.qubits),
-            cirq.testing.random_circuit(n_qubits,
-                                        n_moments,
-                                        op_density=1,
-                                        random_state=seed).all_operations()))
+            cirq.testing.random_circuit(
+                n_qubits, n_moments, op_density=1,
+                random_state=random_seed).all_operations()))
 
     # Check commutation
     assert all(
@@ -76,8 +88,8 @@ def test_Commute(seed, **kwargs):
             zip(rng.choices(circuit, k=200), rng.choices(circuit, k=200))))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_Same(seed, **kwargs):
+@repeat(20)
+def test_Same(random_seed, **kwargs):
     # Same using quimb
     def same_(gate_A, gate_B, atol=1e-5):
         gate_A = Tensor(
@@ -92,7 +104,7 @@ def test_Same(seed, **kwargs):
             gate_A.data, gate_B.transpose_like(gate_A).data, atol=1e-5)
 
     # Initialize RNG
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Set parameters
     n_qubits = kwargs.get('n_qubits', 5)
@@ -102,10 +114,9 @@ def test_Same(seed, **kwargs):
     circuit = tuple(
         map(
             lambda gate: (cirq.unitary(gate), gate.qubits),
-            cirq.testing.random_circuit(n_qubits,
-                                        n_moments,
-                                        op_density=1,
-                                        random_state=seed).all_operations()))
+            cirq.testing.random_circuit(
+                n_qubits, n_moments, op_density=1,
+                random_state=random_seed).all_operations()))
 
     # Check same
     assert all(
@@ -116,11 +127,11 @@ def test_Same(seed, **kwargs):
         map(lambda g: same_(g, g) and same(g, g), rng.choices(circuit, k=200)))
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_LoadArbitraryInitialFinalState(seed, **kwargs):
+@repeat(20)
+def test_LoadArbitraryInitialFinalState(random_seed, **kwargs):
     # Get rng
-    rng = Random(seed)
-    np_rng = np.random.default_rng(seed)
+    rng = Random(random_seed)
+    np_rng = np.random.default_rng(random_seed)
 
     # Get parameters
     n_qubits = kwargs.get('n_qubits', rng.randint(5, 10))
@@ -151,7 +162,7 @@ def test_LoadArbitraryInitialFinalState(seed, **kwargs):
         circuit = cirq.testing.random_circuit(n_qubits,
                                               n_moments,
                                               op_density=op_density,
-                                              random_state=seed)
+                                              random_state=random_seed)
     else:
         circuit = cirq.testing.random_circuit(n_qubits,
                                               n_moments,
@@ -163,7 +174,7 @@ def test_LoadArbitraryInitialFinalState(seed, **kwargs):
                                                   cirq.CCZPowGate(): 3,
                                                   cirq.ISWAP: 2
                                               },
-                                              random_state=seed)
+                                              random_state=random_seed)
     circuit = map((cirq.H**0.5).on, circuit.all_qubits()) + circuit + map(
         (cirq.H**0.5).on, circuit.all_qubits())
 
@@ -188,7 +199,7 @@ def test_LoadArbitraryInitialFinalState(seed, **kwargs):
         decompose_hyper_inds=decompose_hyper_inds,
         fuse=fuse,
         use_matrix_commutation=use_matrix_commutation,
-        seed=seed)
+        seed=random_seed)
 
     def get_state(x):
         valid_token = {
@@ -243,10 +254,10 @@ def test_LoadArbitraryInitialFinalState(seed, **kwargs):
     np.testing.assert_allclose(ex, ts, atol=1e-5)
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_LoadUnitary(seed, **kwargs):
+@repeat(20)
+def test_LoadUnitary(random_seed, **kwargs):
     # Get rng
-    rng = Random(seed)
+    rng = Random(random_seed)
 
     # Get parameters
     n_qubits = kwargs.get('n_qubits', rng.randint(5, 10))
@@ -265,7 +276,7 @@ def test_LoadUnitary(seed, **kwargs):
         circuit = cirq.testing.random_circuit(n_qubits,
                                               n_moments,
                                               op_density=op_density,
-                                              random_state=seed)
+                                              random_state=random_seed)
     else:
         circuit = cirq.testing.random_circuit(n_qubits,
                                               n_moments,
@@ -277,7 +288,7 @@ def test_LoadUnitary(seed, **kwargs):
                                                   cirq.CCZPowGate(): 3,
                                                   cirq.ISWAP: 2
                                               },
-                                              random_state=seed)
+                                              random_state=random_seed)
     circuit = map((cirq.H**0.5).on, circuit.all_qubits()) + circuit + map(
         (cirq.H**0.5).on, circuit.all_qubits())
 
@@ -291,7 +302,7 @@ def test_LoadUnitary(seed, **kwargs):
         decompose_hyper_inds=decompose_hyper_inds,
         fuse=fuse,
         use_matrix_commutation=use_matrix_commutation,
-        seed=seed)
+        seed=random_seed)
 
     # Get exact unitary
     U = cirq.unitary(circuit)
@@ -337,8 +348,8 @@ def test_LoadUnitary(seed, **kwargs):
     assert not arrays and not ts_inds and not output_inds
 
 
-@pytest.mark.parametrize('seed', sample_seeds(200))
-def test_LoadQisKit(seed):
+@repeat(20)
+def test_LoadQisKit(random_seed):
     # Set number of qubits and depth of the circuit
     n_qubits = 6
     circuit_depth = 12
@@ -350,8 +361,8 @@ def test_LoadQisKit(seed):
     # Get a random circuit
     circuit = qiskit.QuantumCircuit(n_qubits)
     mit.consume(map(lambda i: circuit.append(sqrt_H, [i]), range(n_qubits)))
-    circuit = circuit.compose(random_circuit(n_qubits, circuit_depth,
-                                             seed=seed))
+    circuit = circuit.compose(
+        random_circuit(n_qubits, circuit_depth, seed=random_seed))
     mit.consume(map(lambda i: circuit.append(sqrt_H, [i]), range(n_qubits)))
 
     # Get unitary
