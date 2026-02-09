@@ -192,6 +192,14 @@ class Optimizer(BaseOptimizer):
                                                              merge_paths=False,
                                                              seed=seed):
 
+                # If path is trivial, skip optimization
+                if not path:
+                    results['disconnected_costs'].append(0)
+                    results['disconnected_paths'].append([])
+                    results['disconnected_slices'].append(frozenset())
+                    results['runtime_s'].append(0)
+                    continue
+
                 # Get contraction tree
                 ctree = ContractionTree(path,
                                         tn.ts_inds,

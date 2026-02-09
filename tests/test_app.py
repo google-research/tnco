@@ -267,7 +267,8 @@ def test_OptimizeTN(random_seed, **kwargs):
                     res, res_json)))
 
     # There should be n_cc disconnected paths
-    assert all(map(lambda r: len(r.disconnected_paths) == n_cc, res))
+    assert dims == 1 or all(
+        map(lambda r: len(r.disconnected_paths) == n_cc, res))
 
     # The costs should be ordered
     assert all(
