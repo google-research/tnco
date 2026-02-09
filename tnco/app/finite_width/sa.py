@@ -196,6 +196,7 @@ class Optimizer(BaseOptimizer):
                 if not path:
                     results['disconnected_costs'].append(0)
                     results['disconnected_paths'].append([])
+                    results['disconnected_slices'].append(frozenset())
                     results['runtime_s'].append(0)
                     continue
 
