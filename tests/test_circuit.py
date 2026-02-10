@@ -24,6 +24,7 @@ import pytest
 import qiskit
 from qiskit.circuit.random import random_circuit
 from quimb.tensor import Tensor, TensorNetwork
+
 from tnco.utils.circuit import commute, load, same
 
 # Initialize RNG
@@ -201,6 +202,9 @@ def test_LoadArbitraryInitialFinalState(random_seed, **kwargs):
         use_matrix_commutation=use_matrix_commutation,
         seed=random_seed)
 
+    # All output indices should have 'i' or 'f' as tag
+    assert all(tag in ['i', 'f'] for _, tag in output_inds)
+
     def get_state(x):
         valid_token = {
             '0': [1, 0],
@@ -244,9 +248,7 @@ def test_LoadArbitraryInitialFinalState(random_seed, **kwargs):
 
     # Transpose if needed
     if outer_inds:
-        ts = ts.reindex(
-            dict(map(lambda x: (x, (x[0], 'i' if x[1] == 0 else 'f')),
-                     ts.inds))).transpose_like(ex)
+        ts = ts.transpose_like(ex)
 
     # Check
     ex = getattr(ex, 'data', ex)
@@ -309,10 +311,7 @@ def test_LoadUnitary(random_seed, **kwargs):
 
     # Contract arrays
     tn = TensorNetwork(its.starmap(Tensor, zip(
-        arrays, ts_inds))).contract(output_inds=output_inds).reindex(
-            dict(
-                its.starmap(lambda x, p: ((x, p), (x, 'i' if p == 0 else 'f')),
-                            output_inds)))
+        arrays, ts_inds))).contract(output_inds=output_inds)
     tn = tn.fuse(
         dict(I=sorted(zip(circuit.all_qubits(), its.repeat('i'))),
              F=sorted(zip(circuit.all_qubits(),
@@ -381,10 +380,9 @@ def test_LoadQisKit(random_seed):
     # Contract TN
     tn = TensorNetwork(map(Tensor, arrays,
                            ts_inds)).contract(output_inds=output_inds)
-    tn = tn.reindex_(dict(map(lambda x: (x, (x[0], int(x[1] > 0))), tn.inds)))
     tn_ = tn.fuse_(
-        dict(L=tuple(zip(circuit.qubits, its.repeat(1))),
-             R=tuple(zip(circuit.qubits, its.repeat(0)))))
+        dict(L=tuple(zip(circuit.qubits, its.repeat('f'))),
+             R=tuple(zip(circuit.qubits, its.repeat('i')))))
 
     # Check
     np.testing.assert_allclose(U, tn_.data, atol=1e-5)
