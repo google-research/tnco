@@ -32,8 +32,9 @@ from tnco.ordered_frozenset import OrderedFrozenSet
 from tnco.typing import Array, Index, TensorName
 
 __all__ = [
-    'get_random_contraction_path', 'read_inds', 'fuse', 'decompose_hyper_inds',
-    'merge_contraction_paths', 'contract'
+    'get_random_contraction_path', 'get_symbol', 'get_einsum_subscripts',
+    'read_inds', 'fuse', 'decompose_hyper_inds', 'merge_contraction_paths',
+    'split_contraction_path', 'contract'
 ]
 
 
@@ -246,6 +247,64 @@ def get_random_contraction_path(
         1) if merge_paths else linear_paths
 
 
+def get_symbol(i: int) -> str:
+    """Get unique symbol.
+
+    Get unique symbol
+
+    Args:
+        i: Symbol index.
+
+    Returns:
+        The corresponding symbol.
+    """
+    # standard a-z, A-Z
+    if i < 52:
+        return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[i]
+
+    # Skip Unicode surrogates (0xD800-0xDFFF) 55296 is the start of the
+    # surrogate range (0xD800). Add 2048 to skip past the entire surrogate
+    # block (2048 chars)
+    elif i >= 55296:
+        return chr(i + 2048)
+
+    # Start at 192 (0xC0)
+    # 52 + 140 = 192
+    else:
+        return chr(i + 140)
+
+
+def get_einsum_subscripts(ts_inds: Iterable[List[Index]],
+                          output_inds: Optional[Iterable[Index]] = ()):
+    """Return einsum path.
+
+    Return einsum path.
+
+    Args:
+        ts_inds: List of indices, with each item being the indices of a tensor.
+        output_inds: List of output indices.
+
+    Return:
+        The corresponding einsum path.
+    """
+    # Convert to list
+    ts_inds = list(ts_inds)
+    output_inds = list(output_inds)
+
+    # Map indices
+    inds_map = dict(
+        its.starmap(
+            lambda i, x: (x, get_symbol(i)),
+            enumerate(
+                mit.unique_everseen(its.chain(mit.flatten(ts_inds),
+                                              output_inds)))))
+
+    # Return map
+    return ','.join(map(lambda xs: ''.join(map(inds_map.get, xs)),
+                        ts_inds)) + '->' + ''.join(
+                            map(inds_map.get, output_inds))
+
+
 def merge_contraction_paths(
         n_tensors: int,
         paths: Iterable[List[Tuple[int, int]]],
@@ -257,7 +316,7 @@ def merge_contraction_paths(
     Merge contraction paths for disconnected tensor networks.
 
     Args:
-        n_tensors: Number of total tensors
+        n_tensors: Number of total tensors.
         paths: Contraction paths to merge in linear (einsum) format.
         autocomplete: If 'True', the merged path will include the contraction
             of the disconnected tensors.
@@ -311,6 +370,121 @@ def merge_contraction_paths(
 
     # Return merged path
     return merged_path
+
+
+def split_contraction_path(
+    n_tensors: int,
+    path: Iterable[Tuple[int, int]],
+    return_connected_components: Optional[bool] = False,
+    normalize_paths: Optional[bool] = False,
+    verbose: Optional[int] = False
+) -> Union[List[List[Tuple[int, int]]], Tuple[List[List[Tuple[int, int]]],
+                                              List[FrozenSet[int]]]]:
+    """Split contraction path.
+
+    Split the contraction path to disconnected contraction paths.
+
+    Args:
+        n_tensors: Number of total tensors.
+        path: Contraction path in linear (einsum) format.
+        return_connected_components: If True, returns the connected tensors for
+            each path.
+        normalize_path: If True, the path will be relative to the tensors in
+            the connected component only.
+        verbose: Verbose output.
+
+    Returns:
+        The non-empty disconnected contraction paths in linear (einsum) format.
+        If 'return_connected_components=True', a tuple of all disconnected
+        paths and tensors beloning to the same connected component is returned
+        instead.
+    """
+
+    # Convert path to list
+    path = list(path)
+
+    # Initialize tensors
+    tensors = list(range(n_tensors))
+    tensor2color = dict(zip(range(n_tensors), range(n_tensors)))
+    color2tensors = dict((i, frozenset([i])) for i in range(n_tensors))
+
+    # For each contraction ...
+    n_intermediate_tensors = n_tensors
+    for x, y in track(map(sorted, path),
+                      total=len(path),
+                      description="Getting connected components...",
+                      disable=verbose <= 0,
+                      console=Console(stderr=True)):
+        # Increase number of intermediate tensors
+        n_intermediate_tensors += 1
+
+        # Get colors
+        c_y = tensor2color[tensors.pop(y)]
+        c_x = tensor2color[tensors.pop(x)]
+
+        # Select color
+        c_z = min(c_x, c_y)
+
+        # Update exising colors
+        color2tensors[c_z] = color2tensors.pop(c_x) | color2tensors.pop(c_y) | {
+            n_intermediate_tensors
+        }
+        tensor2color.update(zip(color2tensors[c_z], its.repeat(c_z)))
+
+        # Update list of tensors
+        tensors.append(n_intermediate_tensors)
+
+    # Split all the intermediate tensors in connected components
+    cc = list(color2tensors.values())
+
+    # Let's create the list of tensors and disconnected paths
+    tensors = list(range(n_tensors))
+    cc_tensors = list(map(sorted, cc)) if normalize_paths else list(
+        list(range(n_tensors)) for _ in range(len(cc)))
+    paths = list(mit.repeatfunc(list, len(cc)))
+
+    # Let's start again
+    n_intermediate_tensors = n_tensors
+    for x, y in track(map(sorted, path),
+                      total=len(path),
+                      description="Getting disconnected paths...",
+                      disable=verbose <= 0,
+                      console=Console(stderr=True)):
+        # Increase number of intermediate tensors
+        n_intermediate_tensors += 1
+
+        # Get tensors
+        t_x, t_y = tensors[x], tensors[y]
+
+        # Find the connected component
+        cc_loc = mit.first(mit.locate(cc, lambda s: t_x in s))
+        assert t_y in cc[cc_loc]
+
+        # Update list of tensors
+        tensors.pop(y)
+        tensors.pop(x)
+        tensors.append(n_intermediate_tensors)
+
+        # Find the location of the intermediate tensors in the right connected
+        # component
+        x, y = sorted(map(cc_tensors[cc_loc].index, (t_x, t_y)))
+
+        # Update path for the connected component
+        paths[cc_loc].append(tuple((x, y)))
+
+        # Update list of tensors for the connected component
+        cc_tensors[cc_loc].pop(y)
+        cc_tensors[cc_loc].pop(x)
+        cc_tensors[cc_loc].append(n_intermediate_tensors)
+
+    # Exclude the intermediate tensors
+    if return_connected_components:
+        cc = list(
+            frozenset(filter(fts.partial(op.gt, n_tensors), s)) for s in cc)
+        return paths, cc
+
+    # Otherwise, just return the non-empty paths
+    return list(filter(len, paths))
 
 
 def read_inds(
@@ -704,8 +878,9 @@ def contract(
 
     Returns:
         It returns the result of the contraction as a tuple of list of indices
-        (for each resulting tensor), and the final output indices. If 'arrays'
-        is provided, it also return the contracted arrays.
+        (for each resulting tensor), and the final output indices (if all
+        tensors were contracted together). If 'arrays' is provided, it also
+        return the contracted arrays.
 
     Raises:
         ValueError: If 'path' is not valid.

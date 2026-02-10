@@ -65,6 +65,7 @@ formatting = [
 testing = [
   "cirq",
   "numpy",
+  "opt_einsum",
   "ply",
   "pytest",
   "pytest-repeat",

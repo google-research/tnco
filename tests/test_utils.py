@@ -24,8 +24,12 @@ from random import Random
 
 import more_itertools as mit
 import numpy as np
+import opt_einsum as oe
 import pytest
 from quimb.tensor import Tensor, TensorNetwork
+from tnco_core import ContractionTree as ContractionTree_
+
+import tnco.utils.tensor as tensor_utils
 from tnco.ctree import ContractionTree
 from tnco.optimize.finite_width import Optimizer as FW_Optimizer
 from tnco.optimize.finite_width.cost_model import \
@@ -40,12 +44,11 @@ from tnco.testing.utils import (generate_random_inds, generate_random_tensors,
                                 is_valid_contraction_tree)
 from tnco.utils.tensor import \
     decompose_hyper_inds as tensor_decompose_hyper_inds
-from tnco.utils.tensor import get_einsum_subscripts, svd
 from tnco.utils.tn import contract
 from tnco.utils.tn import decompose_hyper_inds as tn_decompose_hyper_inds
-from tnco.utils.tn import (fuse, get_random_contraction_path,
-                           merge_contraction_paths, read_inds)
-from tnco_core import ContractionTree as ContractionTree_
+from tnco.utils.tn import (fuse, get_einsum_subscripts,
+                           get_random_contraction_path, merge_contraction_paths,
+                           read_inds, split_contraction_path)
 
 # Initialize RNG
 rng = Random(
@@ -1079,7 +1082,7 @@ def test_DecomposeHyperInds(random_seed):
 
 
 @repeat(20)
-def test_GetEinsumPath(random_seed):
+def test_TensorGetEinsumSubscripts(random_seed):
     # Initialize random generator
     rng = Random(random_seed)
     np_rng = np.random.default_rng(seed=random_seed)
@@ -1123,8 +1126,9 @@ def test_GetEinsumPath(random_seed):
     output_inds = permutation(output_inds)
 
     # Compute tensordot providing the output inds
-    array_c = np.einsum(get_einsum_subscripts(inds_a, inds_b, output_inds),
-                        array_a, array_b)
+    array_c = np.einsum(
+        tensor_utils.get_einsum_subscripts(inds_a, inds_b, output_inds),
+        array_a, array_b)
 
     # Check if correct
     np.testing.assert_allclose(
@@ -1132,6 +1136,68 @@ def test_GetEinsumPath(random_seed):
          Tensor(array_b, inds_b)).contract(output_inds=output_inds).data,
         array_c,
         atol=1e-5)
+
+
+@repeat(20)
+def test_TNGetEinsumSubscripts(random_seed: int, **kwargs):
+    # Initialize RNG
+    rng = Random(random_seed)
+
+    # Initialize numpy rng
+    np_rng = np.random.default_rng(random_seed)
+
+    # Initialize variables
+    n_tensors = kwargs.get('n_tensors', rng.randint(5, 15))
+    n_inds = kwargs.get('n_inds', rng.randint(25, 45))
+    k = kwargs.get('k', rng.randint(2, 6))
+    n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 10))
+    n_cc = kwargs.get('n_cc', rng.randint(1, 3))
+    randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
+
+    # Get random tensors
+    ts_inds, output_inds = generate_random_tensors(
+        n_tensors=n_tensors,
+        n_inds=n_inds,
+        k=k,
+        n_output_inds=n_output_inds,
+        n_cc=n_cc,
+        randomize_names=randomize_names,
+        seed=random_seed)
+
+    # Get all inds
+    all_inds = frozenset(mit.flatten(ts_inds))
+
+    # Get random dimensions
+    dims = dict(zip(all_inds, rng.choices(range(1, 3), k=len(all_inds))))
+
+    # Get random arrays
+    arrays = list(
+        np_rng.normal(size=tuple(map(dims.get, xs))) for xs in ts_inds)
+
+    # Get subscripts
+    subscripts = get_einsum_subscripts(ts_inds, list(output_inds))
+
+    # Get path
+    path, _ = oe.contract_path(subscripts, *arrays)
+
+    # Skip if too large
+    if ContractionTree(path, ts_inds, dims,
+                       output_inds=output_inds).max_width() > 25:
+        pytest.skip("Contraction is too large.")
+
+    # Contract using einsum
+    merged_array_1 = oe.contract(subscripts, *arrays, optimize=path)
+
+    # Contract using tnco
+    [merged_inds], merged_output_inds, [merged_array_2
+                                       ] = contract(path, ts_inds, output_inds,
+                                                    arrays)
+    assert frozenset(merged_inds) == merged_output_inds
+    merged_array_2 = merged_array_2.transpose(
+        list(map(merged_inds.index, list(output_inds))))
+
+    # Check
+    np.testing.assert_allclose(merged_array_1, merged_array_2, atol=1e-5)
 
 
 @pytest.mark.timeout(30)
@@ -1151,8 +1217,9 @@ def test_Fuse(random_seed, **kwargs):
             # Contract
             arrays.append(
                 Tensor(
-                    np.einsum(get_einsum_subscripts(tx.inds, ty.inds, iz),
-                              tx.data, ty.data), iz))
+                    np.einsum(
+                        tensor_utils.get_einsum_subscripts(
+                            tx.inds, ty.inds, iz), tx.data, ty.data), iz))
 
         # Get final fused tensor
         return arrays
@@ -1350,12 +1417,18 @@ def test_TensorSVD(random_seed, **kwargs):
 
     # This should fail
     try:
-        svd(array, inds, left_inds, svd_index_name=rng.choice(inds))
+        tensor_utils.svd(array,
+                         inds,
+                         left_inds,
+                         svd_index_name=rng.choice(inds))
     except ValueError as e:
         assert str(e) == "'svd_index_name' must be different from 'inds'."
 
     # Decompose array
-    d_arrays = svd(array, inds, left_inds, svd_index_name=svd_index_name)
+    d_arrays = tensor_utils.svd(array,
+                                inds,
+                                left_inds,
+                                svd_index_name=svd_index_name)
 
     # Check if correct
     np.testing.assert_allclose(TensorNetwork(
@@ -1367,13 +1440,16 @@ def test_TensorSVD(random_seed, **kwargs):
                                   d_arrays[0][1][:-1] == left_inds)
 
     # Check the case in which left_inds is empty
-    d_arrays = svd(array, inds, (), svd_index_name=svd_index_name)
+    d_arrays = tensor_utils.svd(array, inds, (), svd_index_name=svd_index_name)
     np.testing.assert_allclose(d_arrays[0][0], array, atol=1e-5)
     assert len(d_arrays) == 1 and d_arrays[0][1] == inds
 
     # Check the case in which left_inds is a permutation of inds
     new_inds = tuple(rng.sample(inds, k=len(inds)))
-    d_arrays = svd(array, inds, new_inds, svd_index_name=svd_index_name)
+    d_arrays = tensor_utils.svd(array,
+                                inds,
+                                new_inds,
+                                svd_index_name=svd_index_name)
     np.testing.assert_allclose(d_arrays[0][0].transpose(
         tuple(map(new_inds.index, inds))),
                                array,
@@ -1617,6 +1693,92 @@ def test_merge_contraction_paths(random_seed, **kwargs):
         np.testing.assert_allclose(array_1.transpose_like(array_2).data,
                                    array_2.data,
                                    atol=1e-5)
+
+
+@repeat(40)
+def test_split_contraction_path(random_seed, **kwargs):
+    # Initialize random number generator
+    rng = Random(random_seed)
+
+    # Set parameters
+    n_tensors = kwargs.get('n_tensors', rng.randint(150, 300))
+    k = kwargs.get('k', rng.randint(2, 4))
+    n_inds = kwargs.get('n_inds', rng.randint(240, 450))
+    n_output_inds = kwargs.get('n_output_inds', rng.randint(0, n_inds // 5))
+    n_cc = kwargs.get('n_cc', rng.randint(1, 5))
+    randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
+
+    # Check minimum number of indices
+    if (n_inds - n_output_inds) < n_tensors + 1 - k:
+        pytest.skip("Too few indices")
+
+    # Get tensors
+    ts_inds, _ = generate_random_tensors(n_tensors=n_tensors,
+                                         n_inds=n_inds,
+                                         k=k,
+                                         n_cc=n_cc,
+                                         n_output_inds=n_output_inds,
+                                         randomize_names=randomize_names,
+                                         seed=random_seed)
+
+    # Get path
+    path = get_random_contraction_path(ts_inds,
+                                       seed=random_seed,
+                                       autocomplete=False)
+
+    # Split paths
+    paths, cc = split_contraction_path(n_tensors * n_cc,
+                                       path,
+                                       return_connected_components=True)
+    assert len(paths) == len(cc)
+    assert all(isinstance(cc, frozenset) for cc in cc)
+    cc = sorted(map(tuple, map(sorted, cc)))
+
+    # The merged path should be identical to the original one
+    assert merge_contraction_paths(n_tensors * n_cc, paths,
+                                   autocomplete=False) == path
+
+    # Get connected components from inds
+    cc_from_inds = sorted(
+        map(tuple, map(sorted, get_connected_components(ts_inds))))
+    assert cc_from_inds == cc
+
+    # Get normalized paths
+    normal_paths, cc_ = split_contraction_path(n_tensors * n_cc,
+                                               path,
+                                               return_connected_components=True,
+                                               normalize_paths=True)
+    assert len(normal_paths) == len(cc_)
+    cc_ = sorted(map(tuple, map(sorted, cc_)))
+    assert cc == cc_
+
+    # Check contractions
+    for normal_tensors, path, normal_path in zip(map(list, cc), paths,
+                                                 normal_paths):
+        # Normal and non-normal paths should have the same number of
+        # contractions
+        assert len(path) == len(normal_path)
+
+        # Add extra tag
+        normal_tensors = list(zip(normal_tensors, its.repeat('__CHECK__')))
+
+        # The non-normal path should have all the initial tensors
+        tensors = list(zip(range(n_tensors * n_cc), its.repeat('__CHECK__')))
+        n_intermediate_tensors = n_tensors
+
+        # For each contraction ...
+        for (x, y), (nx, ny) in zip(map(sorted, path), map(sorted,
+                                                           normal_path)):
+            # Normal and non-normal path should point to the same tensor
+            assert tensors.pop(y) == normal_tensors.pop(ny)
+            assert tensors.pop(x) == normal_tensors.pop(nx)
+
+            # Append the intermediate tensors
+            tensors.append((n_intermediate_tensors, '__CHECK__'))
+            normal_tensors.append((n_intermediate_tensors, '__CHECK__'))
+
+            # Update the number of intermediate tensors
+            n_intermediate_tensors += 1
 
 
 @repeat(20)
