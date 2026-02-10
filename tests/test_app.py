@@ -27,6 +27,7 @@ import numpy as np
 import pytest
 from cirq.contrib.qasm_import import circuit_from_qasm
 from quimb.tensor import Tensor, TensorNetwork
+
 from tnco.app import Optimizer
 from tnco.app import Tensor as TS
 from tnco.app import TensorNetwork as TN
@@ -61,7 +62,7 @@ def test_LoadTN_CirqCircuit(random_seed):
     def check_tn(U, tn):
         tn = TensorNetwork(map(Tensor, tn.arrays,
                                tn.ts_inds)).contract(output_inds=tn.output_inds)
-        tn = tn.transpose(*sorted(tn.inds, key=lambda x: (x[1] == 0, x[0])))
+        tn = tn.transpose(*sorted(tn.inds, key=lambda x: (x[1] == 'i', x[0])))
         np.testing.assert_allclose(U.ravel(), tn.data.ravel(), atol=1e-5)
 
     # Get RNG

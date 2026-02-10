@@ -17,6 +17,7 @@ import itertools as its
 import math
 import operator as op
 from collections import defaultdict
+from random import Random
 from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
 import autoray as ar
@@ -186,6 +187,7 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
          use_matrix_commutation: Optional[bool] = True,
          decompose_hyper_inds: Optional[bool] = True,
          fuse: Optional[float] = 4,
+         dtype: Optional[any] = None,
          atol: Optional[float] = 1e-8,
          backend: Optional[str] = None,
          seed: Optional[int] = None,
@@ -216,6 +218,7 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
         fuse: Fuse tensors together up a width smaller than 'fuse'.  The width
             is defined as sum of the logarithms of all the dimensions of a
             given tensor.  Tensors are contracted so that
+        dtype: Type to use for arrays.
         atol: Absolute tollerance for array comparison.
         backend: Backend to use to fuse gates. See: `autoray.do`.
         seed: Seed for the random number generator.
@@ -226,15 +229,74 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
             arrays: Arrays associated to each tensor.
             ts_inds: Indices associated to each tensor.
             output_inds: Output indices.
+        All the indices associated to an initial open qubits are marked with an
+        'i', while all the indices associated to a final open qubit are marked
+        with an 'f'.
     """
+    # Valid token for the initial/final state
+    valid_token = {
+        '0':
+            ar.do('asarray', [1, 0], dtype=dtype, like=backend),
+        '1':
+            ar.do('asarray', [0, 1], dtype=dtype, like=backend),
+        '+':
+            ar.do('asarray', [1 / math.sqrt(2), 1 / math.sqrt(2)],
+                  dtype=dtype,
+                  like=backend),
+        '-':
+            ar.do('asarray', [1 / math.sqrt(2), -1 / math.sqrt(2)],
+                  dtype=dtype,
+                  like=backend)
+    }
+
+    # Convert initial/final state
+    def get_state(state, tag):
+        if state is None:
+            return {}
+
+        if isinstance(state, str) and state in valid_token:
+            return dict(
+                zip(zip(qubits, its.repeat(tag)),
+                    its.repeat(valid_token[state])))
+
+        if isinstance(state, dict):
+
+            # Check valid tokens
+            if not all(x in valid_token
+                       for x in state.values()
+                       if isinstance(x, str)):
+                raise ValueError("State has not supported tokens.")
+
+            # Convert state
+            state = dict(
+                ((q, tag), valid_token[x] if isinstance(x, str) else ar.
+                 do('asarray', x, dtype=dtype, like=backend))
+                for q, x in state.items()
+                if q in qubits)
+
+            # Check states
+            if not all(
+                    x.shape == (2,) and abs(ar.do('linalg.norm', x) - 1) < atol
+                    for x in state.values()):
+                raise ValueError("State is not properly normalized.")
+
+            return state
+
+        raise NotImplementedError("State not supported.")
+
     # Short names
     same_ = fts.partial(same, atol=atol)
     commute_ = fts.partial(commute,
                            use_matrix_commutation=use_matrix_commutation,
                            atol=atol)
 
+    # Convert arrays
+    circuit = tuple(
+        its.starmap(
+            lambda a, qs: (ar.do('asarray', a, dtype=dtype, like=backend), qs),
+            circuit))
+
     # Get all qubits
-    circuit = tuple(circuit)
     qubits = kwargs.pop(
         '_qubits', OrderedFrozenSet(mit.flatten(map(op.itemgetter(1),
                                                     circuit))))
@@ -256,7 +318,7 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
                        description="Building TN..."):
 
         # Get adjoint
-        gate_adj_ = (ar.do('asarray', gate_[0]).conj().T, gate_[1])
+        gate_adj_ = (gate_[0].conj().T, gate_[1])
 
         # Check if there is at least one gate that can be simplifies
         pos_, status_ = next(
@@ -287,8 +349,10 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
                     use_matrix_commutation=use_matrix_commutation,
                     decompose_hyper_inds=decompose_hyper_inds,
                     fuse=fuse,
+                    dtype=dtype,
                     atol=atol,
-                    seed=seed,
+                    backend=backend,
+                    seed=Random(seed).randrange(2**32),
                     verbose=verbose,
                     _qubits=qubits)
 
@@ -313,59 +377,24 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
                                        qubit_map.items())).union(
                                            map(lambda q: (q, 0), qubits))
 
-    def get_state(state):
-        valid_token = {
-            '0': [1, 0],
-            '1': [0, 1],
-            '+': [1 / math.sqrt(2), 1 / math.sqrt(2)],
-            '-': [1 / math.sqrt(2), -1 / math.sqrt(2)]
-        }
-        if state is None:
-            return {}
+    # Remap initial/final open qubits
+    output_inds_map = dict(
+        zip(output_inds,
+            ((q, 'i' if x == 0 else 'f') for (q, x) in output_inds)))
+    output_inds = OrderedFrozenSet(map(output_inds_map.get, output_inds))
+    ts_inds = list(
+        map(lambda xs: tuple(output_inds_map.get(x, x) for x in xs), ts_inds))
 
-        if isinstance(state, str):
-            if state not in valid_token:
-                raise ValueError(f"'{state}' is not valid.")
-            return dict(zip(qubits, its.repeat(valid_token[state])))
-
-        if not all(
-                map(
-                    lambda x: (isinstance(x, str) and len(x) == 1) or
-                    (len(x) == 2 and abs(abs(x[0])**2 + abs(x[1])**2 - 1) < 1e-8
-                    ), state.values())):
-            raise ValueError("State is not valid.")
-
-        return dict(
-            filter(
-                lambda x: x[0] in qubits,
-                its.starmap(
-                    lambda q, x:
-                    (q, valid_token[x] if isinstance(x, str) else x),
-                    state.items())))
-
-    # Convert initial / final state
-    initial_state = get_state(initial_state)
-    final_state = get_state(final_state)
-    #
-    initial_state = list(
-        filter(
-            None,
-            map(
-                lambda q: (initial_state[q], ((q, 0),))
-                if q in initial_state else None, qubits)))
-    final_state = list(
-        filter(
-            None,
-            its.starmap(
-                lambda q, x: (ar.do('asarray', final_state[q]).conj(),
-                              ((q, x),)) if q in final_state else None,
-                mit.map_reduce(output_inds, lambda x: x[0], lambda x: x[1],
-                               max).items())))
+    # Convert initial/final state
+    initial_state = get_state(initial_state, 'i')
+    final_state = dict(
+        its.starmap(lambda q, a: (q, a.conj()),
+                    get_state(final_state, 'f').items()))
 
     # Attach initial / final state to tn
     if initial_state or final_state:
-        arrays_, ts_inds_ = mit.transpose(initial_state + final_state)
-        arrays.extend(arrays_)
+        ts_inds_ = list((q,) for q in its.chain(initial_state, final_state))
+        arrays.extend(its.chain(initial_state.values(), final_state.values()))
         ts_inds.extend(ts_inds_)
         output_inds = output_inds.difference(mit.flatten(ts_inds_))
 
@@ -374,6 +403,15 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
         arrays, ts_inds, hyper_inds_map = tn_utils.decompose_hyper_inds(
             arrays, ts_inds, atol=atol)
         output_inds = frozenset(map(hyper_inds_map.get, output_inds))
+
+        # Remap hyper-inds to make sure that output qubits are all
+        # initial / final qubits
+        hyper_remap_ = dict(
+            (hyper_inds_map[q], q)
+            for q in filter(lambda x: x[1] in ['i', 'f'], hyper_inds_map))
+        ts_inds = list(
+            tuple(hyper_remap_.get(x, x) for x in xs) for xs in ts_inds)
+        output_inds = frozenset(hyper_remap_.get(x, x) for x in output_inds)
 
     # Keep only the output inds that are still present in the tn
     output_inds = output_inds.intersection(mit.flatten(ts_inds))
@@ -405,7 +443,7 @@ try:
     import cirq
 
     @load.register
-    def _(circuit: cirq.Circuit, *args, **kwargs):
+    def _(circuit: cirq.AbstractCircuit, *args, **kwargs):
         # Define gates to ignore
         def ignore_gate(gate):
             # Ignore measurement gates
@@ -414,9 +452,15 @@ try:
 
             return False
 
+        # Get params
+        dtype = kwargs.get('dtype', None)
+        backend = kwargs.get('backend', None)
+
         # Create circuit
         circuit = map(
-            lambda g: (cirq.unitary(g), g.qubits),
+            lambda g:
+            (ar.do('asarray', cirq.unitary(g), dtype=dtype, like=backend), g.
+             qubits),
             filter(lambda gate: not ignore_gate(gate),
                    circuit.all_operations()))
 
@@ -425,8 +469,15 @@ try:
 
     @load.register
     def _(circuit: cirq.Moment, *args, **kwargs):
+        # Get params
+        dtype = kwargs.get('dtype', None)
+        backend = kwargs.get('backend', None)
+
         # Create circuit
-        circuit = map(lambda g: (cirq.unitary(g), g.qubits), circuit)
+        circuit = map(
+            lambda g:
+            (ar.do('asarray', cirq.unitary(g), dtype=dtype, like=backend), g.
+             qubits), circuit)
 
         # Load TN
         return load(circuit, *args, **kwargs)
@@ -440,8 +491,15 @@ try:
 
     @load.register
     def _(circuit: qiskit.QuantumCircuit, *args, **kwargs):
+        # Get params
+        dtype = kwargs.get('dtype', None)
+        backend = kwargs.get('backend', None)
+
         # Create circuit
-        circuit = map(lambda g: (g.matrix, g.qubits), circuit)
+        circuit = map(
+            lambda g:
+            (ar.do('asarray', g.matrix, dtype=dtype, like=backend), g.qubits),
+            circuit)
 
         # Load TN
         return load(circuit, *args, **kwargs)
