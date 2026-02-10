@@ -210,7 +210,7 @@ def generate_random_tensors(
         return rng.sample(x, k=len(x))
 
     # Check minimum number of indices
-    if (n_inds - n_output_inds) < n_tensors + 1 - k:
+    if (n_inds - n_output_inds) < n_tensors + 1 - k or n_tensors < k:
         raise ValueError("Too few indices.")
 
     # Initialize
