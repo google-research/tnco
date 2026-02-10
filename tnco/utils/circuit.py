@@ -100,7 +100,7 @@ def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
         xs_C = list(
             its.chain(map(lambda q: (q, 'i'), all_qubits),
                       map(lambda q: (q, 'f'), all_qubits)))
-        return tensor_utils.get_einsum_path(xs_A, xs_B, xs_C)
+        return tensor_utils.get_einsum_subscripts(xs_A, xs_B, xs_C)
 
     # Reshape unitaries
     array_A = array_A.reshape((2,) * 2 * len(qubits_A))
