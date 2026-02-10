@@ -24,7 +24,7 @@ import more_itertools as mit
 
 from tnco.typing import Array, Index
 
-__all__ = ['decompose_hyper_inds', 'get_einsum_path', 'svd']
+__all__ = ['decompose_hyper_inds', 'get_einsum_subscripts', 'svd']
 
 
 def is_diagonal(array: Array, /, *, atol: Optional[float] = 1e-8) -> bool:
@@ -140,8 +140,8 @@ def decompose_hyper_inds(
     return decompose_hyper_inds(array, inds, _hyper_inds=_hyper_inds)
 
 
-def get_einsum_path(inds_a: Iterable[Index], inds_b: Iterable[Index],
-                    output_inds: Iterable[Index], /) -> str:
+def get_einsum_subscripts(inds_a: Iterable[Index], inds_b: Iterable[Index],
+                          output_inds: Iterable[Index], /) -> str:
     """Return einsum path.
 
     Return einsum path for the contraction 'inds_a @ inds_b -> output_inds'.

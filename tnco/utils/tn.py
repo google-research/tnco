@@ -829,7 +829,8 @@ def contract(
         # Append new tensor
         if arrays is not None:
             arrays.append(
-                do('einsum', tensor_utils.get_einsum_path(xs, ys, zs), ax, ay))
+                do('einsum', tensor_utils.get_einsum_subscripts(xs, ys, zs), ax,
+                   ay))
 
         # Append new indices
         ts_inds.append(zs)

@@ -40,7 +40,7 @@ from tnco.testing.utils import (generate_random_inds, generate_random_tensors,
                                 is_valid_contraction_tree)
 from tnco.utils.tensor import \
     decompose_hyper_inds as tensor_decompose_hyper_inds
-from tnco.utils.tensor import get_einsum_path, svd
+from tnco.utils.tensor import get_einsum_subscripts, svd
 from tnco.utils.tn import contract
 from tnco.utils.tn import decompose_hyper_inds as tn_decompose_hyper_inds
 from tnco.utils.tn import (fuse, get_random_contraction_path,
@@ -1123,8 +1123,8 @@ def test_GetEinsumPath(random_seed):
     output_inds = permutation(output_inds)
 
     # Compute tensordot providing the output inds
-    array_c = np.einsum(get_einsum_path(inds_a, inds_b, output_inds), array_a,
-                        array_b)
+    array_c = np.einsum(get_einsum_subscripts(inds_a, inds_b, output_inds),
+                        array_a, array_b)
 
     # Check if correct
     np.testing.assert_allclose(
@@ -1151,8 +1151,8 @@ def test_Fuse(random_seed, **kwargs):
             # Contract
             arrays.append(
                 Tensor(
-                    np.einsum(get_einsum_path(tx.inds, ty.inds, iz), tx.data,
-                              ty.data), iz))
+                    np.einsum(get_einsum_subscripts(tx.inds, ty.inds, iz),
+                              tx.data, ty.data), iz))
 
         # Get final fused tensor
         return arrays
