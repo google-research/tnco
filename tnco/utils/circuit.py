@@ -284,6 +284,14 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
 
         raise NotImplementedError("State not supported.")
 
+    def get_delta(n: int):
+        """
+        Return a Kronecker delta of n-dimensions.
+        """
+        delta = ar.do('zeros', 2**n, dtype=dtype, like=backend)
+        delta[[0, -1]] = 1
+        return delta.reshape([2] * n)
+
     # Short names
     same_ = fts.partial(same, atol=atol)
     commute_ = fts.partial(commute,
@@ -404,14 +412,27 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
             arrays, ts_inds, atol=atol)
         output_inds = frozenset(map(hyper_inds_map.get, output_inds))
 
-        # Remap hyper-inds to make sure that output qubits are all
-        # initial / final qubits
-        hyper_remap_ = dict(
-            (hyper_inds_map[q], q)
-            for q in filter(lambda x: x[1] in ['i', 'f'], hyper_inds_map))
-        ts_inds = list(
-            tuple(hyper_remap_.get(x, x) for x in xs) for xs in ts_inds)
-        output_inds = frozenset(hyper_remap_.get(x, x) for x in output_inds)
+        # Get closed indices
+        closed_inds = frozenset(initial_state).union(final_state)
+
+        # Get all the kronecker deltas for the missing initial / final state
+        kronecker_delta_inds = list([x] + xs for x, xs in mit.map_reduce((
+            (x, y)
+            for x, y in hyper_inds_map.items()
+            if x != y and x not in closed_inds and y in output_inds
+        ), op.itemgetter(1), op.itemgetter(0), list).items())
+
+        # Update indices
+        ts_inds.extend(kronecker_delta_inds)
+
+        # Update arrays
+        arrays.extend(map(get_delta, map(len, kronecker_delta_inds)))
+
+        # Update output_inds
+        output_inds = frozenset(
+            q for q in zip(qubits, its.repeat('i'))
+            if q not in initial_state).union(
+                q for q in zip(qubits, its.repeat('f')) if q not in final_state)
 
     # Keep only the output inds that are still present in the tn
     output_inds = output_inds.intersection(mit.flatten(ts_inds))

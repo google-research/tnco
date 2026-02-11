@@ -176,8 +176,6 @@ def test_LoadArbitraryInitialFinalState(random_seed, **kwargs):
                                                   cirq.ISWAP: 2
                                               },
                                               random_state=random_seed)
-    circuit = map((cirq.H**0.5).on, circuit.all_qubits()) + circuit + map(
-        (cirq.H**0.5).on, circuit.all_qubits())
 
     # Get qubits
     qubits = sorted(circuit.all_qubits())
@@ -291,8 +289,6 @@ def test_LoadUnitary(random_seed, **kwargs):
                                                   cirq.ISWAP: 2
                                               },
                                               random_state=random_seed)
-    circuit = map((cirq.H**0.5).on, circuit.all_qubits()) + circuit + map(
-        (cirq.H**0.5).on, circuit.all_qubits())
 
     # Load arrays
     arrays, ts_inds, output_inds = load(
@@ -305,6 +301,10 @@ def test_LoadUnitary(random_seed, **kwargs):
         fuse=fuse,
         use_matrix_commutation=use_matrix_commutation,
         seed=random_seed)
+
+    # All qubits should be present
+    assert output_inds == frozenset(
+        mit.flatten(((q, 'i'), (q, 'f')) for q in circuit.all_qubits()))
 
     # Get exact unitary
     U = cirq.unitary(circuit)
@@ -353,16 +353,10 @@ def test_LoadQisKit(random_seed):
     n_qubits = 6
     circuit_depth = 12
 
-    # Implement sqrt of Hadamard
-    sqrt_H = qiskit.circuit.library.UnitaryGate(cirq.unitary(cirq.H**0.5),
-                                                label='√H')
-
     # Get a random circuit
     circuit = qiskit.QuantumCircuit(n_qubits)
-    mit.consume(map(lambda i: circuit.append(sqrt_H, [i]), range(n_qubits)))
     circuit = circuit.compose(
         random_circuit(n_qubits, circuit_depth, seed=random_seed))
-    mit.consume(map(lambda i: circuit.append(sqrt_H, [i]), range(n_qubits)))
 
     # Get unitary
     U = cirq.unitary(
