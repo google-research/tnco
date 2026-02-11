@@ -86,8 +86,6 @@ def test_LoadTN_CirqCircuit(random_seed):
                                           circuit_depth,
                                           1,
                                           random_state=circuit_seed)
-    circuit = (cirq.H**0.5).on_each(circuit.all_qubits()) + circuit + (
-        cirq.H**0.5).on_each(circuit.all_qubits())
 
     # Get unitary
     U = cirq.unitary(circuit)

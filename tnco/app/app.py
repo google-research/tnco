@@ -488,21 +488,19 @@ def load_tn(obj: Any,
                                             verbose=verbose)
 
         # Get tensor network
-        tn = TensorNetwork(map(lambda xs, a: Tensor(xs, array=a), ts_inds,
-                               arrays),
-                           output_inds=output_inds)
-
-        # Call back again
-        return load_tn(tn, **options)
+        return TensorNetwork(map(lambda xs, a: Tensor(xs, array=a), ts_inds,
+                                 arrays),
+                             output_inds=output_inds)
 
     # Is it a cirq.Circuit? Let's load 'cirq' only if needed.
-    if type(obj).__module__.startswith('cirq.') and type(
-            obj).__name__ == 'Circuit':
-        from cirq import Circuit
+    if type(obj).__module__.startswith('cirq.') and type(obj).__name__ in [
+            'Circuit', 'FrozenCircuit'
+    ]:
+        from cirq import AbstractCircuit
 
         from tnco.utils.circuit import load
 
-        if isinstance(obj, Circuit):
+        if isinstance(obj, AbstractCircuit):
             # Convert circuit to tn
             arrays, ts_inds, output_inds = load(obj,
                                                 initial_state=initial_state,
@@ -515,12 +513,9 @@ def load_tn(obj: Any,
                                                 verbose=verbose)
 
             # Get tensor network
-            tn = TensorNetwork(map(lambda xs, a: Tensor(xs, array=a), ts_inds,
-                                   arrays),
-                               output_inds=output_inds)
-
-            # Call back again
-            return load_tn(tn, **options)
+            return TensorNetwork(map(lambda xs, a: Tensor(xs, array=a), ts_inds,
+                                     arrays),
+                                 output_inds=output_inds)
 
     # Is it a qiskit.QuantumCircuit? Let's load 'qiskit' only if needed.
     if type(obj).__module__.startswith('qiskit.') and type(
@@ -542,12 +537,9 @@ def load_tn(obj: Any,
                                                 verbose=verbose)
 
             # Get tensor network
-            tn = TensorNetwork(map(lambda xs, a: Tensor(xs, array=a), ts_inds,
-                                   arrays),
-                               output_inds=output_inds)
-
-            # Call back again
-            return load_tn(tn, **options)
+            return TensorNetwork(map(lambda xs, a: Tensor(xs, array=a), ts_inds,
+                                     arrays),
+                                 output_inds=output_inds)
 
     # Not a valid object
     raise TypeError("'obj' is not recognized.")
