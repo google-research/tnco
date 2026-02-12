@@ -26,9 +26,11 @@ from dataclasses import dataclass
 from decimal import Decimal
 from importlib import import_module
 from pathlib import Path
+from random import Random
 from typing import Any, Dict, List, Optional, Tuple, Union
 from warnings import warn
 
+import autoray as ar
 import more_itertools as mit
 from pathvalidate import ValidationError, validate_filepath
 
@@ -152,6 +154,7 @@ def load_tn(obj: Any,
             output_index_token: Optional[str] = '*',
             sparse_index_token: Optional[str] = '/',
             atol: Optional[float] = 1e-5,
+            dtype: Optional[any] = None,
             backend: Optional[str] = None,
             seed: Optional[int] = None,
             verbose: Optional[int] = False) -> TensorNetwork:
@@ -187,6 +190,7 @@ def load_tn(obj: Any,
         sparse_index_token: If 'obj' is a list of indices, the token to use to
             identify sparse inds.
         atol: Absolute tollerance when checking for hyper-indices.
+        dtype: Type to use for arrays.
         backend: Backend to use to fuse arrays. See: `autoray.do`.
         seed: Seed to use.
         verbose: Verbose output.
@@ -298,7 +302,9 @@ def load_tn(obj: Any,
         # Get tensors
         ts_inds = list(obj.ts_inds)
         dims = obj.dims
-        arrays = list(obj.arrays)
+        arrays = list(None if a is
+                      None else ar.do('asarray', a, dtype=dtype, like=backend)
+                      for a in obj.arrays)
         tags = dict(obj.tags)
         ts_tags = list(obj.ts_tags)
         output_inds = obj.output_inds
@@ -484,6 +490,8 @@ def load_tn(obj: Any,
                                             decompose_hyper_inds=False,
                                             fuse=False,
                                             atol=atol,
+                                            dtype=dtype,
+                                            backend=backend,
                                             seed=seed,
                                             verbose=verbose)
 
@@ -509,6 +517,8 @@ def load_tn(obj: Any,
                                                 decompose_hyper_inds=False,
                                                 fuse=False,
                                                 atol=atol,
+                                                dtype=dtype,
+                                                backend=backend,
                                                 seed=seed,
                                                 verbose=verbose)
 
@@ -533,6 +543,8 @@ def load_tn(obj: Any,
                                                 decompose_hyper_inds=False,
                                                 fuse=False,
                                                 atol=atol,
+                                                dtype=dtype,
+                                                backend=backend,
                                                 seed=seed,
                                                 verbose=verbose)
 
@@ -716,6 +728,7 @@ class BaseOptimizer:
         overwrite_output_file: If 'True', the 'output_filename' will be
             overwritten if it exists.
         atol: Absolute tollerance when checking for hyper-indices.
+        dtype: Type to use for arrays.
         backend: Backend to use to fuse arrays. See: `autoray.do`.
         seed: Seed to use.
         verbose: Verbose output.
@@ -729,6 +742,7 @@ class BaseOptimizer:
     output_compression: Optional[str] = 'auto'
     overwrite_output_file: Optional[bool] = False
     atol: Optional[float] = 1e-5
+    dtype: Optional[any] = None
     backend: Optional[str] = None
     seed: Optional[int] = None
     verbose: Optional[int] = False
@@ -739,6 +753,7 @@ class BaseOptimizer:
     def _load_tn(self, tn, **load_tn_options):
         return load_tn(tn,
                        atol=self.atol,
+                       dtype=self.dtype,
                        backend=self.backend,
                        seed=self.seed,
                        verbose=self.verbose,
@@ -754,6 +769,9 @@ class BaseOptimizer:
                             **dump_results_options)
 
     def __post_init__(self):
+        # Initialize common rng
+        self._rng = Random(self.seed)
+
         # Check dumper
         self._dump_results(None, None, check_only=True)
 
@@ -768,6 +786,7 @@ def Optimizer(method: Optional[str] = 'sa',
               output_compression: Optional[str] = 'auto',
               overwrite_output_file: Optional[bool] = False,
               atol: Optional[float] = 1e-5,
+              dtype: Optional[any] = None,
               backend: Optional[str] = None,
               seed: Optional[int] = None,
               verbose: Optional[int] = False) -> BaseOptimizer:
@@ -803,6 +822,7 @@ def Optimizer(method: Optional[str] = 'sa',
         overwrite_output_file: If 'True', the 'output_filename' will be
             overwritten if it exists.
         atol: Absolute tollerance when checking for hyper-indices.
+        dtype: Type to use for arrays.
         backend: Backend to use to fuse arrays. See: `autoray.do`.
         seed: Seed to use.
         verbose: Verbose output.
