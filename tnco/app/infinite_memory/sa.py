@@ -14,7 +14,6 @@
 
 import json
 from dataclasses import dataclass
-from random import Random
 from sys import stderr
 from time import perf_counter
 from typing import Any, Iterable, List, Optional, Tuple, Union
@@ -131,7 +130,7 @@ class Optimizer(BaseOptimizer):
         tn = self._load_tn(tn, **load_tn_options)
 
         # Initialize random generator
-        rng = Random(self.seed)
+        rng = self._rng
 
         # Check 'n_steps'
         if n_steps is not None:
