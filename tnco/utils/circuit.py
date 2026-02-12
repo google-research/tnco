@@ -288,9 +288,11 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
         """
         Return a Kronecker delta of n-dimensions.
         """
-        delta = ar.do('zeros', 2**n, dtype=dtype, like=backend)
-        delta[[0, -1]] = 1
-        return delta.reshape([2] * n)
+        return ar.do('concatenate', [
+            ar.do('ones', 1, dtype=dtype, like=backend),
+            ar.do('zeros', 2**n - 2, dtype=dtype, like=backend),
+            ar.do('ones', 1, dtype=dtype, like=backend)
+        ]).reshape([2] * n)
 
     # Short names
     same_ = fts.partial(same, atol=atol)
