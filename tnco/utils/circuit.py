@@ -217,7 +217,7 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
         decompose_hyper_inds: If 'True', decompose gates to get hyper-indices.
         fuse: Fuse tensors together up a width smaller than 'fuse'.  The width
             is defined as sum of the logarithms of all the dimensions of a
-            given tensor.  Tensors are contracted so that
+            given tensor.
         dtype: Type to use for arrays.
         atol: Absolute tollerance for array comparison.
         backend: Backend to use to fuse gates. See: `autoray.do`.
@@ -314,63 +314,69 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
     if kwargs:
         raise TypeError('Got unexpected keyword argument(s).')
 
-    # Collect gates
-    all_gates = []
+    # Simplify only if needed
+    if simplify:
 
-    # Any change?
-    changes = False
+        # Collect gates
+        all_gates = []
 
-    # For each gate ...
-    for gate_ in track(circuit,
-                       console=Console(stderr=True),
-                       disable=(verbose <= 0),
-                       transient=True,
-                       description="Building TN..."):
+        # Any change?
+        changes = False
 
-        # Get adjoint
-        gate_adj_ = (gate_[0].conj().T, gate_[1])
+        # For each gate ...
+        for gate_ in track(circuit,
+                           console=Console(stderr=True),
+                           disable=(verbose <= 0),
+                           transient=True,
+                           description="Building TN..."):
 
-        # Check if there is at least one gate that can be simplifies
-        pos_, status_ = next(
-            filter(
-                lambda x: x[1] is not None,
-                its.starmap(
-                    lambda i, gate:
-                    (i, True if same_(gate, gate_adj_) else False
-                     if not commute_(gate, gate_) else None),
-                    enumerate(all_gates))),
-            (None, False)) if simplify else (None, False)
+            # Get adjoint
+            gate_adj_ = (gate_[0].conj().T, gate_[1])
 
-        # If there is one, remove it
-        if status_:
-            del all_gates[pos_]
-            changes = True
+            # Check if there is at least one gate that can be simplifies
+            pos_, status_ = next(
+                filter(
+                    lambda x: x[1] is not None,
+                    its.starmap(
+                        lambda i, gate:
+                        (i, True if same_(gate, gate_adj_) else False
+                         if not commute_(gate, gate_) else None),
+                        enumerate(reversed(all_gates)))), (None, False))
 
-        # Otherwise, append it
-        else:
-            all_gates.insert(0, gate_)
+            # If there is one, remove it
+            if status_:
+                del all_gates[len(all_gates) - pos_ - 1]
+                changes = True
 
-    # If there are changes, try again
-    if changes:
-        return load(all_gates[::-1],
-                    initial_state=initial_state,
-                    final_state=final_state,
-                    simplify=simplify,
-                    use_matrix_commutation=use_matrix_commutation,
-                    decompose_hyper_inds=decompose_hyper_inds,
-                    fuse=fuse,
-                    dtype=dtype,
-                    atol=atol,
-                    backend=backend,
-                    seed=Random(seed).randrange(2**32),
-                    verbose=verbose,
-                    _qubits=qubits)
+            # Otherwise, append it
+            else:
+                all_gates.append(gate_)
+
+        # If there are changes, try again
+        if changes:
+            return load(all_gates,
+                        initial_state=initial_state,
+                        final_state=final_state,
+                        simplify=simplify,
+                        use_matrix_commutation=use_matrix_commutation,
+                        decompose_hyper_inds=decompose_hyper_inds,
+                        fuse=fuse,
+                        dtype=dtype,
+                        atol=atol,
+                        backend=backend,
+                        seed=Random(seed).randrange(2**32),
+                        verbose=verbose,
+                        _qubits=qubits)
+
+    # Skip simplification
+    else:
+        all_gates = circuit
 
     # Build TN
     qubit_map = defaultdict(int)
     arrays = []
     ts_inds = []
-    for array_, qs_ in all_gates[::-1]:
+    for array_, qs_ in all_gates:
         # Get qubits
         qs_ = tuple(map(lambda q: (q, qubit_map[q]), qs_))
 
