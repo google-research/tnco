@@ -16,7 +16,7 @@ import functools as fts
 import itertools as its
 import math
 import operator as op
-from collections import defaultdict
+from collections import Counter, defaultdict
 from random import Random
 from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
@@ -408,21 +408,40 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
         ts_inds.extend(ts_inds_)
         output_inds = output_inds.difference(mit.flatten(ts_inds_))
 
+    # Get open / close qubits
+    closed_qubits = OrderedFrozenSet(initial_state).union(final_state)
+    open_qubits = OrderedFrozenSet(
+        mit.flatten(
+            ((q, 'i'), (q, 'f')) for q in qubits)).difference(closed_qubits)
+
     # Decompose hyper inds if needed
     if decompose_hyper_inds:
         arrays, ts_inds, hyper_inds_map = tn_utils.decompose_hyper_inds(
             arrays, ts_inds, atol=atol)
-        output_inds = frozenset(map(hyper_inds_map.get, output_inds))
+        output_inds = OrderedFrozenSet(map(hyper_inds_map.get, output_inds))
 
-        # Get closed indices
-        closed_inds = frozenset(initial_state).union(final_state)
+        # Let's split hyper_inds_map to isolate open_qubits mapped to internal
+        # indices
+        hyper_inds_map = mit.map_reduce(
+            hyper_inds_map.items(),
+            lambda xs: xs[0] in open_qubits and xs[1] not in open_qubits)
 
-        # Get all the kronecker deltas for the missing initial / final state
-        kronecker_delta_inds = list([x] + xs for x, xs in mit.map_reduce((
-            (x, y)
+        # Invert map open_qubits --> internal
+        hyper_remap = dict((y, x) for x, y in hyper_inds_map.get(True, {}))
+        hyper_inds_map = dict((x, hyper_remap.get(y, y))
+                              for x, y in mit.flatten(hyper_inds_map.values()))
+
+        # Update indices
+        ts_inds = list(
+            tuple(hyper_remap.get(x, x) for x in xs) for xs in ts_inds)
+
+        # Let's now identify output qubitis that are mapper to output qubits,
+        # in order to create a Kronecker delta
+        kronecker_delta_inds = list((x, *ys) for x, ys in mit.map_reduce((
+            (y, x)
             for x, y in hyper_inds_map.items()
-            if x != y and x not in closed_inds and y in output_inds
-        ), op.itemgetter(1), op.itemgetter(0), list).items())
+            if x in open_qubits and y in open_qubits and x != y
+        ), op.itemgetter(0), op.itemgetter(1)).items())
 
         # Update indices
         ts_inds.extend(kronecker_delta_inds)
@@ -430,14 +449,58 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
         # Update arrays
         arrays.extend(map(get_delta, map(len, kronecker_delta_inds)))
 
-        # Update output_inds
-        output_inds = frozenset(
-            q for q in zip(qubits, its.repeat('i'))
-            if q not in initial_state).union(
-                q for q in zip(qubits, its.repeat('f')) if q not in final_state)
+    else:
+        # Some qubits might be still open despite it should be closed. The
+        # reason is because it should be mapped to an actual open qubit.
+        closed_but_open_qubits = list(q for q, n in Counter(
+            x for x in mit.flatten(ts_inds) if x in closed_qubits).items()
+                                      if n == 1)
 
-    # Keep only the output inds that are still present in the tn
-    output_inds = output_inds.intersection(mit.flatten(ts_inds))
+        # It might happen that a pair of disconnected would both appear in
+        # closed_but_open_qubits. We need to remove them from ts_inds.
+        qubits_to_remove = OrderedFrozenSet(q for q, n in Counter(
+            map(op.itemgetter(0), closed_but_open_qubits)).items() if n == 2)
+        for qubit in qubits_to_remove:
+            pos = list(
+                mit.locate(ts_inds,
+                           lambda xs: len(xs) == 1 and xs[0][0] == qubit))
+            assert len(pos) == 2
+            del ts_inds[pos[1]]
+            del ts_inds[pos[0]]
+            del arrays[pos[1]]
+            del arrays[pos[0]]
+
+        # Update loose qubits
+        closed_but_open_qubits = list(
+            q for q in closed_but_open_qubits if q[0] not in qubits_to_remove)
+
+        # Update loose qubits
+        for p in mit.locate(
+                ts_inds,
+                lambda xs: len(xs) == 1 and xs[0] in closed_but_open_qubits):
+            qubit = ts_inds[p][0]
+            inv_qubit = (qubit[0], 'i' if qubit[1] == 'f' else 'f')
+            assert qubit in closed_qubits and inv_qubit in open_qubits
+            ts_inds[p] = (inv_qubit,)
+
+        # Some qubits might be entirely missing. In this case, let's add a
+        # Kronecker delta
+        missing_qubits = Counter(
+            map(
+                op.itemgetter(0),
+                open_qubits.difference(
+                    OrderedFrozenSet(
+                        x for x in mit.flatten(ts_inds) if x in open_qubits))))
+
+        # Missing qubits should always be in pairs
+        assert all(n == 2 for n in missing_qubits.values())
+
+        # Add Kronecker deltas for each missing qubit
+        arrays.extend(map(get_delta, its.repeat(2, len(missing_qubits))))
+        ts_inds.extend(((q, 'i'), (q, 'f')) for q in missing_qubits)
+
+    # Update output
+    output_inds = open_qubits
 
     # Fuse if needed
     if fuse is not None and fuse > 0:

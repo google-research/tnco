@@ -343,8 +343,14 @@ def test_LoadUnitary(random_seed, **kwargs):
                                         fuse=0,
                                         decompose_hyper_inds=False)
 
-    # Everything should be empty
-    assert not arrays and not ts_inds and not output_inds
+    # All qubits should be present
+    assert output_inds == frozenset(
+        mit.flatten(((q, 'i'), (q, 'f')) for q in circuit.all_qubits()))
+
+    # Only Kronecker deltas should be present
+    assert all(np.allclose(x, np.eye(2)) for x in arrays)
+    assert all(x[0] == y[0] and x[1] == 'i' and y[1] == 'f' for x, y in ts_inds)
+    assert sorted(mit.flatten(ts_inds)) == sorted(output_inds)
 
 
 @repeat(20)
