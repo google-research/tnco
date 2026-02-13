@@ -17,14 +17,15 @@ import itertools as its
 import operator as op
 from random import Random
 from string import ascii_letters
-from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple
+from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
 import autoray as ar
 import more_itertools as mit
 
+from tnco.ordered_frozenset import OrderedFrozenSet
 from tnco.typing import Array, Index
 
-__all__ = ['decompose_hyper_inds', 'get_einsum_subscripts', 'svd']
+__all__ = ['decompose_hyper_inds', 'get_einsum_subscripts', 'tensordot', 'svd']
 
 
 def is_diagonal(array: Array, /, *, atol: Optional[float] = 1e-8) -> bool:
@@ -162,6 +163,79 @@ def get_einsum_subscripts(inds_a: Iterable[Index], inds_b: Iterable[Index],
     # Return path
     return ''.join(map(cntr.get, inds_a)) + ',' + ''.join(map(
         cntr.get, inds_b)) + '->' + ''.join(map(cntr.get, output_inds))
+
+
+def tensordot(
+    x: Tuple[Array, Iterable[Index]],
+    y: Tuple[Array, Iterable[Index]],
+    /,
+    *,
+    hyper_inds: Optional[Iterable[Index]] = (),
+    return_inds_only: Optional[bool] = False
+) -> Union[Tuple[Array, List[Index]], List[Index]]:
+    """Multiply tensors.
+
+    Multiply the tensor 'xs' with 'ys', to return a final tensor with indices
+    'zs'.
+
+    Args:
+        xs: Tensor to multiply.
+        ys: Tensor to multiply.
+        hyper_inds: Indices to be treated as hyper-indices.
+        return_inds_only: If True, only the indices of the resuling tensor will
+            be returned.
+
+    Returns:
+        The array obtained by multiplying 'xs' with 'ys'. If
+        'return_inds_only=True', only the indices of the resulting tensor will
+        be returned.
+
+    Raises:
+        ValueError: If any hyper-index is not a shared index between 'xs' and
+            'ys'.
+    """
+    # Get indices and arrays
+    ax, ay = map(fts.partial(ar.do, 'asarray'), (x[0], y[0]))
+    xs, ys = map(OrderedFrozenSet, (x[1], y[1]))
+
+    # Get all dimensions
+    dims = dict(its.chain(zip(xs, ax.shape), zip(ys, ay.shape)))
+
+    # Check hyper-indices
+    hyper_inds = OrderedFrozenSet(hyper_inds)
+    if not (xs & ys).issuperset(hyper_inds):
+        raise ValueError("'hyper_inds' must be a list of shared indices.")
+
+    # Let's get the shared inds
+    shared_inds = (xs & ys)
+    shared_no_hyper_inds = shared_inds - hyper_inds
+
+    # Build the new x / y inds
+    xs_not_shared = xs - shared_inds
+    ys_not_shared = ys - shared_inds
+    new_xs = tuple(hyper_inds | xs_not_shared | shared_no_hyper_inds)
+    new_ys = tuple(hyper_inds | shared_no_hyper_inds | ys_not_shared)
+
+    # Get new inds
+    zs = hyper_inds | xs_not_shared | ys_not_shared
+
+    # Return inds only if needed
+    if return_inds_only:
+        return tuple(zs)
+
+    # Transpose arrays accordingly
+    xs, ys = map(tuple, (xs, ys))
+    ax = ax.transpose(list(map(xs.index, new_xs))).reshape(
+        tuple(
+            fts.reduce(op.mul, map(dims.get, xs), 1)
+            for xs in (hyper_inds, xs_not_shared, shared_no_hyper_inds)))
+    ay = ay.transpose(list(map(ys.index, new_ys))).reshape(
+        tuple(
+            fts.reduce(op.mul, map(dims.get, ys), 1)
+            for ys in (hyper_inds, shared_no_hyper_inds, ys_not_shared)))
+
+    # Return new tensor
+    return (ax @ ay).reshape(tuple(map(dims.get, zs))), tuple(zs)
 
 
 def svd(array: Array,

@@ -969,9 +969,6 @@ def contract(
             ay = arrays.pop(y)
             ax = arrays.pop(x)
 
-        # Get all indices
-        all_inds = frozenset(xs) | frozenset(ys)
-
         # Get shared indices
         shared_inds = frozenset(xs) & frozenset(ys)
 
@@ -985,27 +982,22 @@ def contract(
             map(
                 op.itemgetter(0),
                 filter(lambda x: x[0] in shared_inds and x[1] > 1,
-                       hyper_count.items())))
+                       hyper_count.items()))) | (output_inds & shared_inds)
 
         # Update hyper-count
         for x in shared_inds:
             hyper_count[x] -= 1
 
-        # Generate new inds
-        zs = (frozenset(xs) ^ frozenset(ys)) | hyper_inds | (output_inds &
-                                                             all_inds)
+        # Contract the tensors
+        if arrays is None:
+            zs = tensor_utils.tensordot((None, xs), (None, ys),
+                                        hyper_inds=hyper_inds,
+                                        return_inds_only=True)
 
-        # Sort new inds as they appear in xs and ys
-        zs = tuple(
-            mit.unique_everseen(
-                its.chain(filter(lambda x: x in zs, xs),
-                          filter(lambda y: y in zs, ys))))
-
-        # Append new tensor
-        if arrays is not None:
-            arrays.append(
-                do('einsum', tensor_utils.get_einsum_subscripts(xs, ys, zs), ax,
-                   ay))
+        else:
+            (az, zs) = tensor_utils.tensordot((ax, xs), (ay, ys),
+                                              hyper_inds=hyper_inds)
+            arrays.append(az)
 
         # Append new indices
         ts_inds.append(zs)

@@ -86,32 +86,34 @@ def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
     if not use_matrix_commutation:
         return False
 
-    # Create contraction path
-    def contraction_path_(qs_A, qs_B):
-        xs_A = list(
+    # How to contract matrices
+    def contract(array_A, qs_A, array_B, qs_B):
+        xs_A = tuple(
             its.chain(
                 map(lambda q: (q, 'i'), qs_A),
                 map(lambda q: (q, 'shared'
                                if q in shared_qubits else 'f'), qs_A)))
-        xs_B = list(
+        xs_B = tuple(
             its.chain(
                 map(lambda q: (q, 'shared'
                                if q in shared_qubits else 'i'), qs_B),
                 map(lambda q: (q, 'f'), qs_B)))
-        xs_C = list(
+        xs_AB = tuple(
             its.chain(map(lambda q: (q, 'i'), all_qubits),
                       map(lambda q: (q, 'f'), all_qubits)))
-        return tensor_utils.get_einsum_subscripts(xs_A, xs_B, xs_C)
+
+        array_AB, xs_AB_ = tensor_utils.tensordot((array_A, xs_A),
+                                                  (array_B, xs_B))
+
+        return array_AB.transpose(tuple(map(xs_AB_.index, xs_AB)))
 
     # Reshape unitaries
     array_A = array_A.reshape((2,) * 2 * len(qubits_A))
     array_B = array_B.reshape((2,) * 2 * len(qubits_B))
 
     # Compute AB and BA
-    array_AB = ar.do('einsum', contraction_path_(qubits_A, qubits_B), array_A,
-                     array_B)
-    array_BA = ar.do('einsum', contraction_path_(qubits_B, qubits_A), array_B,
-                     array_A)
+    array_AB = contract(array_A, qubits_A, array_B, qubits_B)
+    array_BA = contract(array_B, qubits_B, array_A, qubits_A)
 
     # Check commutation
     return ar.do('allclose', array_AB, array_BA, atol=atol)
