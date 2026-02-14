@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, TypeVar
+from tnco.app.circuit.sampling import Sampler
 
-TensorName = Any
-Index = Any
-IndexName = Any
-Array = TypeVar('Array')
-Matrix = TypeVar('Matrix')
-Qubit = TypeVar('Qubit')
-Circuit = TypeVar('Circuit')
+__all__ = ['Sampler']

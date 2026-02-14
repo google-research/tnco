@@ -30,7 +30,7 @@ import tnco.utils.tn as tn_utils
 from tnco.ordered_frozenset import OrderedFrozenSet
 from tnco.typing import Array, Index, Matrix, Qubit
 
-__all__ = ['commute', 'same', 'load']
+__all__ = ['load']
 
 
 def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
@@ -536,45 +536,53 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
 try:
     import cirq
 
-    @load.register
-    def _(circuit: cirq.AbstractCircuit, *args, **kwargs):
+    def cirq_to_arrays(
+            circuit: Iterable[cirq.Operation],
+            dtype: Optional[any] = None,
+            backend: Optional[str] = None) -> List[Tuple[Array, Tuple[Qubit]]]:
+        """Convert a 'cirq' circuit to arrays.
+
+        Convert a 'cirq' circuit to arrays.
+
+        Args:
+            circuit: The circuit to convert.
+            dtype: The type to use for the unitary matrices.
+            backend: The backend for the unitary matrices.
+
+        Returns:
+            A list of (array, qubits).
+        """
+
         # Define gates to ignore
-        def ignore_gate(gate):
+        def ignore_gate(op):
             # Ignore measurement gates
-            if cirq.is_measurement(gate):
+            if cirq.is_measurement(op):
                 return True
 
             return False
 
-        # Get params
-        dtype = kwargs.get('dtype', None)
-        backend = kwargs.get('backend', None)
-
         # Create circuit
-        circuit = map(
-            lambda g:
-            (ar.do('asarray', cirq.unitary(g), dtype=dtype, like=backend), g.
-             qubits),
-            filter(lambda gate: not ignore_gate(gate),
-                   circuit.all_operations()))
+        return list(
+            map(
+                lambda g:
+                (ar.do('asarray', cirq.unitary(g), dtype=dtype, like=backend), g
+                 .qubits), filter(lambda op: not ignore_gate(op), circuit)))
 
-        # Load TN
-        return load(circuit, *args, **kwargs)
+    @load.register
+    def _(circuit: cirq.AbstractCircuit, *args, **kwargs):
+        return load(
+            cirq_to_arrays(circuit.all_operations(),
+                           dtype=kwargs.get('dtype', None),
+                           backend=kwargs.get('backend', None)), *args,
+            **kwargs)
 
     @load.register
     def _(circuit: cirq.Moment, *args, **kwargs):
-        # Get params
-        dtype = kwargs.get('dtype', None)
-        backend = kwargs.get('backend', None)
-
-        # Create circuit
-        circuit = map(
-            lambda g:
-            (ar.do('asarray', cirq.unitary(g), dtype=dtype, like=backend), g.
-             qubits), circuit)
-
-        # Load TN
-        return load(circuit, *args, **kwargs)
+        return load(
+            cirq_to_arrays(circuit,
+                           dtype=kwargs.get('dtype', None),
+                           backend=kwargs.get('backend', None)), *args,
+            **kwargs)
 
 except ModuleNotFoundError:
     pass
@@ -583,20 +591,34 @@ except ModuleNotFoundError:
 try:
     import qiskit
 
+    def qiskit_to_arrays(
+            circuit: Iterable[qiskit.circuit.CircuitInstruction],
+            dtype: Optional[any] = None,
+            backend: Optional[str] = None) -> List[Tuple[Array, Tuple[Qubit]]]:
+        """Convert a 'qiskit' circuit to arrays.
+
+        Convert a 'qiskit' circuit to arrays.
+
+        Args:
+            circuit: The circuit to convert.
+            dtype: The type to use for the unitary matrices.
+            backend: The backend for the unitary matrices.
+
+        Returns:
+            A list of (array, qubits).
+        """
+        return list(
+            map(
+                lambda g: (ar.do('asarray', g.matrix, dtype=dtype, like=backend
+                                ), g.qubits), circuit))
+
     @load.register
     def _(circuit: qiskit.QuantumCircuit, *args, **kwargs):
-        # Get params
-        dtype = kwargs.get('dtype', None)
-        backend = kwargs.get('backend', None)
-
-        # Create circuit
-        circuit = map(
-            lambda g:
-            (ar.do('asarray', g.matrix, dtype=dtype, like=backend), g.qubits),
-            circuit)
-
-        # Load TN
-        return load(circuit, *args, **kwargs)
+        return load(
+            qiskit_to_arrays(circuit,
+                             dtype=kwargs.get('dtype', None),
+                             backend=kwargs.get('backend', None)), *args,
+            **kwargs)
 
 except ModuleNotFoundError:
     pass
