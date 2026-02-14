@@ -42,8 +42,6 @@ from tnco.ordered_frozenset import OrderedFrozenSet
 from tnco.testing.utils import (generate_random_inds, generate_random_tensors,
                                 get_connected_components,
                                 is_valid_contraction_tree)
-from tnco.utils.tensor import \
-    decompose_hyper_inds as tensor_decompose_hyper_inds
 from tnco.utils.tn import contract
 from tnco.utils.tn import decompose_hyper_inds as tn_decompose_hyper_inds
 from tnco.utils.tn import (fuse, get_einsum_subscripts,
@@ -1060,8 +1058,8 @@ def test_DecomposeHyperInds(random_seed):
     array = array.transpose(*permutation(inds))
 
     # Get decomposition
-    (d_array,
-     d_inds), merged_inds = tensor_decompose_hyper_inds(array.data, array.inds)
+    (d_array, d_inds), merged_inds = tensor_utils.decompose_hyper_inds(
+        array.data, array.inds)
 
     # Check number of inds associated to hyper-inds
     assert len(merged_inds) == 1 and len(mit.nth(merged_inds.values(),
@@ -1602,8 +1600,9 @@ def test_DecomposeHyperIndsTN(random_seed: int, **kwargs):
     # Get contraction without decomposing, and decompose only at the end
     array_1 = tn.contract(output_inds=output_inds)
     if len(output_inds):
-        array_1 = (lambda x: (Tensor(*x[0]), x[1]))(tensor_decompose_hyper_inds(
-            array_1.data, array_1.inds))[0]
+        array_1 = (lambda x:
+                   (Tensor(*x[0]), x[1]))(tensor_utils.decompose_hyper_inds(
+                       array_1.data, array_1.inds))[0]
 
     # Decompose tn
     new_arrays, new_ts_inds, hyper_inds_map_2 = tn_decompose_hyper_inds(
@@ -1957,3 +1956,49 @@ def test_OrderedFrozenSet(random_seed):
                         res)) == tuple(ordered_set_x - ordered_set_y)
     assert tuple(filter(lambda z: z in ordered_set_y,
                         res)) == tuple(ordered_set_y - ordered_set_x)
+
+
+@repeat(200)
+def test_TensorDot(random_seed):
+    # Initialize random generator
+    rng = Random(random_seed)
+    np_rng = np.random.default_rng(random_seed)
+
+    # Get indices
+    n_shared = rng.randrange(3)
+    n_hyper = rng.randrange(3)
+    nx = rng.randrange(n_shared + n_hyper, 12)
+    ny = rng.randrange(n_shared + n_hyper, 12)
+    xs = generate_random_inds(nx, seed=rng.randrange(2**32))
+    shared_inds = tuple(rng.sample(xs, k=n_shared + n_hyper))
+    while True:
+        ys = frozenset(shared_inds + generate_random_inds(
+            ny - len(shared_inds), seed=rng.randrange(2**32)))
+        if len(ys) == ny and len(ys.intersection(xs)) == (n_shared + n_hyper):
+            ys = tuple(ys)
+            break
+
+    # Split shared and hyper
+    hyper_inds, shared_inds = shared_inds[:n_hyper], shared_inds[n_hyper:]
+
+    # Get random dimensions
+    dims = dict((x, rng.randrange(2, 4)) for x in frozenset(xs + ys))
+
+    # Generate random arrays
+    ax = np_rng.normal(size=tuple(map(dims.get, xs)))
+    ay = np_rng.normal(size=tuple(map(dims.get, ys)))
+
+    # Multiply using tensordot
+    (az, zs) = tensor_utils.tensordot((ax, xs), (ay, ys), hyper_inds=hyper_inds)
+    assert isinstance(zs, tuple)
+
+    # Check operation
+    np.testing.assert_allclose(
+        az,
+        np.einsum(tensor_utils.get_einsum_subscripts(xs, ys, zs), ax, ay),
+        atol=1e-5)
+
+    # Check if only inds are returned
+    assert tensor_utils.tensordot((None, xs), (None, ys),
+                                  hyper_inds=hyper_inds,
+                                  return_inds_only=True) == zs
