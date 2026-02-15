@@ -27,7 +27,6 @@ import more_itertools as mit
 import numpy as np
 import pytest
 from cirq.contrib.qasm_import import circuit_from_qasm
-from qsimcirq import QSimOptions, QSimSimulator
 from quimb.tensor import Tensor, TensorNetwork
 
 from tnco.app import Optimizer
@@ -335,9 +334,6 @@ def test_Sampling(random_seed):
     # Get params
     simplify = rng.randrange(2)
 
-    # Initialize simulator
-    qsim = QSimSimulator(QSimOptions(max_fused_gate_size=4, cpu_threads=1))
-
     # Initialize circuit
     n_qubits = 5
     n_moments = 10
@@ -362,9 +358,8 @@ def test_Sampling(random_seed):
     circuit = initial_state + circuit + cirq.inverse(circuit)
 
     # Get probability of peak
-    peak_prob = abs(
-        qsim.simulate(circuit, qubit_order=qubits).state_vector()[int(peak,
-                                                                      2)])**2
+    peak_prob = abs(cirq.Simulator().simulate(
+        circuit, qubit_order=qubits).state_vector()[int(peak, 2)])**2
     assert peak_prob > 0.1
 
     # Initialize sampler
