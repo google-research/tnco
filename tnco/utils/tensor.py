@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Tensor utilities."""
 
 import functools as fts
 import itertools as its
 import operator as op
 from random import Random
 from string import ascii_letters
-from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
 import autoray as ar
 import more_itertools as mit
@@ -29,16 +30,16 @@ __all__ = ['decompose_hyper_inds', 'get_einsum_subscripts', 'tensordot', 'svd']
 
 
 def is_diagonal(array: Array, /, *, atol: Optional[float] = 1e-8) -> bool:
-    """Check if array 'array' is diagonal.
+    """Checks if an array is diagonal.
 
-    Check if array 'array' is diagonal.
+    Checks if the given array is diagonal.
 
     Args:
         array: Array to check.
-        atol: Absolute tollerance while checking non-diagonal elements.
+        atol: Absolute tolerance for non-diagonal elements.
 
     Returns:
-        'True' if 'array' is diagonal.
+        ``True`` if ``array`` is diagonal, ``False`` otherwise.
     """
     # Convert to array
     array = ar.do('asarray', array)
@@ -69,21 +70,21 @@ def decompose_hyper_inds(
     atol: Optional[float] = 1e-8,
     **kwargs
 ) -> Tuple[Tuple[Array, List[Index]], Dict[Index, FrozenSet[Index]]]:
-    """Decompose 'array' in hyper-indices.
+    """Decomposes an array into hyper-indices.
 
-    Decompose 'array' in hyper-indices.
+    Decomposes an array into hyper-indices (diagonal structure).
 
     Args:
         array: Array representing the tensor.
         inds: Indices of the tensor.
-        atol: Absolute tollerance when checking for hyper-indices.
+        atol: Absolute tolerance for checking diagonal elements.
 
     Returns:
-        It returns the reduced tensors and a map on how the indices have been
-        merged.
+        A tuple containing the reduced tensor and a dictionary mapping new
+        indices to the set of merged indices.
 
     Raises:
-        ValueError: If arguments are not consistent within each other.
+        ValueError: If arguments are inconsistent.
     """
 
     # Get cache
@@ -143,17 +144,23 @@ def decompose_hyper_inds(
 
 def get_einsum_subscripts(inds_a: Iterable[Index], inds_b: Iterable[Index],
                           output_inds: Iterable[Index], /) -> str:
-    """Return einsum path.
+    """Generates einsum subscripts.
 
-    Return einsum path for the contraction 'inds_a @ inds_b -> output_inds'.
+    Generates the einsum subscripts string for the contraction
+    ``inds_a, inds_b -> output_inds``.
 
     Args:
-        inds_a: Indices of the contracted tensor.
-        inds_b: Indices of the contracted tensor.
+        inds_a: Indices of the first tensor.
+        inds_b: Indices of the second tensor.
         output_inds: Indices of the output tensor.
 
     Returns:
-        The corresponding einsum path.
+        The corresponding einsum subscripts string.
+
+    Examples:
+        >>> from tnco.utils.tensor import get_einsum_subscripts
+        >>> get_einsum_subscripts(['i', 'j'], ['j', 'k'], ['i', 'k'])
+        'ab,bc->ac'
     """
     # Normalize indexes
     cntr = dict(
@@ -170,29 +177,38 @@ def tensordot(
     y: Tuple[Array, Iterable[Index]],
     /,
     *,
-    hyper_inds: Optional[Iterable[Index]] = (),
+    hyper_inds: Optional[Iterable[Index]] = None,
     return_inds_only: Optional[bool] = False
 ) -> Union[Tuple[Array, List[Index]], List[Index]]:
-    """Multiply tensors.
+    """Contracts two tensors.
 
-    Multiply the tensor 'xs' with 'ys', to return a final tensor with indices
-    'zs'.
+    Contracts tensor ``x`` with tensor ``y``.
 
     Args:
-        xs: Tensor to multiply.
-        ys: Tensor to multiply.
-        hyper_inds: Indices to be treated as hyper-indices.
-        return_inds_only: If True, only the indices of the resuling tensor will
-            be returned.
+        x: First tensor (array, indices).
+        y: Second tensor (array, indices).
+        hyper_inds: Indices to be treated as hyper-indices (diagonal).
+        return_inds_only: If ``True``, only returns the indices of the
+            resulting tensor.
 
     Returns:
-        The array obtained by multiplying 'xs' with 'ys'. If
-        'return_inds_only=True', only the indices of the resulting tensor will
-        be returned.
+        The resulting tensor (array, indices) or just the indices if
+        ``return_inds_only`` is ``True``.
 
     Raises:
-        ValueError: If any hyper-index is not a shared index between 'xs' and
-            'ys'.
+        ValueError: If ``hyper_inds`` contains indices not shared by both
+            tensors.
+
+    Examples:
+        >>> import numpy as np
+        >>> from tnco.utils.tensor import tensordot
+        >>> x = (np.eye(2), ['i', 'j'])
+        >>> y = (np.ones(2), ['j'])
+        >>> z, z_inds = tensordot(x, y)
+        >>> z
+        array([1., 1.])
+        >>> z_inds
+        ('i',)
     """
     # Get indices and arrays
     ax, ay = map(fts.partial(ar.do, 'asarray'), (x[0], y[0]))
@@ -202,6 +218,8 @@ def tensordot(
     dims = dict(its.chain(zip(xs, ax.shape), zip(ys, ay.shape)))
 
     # Check hyper-indices
+    if hyper_inds is None:
+        hyper_inds = ()
     hyper_inds = OrderedFrozenSet(hyper_inds)
     if not (xs & ys).issuperset(hyper_inds):
         raise ValueError("'hyper_inds' must be a list of shared indices.")
@@ -242,27 +260,44 @@ def svd(array: Array,
         inds: Iterable[Index],
         left_inds: Iterable[Index],
         *,
-        svd_index_name: Optional[any] = None,
+        svd_index_name: Optional[Any] = None,
         atol: Optional[float] = 1e-8,
         seed: Optional[int] = None) -> List[Tuple[Array, Tuple[Index, ...]]]:
-    """Decompose array.
+    """Performs Singular Value Decomposition (SVD).
 
-    Create a new tensors by decomposing the provided one using the singular
-    value decomposition.
+    Decomposes an array into three tensors using SVD: U, s, Vh.
 
     Args:
-        array: array to decompose.
-        inds: List of indices for 'array'.
-        left_inds: List of indices to gather and split from the rest.
-        svd_index_name: Name for the extra SVD index.
-        atol: Remove all singular values smaller than 'atol'.
-        seed: Seed to use when generating the new index after decomposition.
+        array: Array to decompose.
+        inds: Indices of the array.
+        left_inds: Indices to keep on the U tensor.
+        svd_index_name: Name for the new index created by SVD. If ``None``,
+            a random name is generated.
+        atol: Threshold for truncating singular values.
+        seed: Seed for generating the random index name.
 
     Returns:
-        The tensors obtained by decomposing 'array'.
+        A list containing the three tensors: [(U, U_inds), (s, s_inds), (Vh,
+        Vh_inds)].
 
     Raises:
-        ValerError: If arguments are not consistent with each other.
+        ValueError: If arguments are inconsistent.
+
+    Examples:
+        >>> import numpy as np
+        >>> from tnco.utils.tensor import svd
+        >>> array = np.array([[1., 0.], [0., 1.]])
+        >>> inds = ['i', 'j']
+        >>> left_inds = ['i']
+        >>> U, s, Vh = svd(array, inds, left_inds, svd_index_name='k')
+        >>> U
+        [array([[1., 0.],
+               [0., 1.]]), ('i', 'k')]
+        >>> s
+        [array([1., 1.]), ('k',)]
+        >>> Vh
+        [array([[1., 0.],
+               [0., 1.]]), ('k', 'j')]
     """
 
     # Convert
@@ -319,5 +354,6 @@ def svd(array: Array,
     Vh = Vh.reshape((-1,) + tuple(map(dims.get, right_inds)))
 
     # Return the new tensors
-    return [U, (*left_inds, svd_index_name)
-           ], [s, (svd_index_name,)], [Vh, (svd_index_name, *right_inds)]
+    return (U, (*left_inds,
+                svd_index_name)), (s, (svd_index_name,)), (Vh, (svd_index_name,
+                                                                *right_inds))

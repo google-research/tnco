@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Utilities for testing."""
 
 import functools as fts
 import itertools as its
@@ -38,16 +39,23 @@ __all__ = [
 def get_connected_components(ts_inds: Iterable[List[Index]],
                              *,
                              verbose: Optional[int] = False) -> List[List[int]]:
-    """Get connected components.
+    """Identifies connected components.
 
-    Given a list of tensor's indices, return the connected components.
+    Identifies connected components in the tensor network.
 
     Args:
-        ts_inds: List of indices, with each item being the indices of a tensor.
+        ts_inds: List of indices for each tensor.
+        verbose: If ``True``, prints verbose output.
 
     Returns:
-        List where Each element corresponds to a list of positions of tensors
-        belonging to the same connected component.
+        A list of lists, where each inner list contains the indices of tensors
+        belonging to a connected component.
+
+    Examples:
+        >>> from tnco.testing.utils import get_connected_components
+        >>> ts_inds = [['i', 'j'], ['j', 'k'], ['a', 'b']]
+        >>> get_connected_components(ts_inds)
+        [(0, 1), (2,)]
     """
     # Convert to list, and ignore empty tensors
     ts_inds = list(filter(len, ts_inds))
@@ -127,16 +135,21 @@ def get_connected_components(ts_inds: Iterable[List[Index]],
 
 
 def generate_random_inds(n: int, *, seed: Optional[int] = None) -> List[Index]:
-    """Generate unique random names.
+    """Generates random index names.
 
-    Generate unique random names.
+    Generates ``n`` unique random index names.
 
     Args:
-        n: The number of unique random names to generate.
-        seed: Seed to use.
+        n: Number of indices to generate.
+        seed: Random seed.
 
     Returns:
-        List of random names.
+        A tuple of unique random names.
+
+    Examples:
+        >>> from tnco.testing.utils import generate_random_inds
+        >>> generate_random_inds(3, seed=42) # doctest: +ELLIPSIS
+        (('fMmhfMCEbemF', 2410529190), ('HClEQaPKriXr', ...), 'srncxgVepGUs')
     """
     # Return if 'n' is trivial
     if n <= 0:
@@ -176,25 +189,31 @@ def generate_random_tensors(
     seed: Optional[int] = None,
     verbose: Optional[int] = False
 ) -> Tuple[List[List[IndexName]], FrozenSet[IndexName]]:
-    """Generate random tensors.
+    """Generates a random tensor network.
 
-    Generate random tensors.
+    Generates random tensors indices.
 
     Args:
-        n_tensors: The total number of tensors to generate will be
-            'n_tensors * n_cc'.
-        n_inds: The total number of indices to generate will be
-            'n_inds * n_cc'.
-        k: int, Number of tensors an index connects.
-        n_output_inds: The total number of output indices will be
-            'n_output_inds * n_cc'.
+        n_tensors: Number of tensors per connected component.
+        n_inds: Number of indices per connected component.
+        k: Number of tensors an index connects.
+        n_output_inds: Number of output indices per connected component.
         n_cc: Number of connected components.
-        randomize_names: If 'True', random names for indices are used.
-        seed: Seed to use.
-        verbose: Verbose output.
+        randomize_names: If ``True``, uses random strings for index names.
+        seed: Random seed.
+        verbose: If ``True``, prints verbose output.
 
     Returns:
-        A tuple of random tensors and output indices.
+        A tuple containing the list of tensor indices and the set of output
+        indices. The total number of tensors, indices, and output indices will
+        be respectively ``n_tensors * n_cc``, ``n_inds * n_cc``, and
+        ``n_output_inds * n_cc``.
+
+    Examples:
+        >>> from tnco.testing.utils import generate_random_tensors
+        >>> ts_inds, output_inds = generate_random_tensors(3, 10, seed=42)
+        >>> len(ts_inds)
+        3
     """
     # Initialize RNG
     rng = Random(seed)
@@ -345,21 +364,22 @@ def is_valid_contraction_tree(ctree: ContractionTree,
                               output_inds: Optional[Iterable[Index]] = None,
                               hyper_count: Optional[Dict[Index, int]] = None,
                               check_shared_inds: Optional[bool] = None) -> bool:
-    """Check if a 'ContractionTree' is valid.
+    """Checks validity of a contraction tree.
 
-    Check if a 'ContractionTree' is valid.
+    Verifies if a ``ContractionTree`` is consistent with the provided tensor
+    network parameters.
 
     Args:
-        ctree: Contraction tree to check.
-        ts_inds: Tensors to check against the contraction tree.
-        dims: Dimensions to check against the contraction tree.
-        output_inds: Output indices to check against the contraction tree.
-        hyper_count: Expected hyper-count for each index.
-        check_shared_inds: If 'True', check that every pair of contracted
-            tensors share at least one index.
+        ctree: The contraction tree to check.
+        ts_inds: Tensor indices.
+        dims: Index dimensions.
+        output_inds: Output indices.
+        hyper_count: Expected occurrence count for each index.
+        check_shared_inds: If ``True``, enforces that contracted tensors share
+            indices.
 
     Returns:
-        'True' if the contraction tree is valid, othewise 'False'.
+        ``True`` if valid, ``False`` otherwise.
     """
     # Check pickle
     copy_ctree = pickle.loads(pickle.dumps(ctree))

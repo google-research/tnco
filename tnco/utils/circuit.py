@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Circuit utilities."""
 
 import functools as fts
 import itertools as its
@@ -18,7 +19,7 @@ import math
 import operator as op
 from collections import Counter, defaultdict
 from random import Random
-from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
 import autoray as ar
 import more_itertools as mit
@@ -38,20 +39,30 @@ def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
             *,
             use_matrix_commutation: Optional[bool] = True,
             atol: Optional[float] = 1e-8) -> bool:
-    """Check if the two gates commute.
-
-    Check if the two gates commute.
+    """Checks if two gates commute.
 
     Args:
-        gate_A: Gate to check commutation.
-        gate_B: Gate to check commutation.
-        use_matrix_commutation: If 'True', the commutation is checked by
-            actually performing the commutation. Otherwise, only qubits are
+        gate_A: First gate to check commutation.
+        gate_B: Second gate to check commutation.
+        use_matrix_commutation: If ``True``, the commutation is checked by
+            performing matrix multiplication. Otherwise, only qubit overlap is
             checked.
-        atol: Absolute tollerance to check commutation.
+        atol: Absolute tolerance for checking commutation.
 
     Returns:
-        'True' is 'gate_A' and 'gate_B' commute. Othewise, return 'False'.
+        ``True`` if ``gate_A`` and ``gate_B`` commute, ``False`` otherwise.
+
+    Examples:
+        >>> import numpy as np
+        >>> from tnco.utils.circuit import commute
+        >>> # X and Z do not commute
+        >>> gate_A = (np.array([[0, 1], [1, 0]]), (0,))
+        >>> gate_B = (np.array([[1, 0], [0, -1]]), (0,))
+        >>> commute(gate_A, gate_B)
+        False
+        >>> # X and X commute
+        >>> commute(gate_A, gate_A)
+        True
     """
 
     # Check if gate is valid
@@ -123,18 +134,26 @@ def same(gate_A: Tuple[Matrix, Iterable[Qubit]],
          gate_B: Tuple[Matrix, Iterable[Qubit]],
          *,
          atol: Optional[float] = 1e-8) -> bool:
-    """Check if two gates are the same.
-
-    Check if two gates are the same.
+    """Checks if two gates are equivalent (up to a global phase).
 
     Args:
-        gate_A: Gate to check.
-        gate_B: Gate to check.
-        atol: Absolute tollerance to check equality.
+        gate_A: First gate to check.
+        gate_B: Second gate to check.
+        atol: Absolute tolerance for checking equality.
 
     Returns:
-        'True' if 'gate_A' and 'gate_B' are the same. Otherwise, return
-        'False'.
+        ``True`` if ``gate_A`` and ``gate_B`` are the same, ``False``
+        otherwise.
+
+    Examples:
+        >>> import numpy as np
+        >>> from tnco.utils.circuit import same
+        >>> gate_A = (np.array([[0, 1], [1, 0]]), (0,))
+        >>> same(gate_A, gate_A)
+        True
+        >>> gate_B = (np.array([[1, 0], [0, -1]]), (0,))
+        >>> same(gate_A, gate_B)
+        False
     """
 
     # Check if gate is valid
@@ -189,51 +208,59 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
          use_matrix_commutation: Optional[bool] = True,
          decompose_hyper_inds: Optional[bool] = True,
          fuse: Optional[float] = 4,
-         dtype: Optional[any] = None,
+         dtype: Optional[Any] = None,
          atol: Optional[float] = 1e-8,
          backend: Optional[str] = None,
          seed: Optional[int] = None,
          verbose: Optional[int] = False,
          **kwargs) -> Tuple[List[Array], List[Tuple[Index]], FrozenSet[Index]]:
-    """Load circuit and convert it to a list of tensors.
-
-    Load circuit and convert it to a list of tensors.
+    """Loads a quantum circuit and converts it to a tensor network.
 
     Args:
-        circuit: List of gates.
-        initial_state: Initial state state to apply to the circuit. If a 'dict'
-            is used, qubits are the keys and the corresponding values can be
-            either a single char token between '01+-', or a 1x2 matrix. If a
-            qubit is missing, it is considered open. If a single token / matrix
-            is used, the same is applied to all qubits. If 'None', all qubits
-            are open.
-        final_state: Final state state to apply to the circuit. If a 'dict' is
-            used, qubits are the keys and the corresponding values can be
-            either a single char token between '01+-', or a 1x2 matrix. If a
-            qubit is missing, it is considered open. If a single token / matrix
-            is used, the same is applied to all qubits. If 'None', all qubits
-            are open.
-        simplify: If 'True', gates that cancel each other will be simplified.
-        use_matrix_commutation: If 'True', gates will be commuted by performing
-            the actual matrix commutation while simplifying the circuit.
-        decompose_hyper_inds: If 'True', decompose gates to get hyper-indices.
-        fuse: Fuse tensors together up a width smaller than 'fuse'.  The width
-            is defined as sum of the logarithms of all the dimensions of a
-            given tensor.
-        dtype: Type to use for arrays.
-        atol: Absolute tollerance for array comparison.
-        backend: Backend to use to fuse gates. See: `autoray.do`.
+        circuit: A list of gates, where each gate is a tuple of
+            (matrix, qubits).
+        initial_state: Initial state to apply to the circuit. If a ``dict`` is
+            used, keys are qubits and values can be either a single character
+            token (``'0'``, ``'1'``, ``'+'``, ``'-'``) or a 1x2 matrix.
+            Missing qubits are considered open. If a single token/matrix is
+            provided, it is applied to all qubits. If ``None``, all qubits are
+            open.
+        final_state: Final state to apply to the circuit. Similar format to
+            ``initial_state``.
+        simplify: If ``True``, simplifies gates that cancel each other.
+        use_matrix_commutation: If ``True``, allows commutation checks using
+            matrix multiplication during simplification.
+        decompose_hyper_inds: If ``True``, decomposes gates to extract
+            hyper-indices (diagonal structure).
+        fuse: Maximum width for fusing tensors. Tensors are fused if the
+            resulting width (sum of log2 dimensions) is less than ``fuse``.
+        dtype: Data type for the tensor arrays.
+        atol: Absolute tolerance for array comparisons.
+        backend: Backend to use for array operations (see ``autoray``).
         seed: Seed for the random number generator.
-        verbose: Verbose output.
+        verbose: If ``True``, prints verbose output.
 
     Returns:
-        It returns a tuple of three elements:
-            arrays: Arrays associated to each tensor.
-            ts_inds: Indices associated to each tensor.
-            output_inds: Output indices.
-        All the indices associated to an initial open qubits are marked with an
-        'i', while all the indices associated to a final open qubit are marked
-        with an 'f'.
+        A tuple containing:
+            - **arrays**: List of arrays associated with each tensor.
+            - **ts_inds**: List of indices for each tensor.
+            - **output_inds**: Set of output indices.
+
+        Indices associated with initial open qubits are marked with ``'i'``,
+        and final open qubits with ``'f'``.
+
+    Examples:
+        >>> import numpy as np
+        >>> from tnco.utils.circuit import load
+        >>> # 1-qubit circuit with H gate
+        >>> H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+        >>> circuit = [(H, (0,))]
+        >>> arrays, ts_inds, output_inds = load(
+        ...     circuit, initial_state=None, final_state=None)
+        >>> len(arrays)
+        1
+        >>> sorted(output_inds)
+        [(0, 'f'), (0, 'i')]
     """
     # Valid token for the initial/final state
     valid_token = {
@@ -538,11 +565,9 @@ try:
 
     def cirq_to_arrays(
             circuit: Iterable[cirq.Operation],
-            dtype: Optional[any] = None,
+            dtype: Optional[Any] = None,
             backend: Optional[str] = None) -> List[Tuple[Array, Tuple[Qubit]]]:
         """Convert a 'cirq' circuit to arrays.
-
-        Convert a 'cirq' circuit to arrays.
 
         Args:
             circuit: The circuit to convert.
@@ -593,11 +618,9 @@ try:
 
     def qiskit_to_arrays(
             circuit: Iterable[qiskit.circuit.CircuitInstruction],
-            dtype: Optional[any] = None,
+            dtype: Optional[Any] = None,
             backend: Optional[str] = None) -> List[Tuple[Array, Tuple[Qubit]]]:
         """Convert a 'qiskit' circuit to arrays.
-
-        Convert a 'qiskit' circuit to arrays.
 
         Args:
             circuit: The circuit to convert.

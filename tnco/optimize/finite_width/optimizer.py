@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Optimizer for finite width."""
 
 from importlib import import_module
 from typing import (Any, FrozenSet, Iterable, Literal, NoReturn, Optional,
@@ -28,7 +29,7 @@ BaseProbability = TypeVar('BaseProbability')
 
 
 class Optimizer:
-    """Optimize contraction tree.
+    """Optimizes a contraction tree.
 
     Optimize contraction tree.
 
@@ -38,14 +39,15 @@ class Optimizer:
         slice_update: How slices are updated.
         max_number_new_slices: Maximum number of slices to add if the
             contraction cannot fit in memory.
-        skip_slices: Indices in 'skip_slices' will not be sliced.
+        skip_slices: Indices in ``skip_slices`` will not be sliced.
         seed: Seed to use to initialize random number generator.
-        disable_shared_inds: If 'False', it is guaranteed that two contracted
+        disable_shared_inds: If ``False``, it is guaranteed that two contracted
             tensors always share an index.
         atol: Check cache with given precision.
 
     Raises:
-        NotImplementedError: If 'cmodel' or 'slice_update' are not supported.
+        NotImplementedError: If ``cmodel`` or ``slice_update`` are not
+            supported.
         ValueError: If arguments are not consistent with each other.
     """
 
@@ -59,7 +61,7 @@ class Optimizer:
                  seed: Optional[Union[int, str]] = None,
                  disable_shared_inds: Optional[bool] = False,
                  atol: Optional[float] = 1e-5,
-                 **kwargs):
+                 **kwargs) -> None:
 
         # Check cost model
         if not isinstance(cmodel, BaseCostModel):
@@ -190,7 +192,7 @@ class Optimizer:
     def disable_shared_inds(self) -> bool:
         """Flag to disable shared indices.
 
-        Flag to disable shared indices. If 'disbale_shared_inds=False', it is
+        Flag to disable shared indices. If ``disable_shared_inds=False``, it is
         guaranteed that every pair of contracted tensors always share at least
         an index.
 
@@ -213,61 +215,61 @@ class Optimizer:
 
     @property
     def total_cost(self) -> float:
-        """Contraction cost of 'Optimizer.ctree'.
+        """Contraction cost of ``Optimizer.ctree``.
 
-        Returns the contraction cost of 'Optimizer.ctree'.
+        Returns the contraction cost of ``Optimizer.ctree``.
 
         Returns:
-            The contraction cost of 'Optimizer.ctree'.
+            The contraction cost of ``Optimizer.ctree``.
         """
         return self._optimizer.total_cost
 
     @property
     def min_total_cost(self) -> float:
-        """Contraction cost of 'Optimizer.min_ctree'.
+        """Contraction cost of ``Optimizer.min_ctree``.
 
-        Returns the contraction cost of 'Optimizer.min_ctree'.
+        Returns the contraction cost of ``Optimizer.min_ctree``.
 
         Returns:
-            The contraction cost of 'Optimizer.min_ctree'.
+            The contraction cost of ``Optimizer.min_ctree``.
         """
         return self._optimizer.min_total_cost
 
     @property
     def log2_total_cost(self) -> float:
-        """Log2 of the contraction cost of 'Optimizer.ctree'.
+        """Log2 of the contraction cost of ``Optimizer.ctree``.
 
         Returns the logarithm in base 2 of the contraction cost of
-        'Optimizer.ctree'.
+        ``Optimizer.ctree``.
 
         Returns:
             The logarithm in base 2 of the contraction cost of
-            'Optimizer.ctree'.
+            ``Optimizer.ctree``.
         """
         return self._optimizer.log2_total_cost
 
     @property
     def log2_min_total_cost(self) -> float:
-        """Log2 of the contraction cost of 'Optimizer.min_ctree'.
+        """Log2 of the contraction cost of ``Optimizer.min_ctree``.
 
         Returns the logarithm in base 2 of the contraction cost of
-        'Optimizer.min_ctree'.
+        ``Optimizer.min_ctree``.
 
         Returns:
             The logarithm in base 2 of the contraction cost of
-            'Optimize.min_ctree'.
+            ``Optimizer.min_ctree``.
         """
         return self._optimizer.log2_min_total_cost
 
     @property
     def slices(self) -> FrozenSet[Index]:
-        """Slices used by 'Optimizer.ctree'.
+        """Slices used by ``Optimizer.ctree``.
 
-        Returns the sliced indices used in 'Optimizer.ctree' to keep every
+        Returns the sliced indices used in ``Optimizer.ctree`` to keep every
         tensor in the contraction tree within the allowed maximum width.
 
         Returns:
-            The sliced indices used in 'Optimizer.ctree'.
+            The sliced indices used in ``Optimizer.ctree``.
         """
         return frozenset(
             map(lambda x: self._ctree_cache[-1][x],
@@ -275,13 +277,13 @@ class Optimizer:
 
     @property
     def min_slices(self) -> FrozenSet[Index]:
-        """Slices used by 'Optimizer.min_ctree'.
+        """Slices used by ``Optimizer.min_ctree``.
 
-        Returns the sliced indices used in 'Optimizer.min_ctree' to keep every
+        Returns the sliced indices used in ``Optimizer.min_ctree`` to keep every
         tensor in the contraction tree within the allowed maximum width.
 
         Returns:
-            The sliced indices used in 'Optimizer.min_ctree'.
+            The sliced indices used in ``Optimizer.min_ctree``.
         """
         return frozenset(
             map(lambda x: self._ctree_cache[-1][x],
@@ -291,20 +293,20 @@ class Optimizer:
                  *,
                  atol: float = 1e-5,
                  return_message: str = False) -> bool:
-        """Check if 'Optimizer' is in a valid state.
+        """Check if ``Optimizer`` is in a valid state.
 
-        Check if 'Optimizer' is in a valid state.
+        Check if ``Optimizer`` is in a valid state.
 
         Args:
             atol: Precision to use to check consistency.
-            return_message: If 'return_message=True', it also returns the
-                reason why 'Optimizer' is not in a valid state.
+            return_message: If ``return_message=True``, it also returns the
+                reason why ``Optimizer`` is not in a valid state.
 
         Returns:
-            If 'return_message=False', it returns a 'True' if 'Optimizer' is in
-            a valid state. If 'return_message=True', it returns a tuple of a
-            bool and a string, with the string being the reason why 'Optimizer'
-            is not in a valid state.
+            If ``return_message=False``, it returns a ``True`` if ``Optimizer``
+            is in a valid state. If ``return_message=True``, it returns a tuple
+            of a bool and a string, with the string being the reason why
+            ``Optimizer`` is not in a valid state.
         """
         return self._optimizer.is_valid(atol=atol,
                                         return_message=return_message)
@@ -313,17 +315,17 @@ class Optimizer:
                prob: BaseProbability,
                *,
                update_slices: bool = True) -> NoReturn:
-        """Update 'Optimizer' using 'prob'.
+        """Update ``Optimizer`` using ``prob``.
 
-        When 'Optimizer.update' is called, a potential move in the contraction
-        tree is proposed. 'prob' must take the difference in cost and the
+        When ``Optimizer.update`` is called, a potential move in the contraction
+        tree is proposed. ``prob`` must take the difference in cost and the
         original cost, and decide to either accept or reject the move.
 
         Args:
             prob: The probability to use to either accept or reject the
                 proposed move.
-            update_slices: If 'True', also update the slices using the
-                'Optimizer.slice_update' method.
+            update_slices: If ``True``, also update the slices using the
+                ``Optimizer.slice_update`` method.
         """
         self._optimizer.update(prob, update_slices=update_slices)
 
@@ -345,8 +347,8 @@ class Optimizer:
                                 self.disable_shared_inds, self.min_ctree,
                                 self.slices, self.min_slices, self.skip_slices)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Optimizer(ctree={}, cmodel={})".format(self.ctree, self.cmodel)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return self.__reduce__()[1] == other.__reduce__()[1]

@@ -69,6 +69,13 @@ jobs:
         fi
         pip install .[parallel,testing] --config-settings=cmake.build-type=${{ matrix.target }} --verbose
 
+    - name: Run Doctests for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
+        matrix.python-version }} (${{ matrix.target }})
+      run: |
+        for f in $(grep -l ">>>" $(find tnco -name "*.py")); do
+          python3 -m doctest $f || exit 1
+        done
+
     - name: Run Tests for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
         matrix.python-version }} (${{ matrix.target }})
       if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'g++' && matrix.python-version

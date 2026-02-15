@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Tensor network utilities."""
 
 import functools as fts
 import itertools as its
@@ -47,32 +48,32 @@ def get_random_contraction_path(
         seed: Optional[int] = None,
         verbose: Optional[int] = False,
         **kwargs) -> Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]:
-    """Generate random contraction.
+    """Generates a random contraction path.
 
-    Generate a random contraction path from 'ts_inds'.
+    Generates a random contraction path for the given tensor indices.
 
     Args:
-        ts_inds: List of indices, with each item corresponding the indices of a
-            tensor.
-        output_inds: List of output indices. Must be provided if 'ts_inds' has
-            hyper-indices. (Deprecated in version '0.2')
-        merge_paths: If 'True' merge all tensors regardless if they belong to
-            different connected components. If 'False', return a contraction
-            path for each connected components.
-        autocomplete: If 'merge_paths=True' and 'autocomplete=True', all the
-            tensors belonging to different connected components are contracted
-            to a single tensor. Otherwise, if 'merge_paths=True' and
-            'autocomplete=False', tensors belonging to different connected
-            components are not contracted, resulting to an incomplete path.
-        seed: Seed to use.
-        verbose: Verbose output.
+        ts_inds: List of indices for each tensor.
+        output_inds: (Deprecated) List of output indices.
+        merge_paths: If ``True``, merges all paths even if tensors are
+            disconnected. If ``False``, returns separate paths for each
+            connected component.
+        autocomplete: If ``True`` and ``merge_paths=True``, connects
+            disconnected components.
+        seed: Random seed.
+        verbose: If ``True``, prints verbose output.
 
     Returns:
-        If 'merge_path=True', return a single path in linear (einsum)
-        format. Otherwise, return multuple paths in linear (einsum)
-        format for each connected component. Each path guarantees that
-        only tensors that share at least one index are included in the
-        path.
+        A list of contraction steps (linear einsum format). If
+        ``merge_paths=False``, returns a list of paths for each connected
+        component. It is guaranteed that only tensors that share at least one
+        index are contracted in connected paths.
+
+    Examples:
+        >>> from tnco.utils.tn import get_random_contraction_path
+        >>> ts_inds = [['i', 'j'], ['j', 'k'], ['k', 'l']]
+        >>> get_random_contraction_path(ts_inds, seed=42)
+        [(0, 1), (0, 1)]
     """
     if output_inds is not None:
         warn(
@@ -248,15 +249,15 @@ def get_random_contraction_path(
 
 
 def get_symbol(i: int) -> str:
-    """Get unique symbol.
+    """Returns a unique symbol for a given integer.
 
-    Get unique symbol
+    Maps an integer to a character for einsum notation.
 
     Args:
-        i: Symbol index.
+        i: Integer index.
 
     Returns:
-        The corresponding symbol.
+        A unique character symbol.
     """
     # standard a-z, A-Z
     if i < 52:
@@ -276,16 +277,16 @@ def get_symbol(i: int) -> str:
 
 def get_einsum_subscripts(ts_inds: Iterable[List[Index]],
                           output_inds: Optional[Iterable[Index]] = ()):
-    """Return einsum path.
+    """Generates einsum subscripts.
 
-    Return einsum path.
+    Generates the einsum subscripts string for contracting multiple tensors.
 
     Args:
-        ts_inds: List of indices, with each item being the indices of a tensor.
+        ts_inds: List of indices for each tensor.
         output_inds: List of output indices.
 
-    Return:
-        The corresponding einsum path.
+    Returns:
+        The einsum subscripts string.
     """
     # Convert to list
     ts_inds = list(ts_inds)
@@ -311,25 +312,28 @@ def merge_contraction_paths(
         *,
         autocomplete: Optional[bool] = True,
         verbose: Optional[int] = False) -> List[Tuple[int, int]]:
-    """Merge contraction paths.
+    """Merges contraction paths.
 
-    Merge contraction paths for disconnected tensor networks.
+    Merges multiple contraction paths into a single path.
 
     Args:
-        n_tensors: Number of total tensors.
-        paths: Contraction paths to merge in linear (einsum) format.
-        autocomplete: If 'True', the merged path will include the contraction
-            of the disconnected tensors.
-        verbose: Verbose output.
+        n_tensors: Total number of tensors.
+        paths: List of contraction paths (each in linear format).
+        autocomplete: If ``True``, adds steps to connect disconnected
+            components.
+        verbose: If ``True``, prints verbose output.
 
     Returns:
-        Merged path in linear (einsum) format.
+        A single merged contraction path in linear (einsum) format.
 
     Raises:
-        ValueError: If 'paths' are not valid or not disconnected.
+        ValueError: If paths are invalid.
 
-    Notes:
-        See 'tnco.utils.tn.get_random_contraction_path'.
+    Examples:
+        >>> from tnco.utils.tn import merge_contraction_paths
+        >>> paths = [[(0, 1)], [(2, 3)]]
+        >>> merge_contraction_paths(4, paths)
+        [(0, 1), (0, 1), (0, 1)]
     """
     # Initialize merged path and positions
     merged_pos = list(range(n_tensors))
@@ -380,24 +384,28 @@ def split_contraction_path(
     verbose: Optional[int] = False
 ) -> Union[List[List[Tuple[int, int]]], Tuple[List[List[Tuple[int, int]]],
                                               List[FrozenSet[int]]]]:
-    """Split contraction path.
+    """Splits a contraction path.
 
-    Split the contraction path to disconnected contraction paths.
+    Splits a contraction path into disconnected components.
 
     Args:
-        n_tensors: Number of total tensors.
-        path: Contraction path in linear (einsum) format.
-        return_connected_components: If True, returns the connected tensors for
-            each path.
-        normalize_path: If True, the path will be relative to the tensors in
-            the connected component only.
-        verbose: Verbose output.
+        n_tensors: Total number of tensors.
+        path: Contraction path in linear format.
+        return_connected_components: If ``True``, returns the sets of tensors
+            in each component.
+        normalize_paths: If ``True``, re-indexes tensors in each sub-path.
+        verbose: If ``True``, prints verbose output.
 
     Returns:
-        The non-empty disconnected contraction paths in linear (einsum) format.
-        If 'return_connected_components=True', a tuple of all disconnected
-        paths and tensors beloning to the same connected component is returned
-        instead.
+        A list of disconnected contraction paths in linear (einsum) format. If
+        ``return_connected_components`` is ``True``, returns a tuple of paths
+        and tensor sets for each connected component.
+
+    Examples:
+        >>> from tnco.utils.tn import split_contraction_path
+        >>> path = [(0, 1), (0, 1)]
+        >>> split_contraction_path(4, path)
+        [[(0, 1)], [(2, 3)]]
     """
 
     # Convert path to list
@@ -494,27 +502,24 @@ def read_inds(
     sparse_index_token: TensorName = '/'
 ) -> Tuple[Dict[TensorName, Tuple[Index, ...]], Dict[Index, int],
            FrozenSet[Index], FrozenSet[Index]]:
-    """Read indices.
+    """Reads indices from a map.
 
-    Convert list of indices to a map of tensors.
+    Constructs a tensor map from a dictionary of index information.
 
     Args:
-        inds_map: Map of indices in the format:
-                '{index_1: (dim, tname_1, tname_2, ...), ...}'.
-        output_index_token: The token to use to identify output inds.
-        sparse_index_token: The token to use to identify sparse inds.
+        inds_map: Dictionary mapping indices to (dimension, tensor_names...).
+        output_index_token: Token identifying output indices.
+        sparse_index_token: Token identifying sparse indices.
 
     Returns:
-        It returns the loaded tensors as a tuple with the following format:
-            tensor_map: Map of tensors. Each tensors is a list of indices
-                attached to it.
-            dims: Dimension of each index.
-            output_inds: Set of output indices.
-            sparse_inds: Set of sparse indices.
+        A tuple containing:
+            - **tensor_map**: Map of tensor names to their indices.
+            - **dims**: Map of index dimensions.
+            - **output_inds**: Set of output indices.
+            - **sparse_inds**: Set of sparse indices.
 
     Raises:
-        ValueError: If 'output_index_token' and 'sparse_index_token' are the
-            same.
+        ValueError: If tokens are identical.
     """
     # Check tokens
     if output_index_token == sparse_index_token:
@@ -553,31 +558,36 @@ def fuse(
     return_fused_inds: Optional[bool] = False,
     verbose: Optional[int] = False
 ) -> Tuple[List[Tuple[int, int]], Optional[List[Tuple[Index]]]]:
-    """Fuse indices.
+    """Fuses tensors.
 
-    Fuse 'ts_inds' up to 'max_width'.
+    Contracts tensors such that the resulting tensor width does not exceed
+    ``max_width``.
 
     Args:
-        ts_inds: List of indices, with each item being the indices of a tensor.
-        dims: Dimension of each index.
-        max_width: Maximum width to use. The width is defined as sum of the
-            logarithms of all the dimensions of a given tensor.  Tensors are
-            contracted so that the width of the contracted tensor is smaller
-            than 'max_width'.
-        output_inds: List of output indices. Must be provided if 'tensor' has
-            hyper-indices.
-        exclude_inds: Indices that must not be contracted.
-        seed: Seed to use.
-        return_fused_inds: If 'True', return the fused indices.
-        verbose: Verbose output.
+        ts_inds: List of indices for each tensor.
+        dims: Dimensions of indices.
+        max_width: Maximum allowed width. The width of a tensor is defined as
+            the sum of the logarithms (base 2) of its dimensions.
+        output_inds: Output indices.
+        exclude_inds: Indices to exclude from contraction.
+        seed: Random seed.
+        return_fused_inds: If ``True``, returns indices of the fused tensors.
+        verbose: If ``True``, prints verbose output.
 
     Returns:
-        The contraction path in linear (einsum) format. If
-        'return_fused_inds=True', also return the corresponding indices
-        of the fused tensors.
+        The contraction path. If ``return_fused_inds`` is ``True``, returns a
+        tuple of (path, fused_indices).
 
     Raises:
-        ValueError: If arguments are not consistent with each other.
+        ValueError: If arguments are inconsistent.
+
+    Examples:
+        >>> from tnco.utils.tn import fuse
+        >>> ts_inds = [['i', 'j'], ['j', 'k'], ['k', 'l']]
+        >>> dims = {'i': 2, 'j': 2, 'k': 2, 'l': 2}
+        >>> # Fuse tensors to limit width to 2 (log2(4))
+        >>> fuse(ts_inds, dims, max_width=2, seed=42)
+        [(0, 1), (0, 1)]
     """
 
     # Initialize rng
@@ -774,23 +784,20 @@ def decompose_hyper_inds(
     *,
     atol: float = 1e-8
 ) -> Tuple[List[Array], List[List[Index]], Dict[Index, Index]]:
-    """Decompose 'arrays' in hyper-indices.
+    """Decomposes hyper-indices in a tensor network.
 
-    Decompose 'arrays' in hyper-indices.
+    Decomposes diagonal tensors into hyper-indices.
 
     Args:
-        arrays: List of array representing the tensor network to decompose.
-        ts_inds: List of indices, with each item corresponding the indices of a
-            tensor.
-        atol: Absolute tollerance when checking for hyper-indices.
+        arrays: List of tensor arrays.
+        ts_inds: List of indices for each tensor.
+        atol: Absolute tolerance for checking diagonality.
 
     Returns:
-        It returns the decomposed arrays using the format:
-            arrays: The list of new arrays after decomposing the hyper inds.
-            ts_inds: The list of new indices after decomposing the hyper inds.
-            hyper_inds_map:Map of hyper-indices, with `hyper_inds_map[x] == y`
-                meaning that the index `x` is now called `y` after the
-                decomposition.
+        A tuple containing:
+            - **arrays**: Decomposed arrays.
+            - **ts_inds**: New indices for decomposed tensors.
+            - **hyper_inds_map**: Mapping from original to new indices.
     """
     # Get all available inds
     ts_inds = list(ts_inds)
@@ -854,38 +861,47 @@ def contract(
     path: Iterable[Tuple[int, int]],
     ts_inds: Iterable[List[Index]],
     output_inds: Optional[Iterable[Index]] = None,
-    arrays: Iterable[Array] = None,
-    dims: Union[int, Dict[Index, int]] = None,
+    arrays: Optional[Iterable[Array]] = None,
+    dims: Optional[Union[int, Dict[Index, int]]] = None,
     *,
     backend: Optional[str] = None,
     verbose: Optional[int] = False
 ) -> Tuple[List[List[Index]], FrozenSet[Index], Optional[List[Array]]]:
-    """Contract tensor network.
+    """Contracts a tensor network.
 
-    Contract tensor network following 'path'.
+    Contracts a tensor network following a given path.
 
     Args:
-        path: Path to follow for the contraction in linear (einsum)
-            format.
-        ts_inds: Indices associated to 'arrays'.
-        output_inds: Output indices (optional if 'ts_inds' does not have
-            hyper-indices).
-        arrays: If provided, the arrays to contract.
-        dims: Dimensions of each index. Must be provided if 'arrays' is not
-            provided.
-        backend: Backend to use for the contraction. See: `autoray.do`.
-        verbose: Verbose output.
+        path: Contraction path in linear format.
+        ts_inds: List of indices for each tensor.
+        output_inds: Output indices.
+        arrays: List of tensor arrays (optional).
+        dims: Dimensions of indices (required if ``arrays`` is ``None``).
+        backend: Backend for array operations (see ``autoray``).
+        verbose: If ``True``, prints verbose output.
 
     Returns:
-        It returns the result of the contraction as a tuple of list of indices
-        (for each resulting tensor), and the final output indices (if all
-        tensors were contracted together). If 'arrays' is provided, it also
-        return the contracted arrays.
+        A tuple containing:
+            - **ts_inds**: Indices of remaining tensors (should be one).
+            - **output_inds**: Final output indices.
+            - **arrays**: (Optional) Resulting array(s) if ``arrays`` was
+              provided.
 
     Raises:
-        ValueError: If 'path' is not valid.
-        ValueError: If arguments for the tensor network are not consistent with
-            each other.
+        ValueError: If arguments are inconsistent or path is invalid.
+
+    Examples:
+        >>> import numpy as np
+        >>> from tnco.utils.tn import contract
+        >>> path = [(0, 1)]
+        >>> ts_inds = [['i', 'j'], ['j', 'k']]
+        >>> arrays = [np.eye(2), np.ones((2, 2))]
+        >>> inds, output, res = contract(path, ts_inds, arrays=arrays)
+        >>> inds
+        [('i', 'k')]
+        >>> res[0]
+        array([[1., 1.],
+               [1., 1.]])
     """
     # Use specific backend
     do = fts.partial(ar.do, like=backend)

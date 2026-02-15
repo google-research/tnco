@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Infinite memory optimization module."""
 
 from tnco.optimize.infinite_memory.optimizer import Optimizer
 

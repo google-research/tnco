@@ -19,7 +19,7 @@ import operator as op
 from collections import defaultdict
 from dataclasses import dataclass
 from random import Random
-from typing import Dict, FrozenSet, Iterable, Optional, Tuple, Union
+from typing import Any, Dict, FrozenSet, Iterable, Optional, Tuple, Union
 
 import autoray as ar
 import more_itertools as mit
@@ -37,14 +37,14 @@ __all__ = ['Sampler']
 def is_classical_operation(m: Matrix) -> bool:
     """Check if given matrix is a classical operation.
 
-    Check if given matrix is a classical operation. An operation is classical
-    if 'm @ v' only permutes the elements of 'v' (excluding a change of phase).
+    An operation is classical if ``m @ v`` only permutes the elements of ``v``
+    (excluding a change of phase).
 
     Args:
         m: Matrix to check.
 
     Returns:
-        True if 'm' is a classical operation.
+        ``True`` if ``m`` is a classical operation.
     """
     m = ar.do('asarray', m)
     if m.ndim != 2 or m.shape[0] != m.shape[1] and int(math.log2(
@@ -104,56 +104,54 @@ def sample(
     qubit_order: Optional[Iterable[Qubit]] = None,
     normalize: Optional[bool] = True,
     return_intermediate_state_only: Optional[bool] = False,
-    dtype: Optional[any] = None,
+    dtype: Optional[Any] = None,
     optimization_backend: Optional[str] = None,
     contraction_backend: Optional[str] = None,
     seed: Optional[int] = None,
     verbose: Optional[int] = False,
     **optimize_params
 ) -> Union[Tuple[Dict[str, int], Tuple[Qubit]], SamplingIntermediateState]:
-    """Sample bitstring from a circuit.
+    """Sample bitstrings from a circuit.
 
-    Sample bitstring from a circuit using the Bravyi-Gosset-Liu algorithm
+    Sample bitstrings from a circuit using the Bravyi-Gosset-Liu algorithm
     presented in "How to Simulate Quantum Measurement without Computing
     Marginals", Phys. Rev. Lett. 128, 220503 (2022).
 
     Args:
-        circuit: The circuit to sample from. If a 'SamplingIntermediateState'
-            is passed insted, the optimization phase of the circuit is skipped
+        circuit: The circuit to sample from. If a ``SamplingIntermediateState``
+            is passed instead, the optimization phase of the circuit is skipped
             and the intermediate state is used to sample.
-        optimizer: The 'Optimizer' to use for the tensor network optimization.
+        optimizer: The ``Optimizer`` to use for the tensor network optimization.
         n_samples: The number of total samples to collect.
-        simplify: If 'True', gates that cancel each other will be simplified.
-        use_matrix_commutation: If 'True', gates will be commuted by performing
-            the actual matrix commutation while simplifying the circuit.
-        decompose_hyper_inds: If 'True', decompose gates to get hyper-indices.
-        fuse: Fuse tensors together up a width smaller than 'fuse'.  The width
+        simplify: If ``True``, gates that cancel each other will be simplified.
+        use_matrix_commutation: If ``True``, gates will be commuted by
+            performing the actual matrix commutation while simplifying the
+            circuit.
+        decompose_hyper_inds: If ``True``, decompose gates to get hyper-indices.
+        fuse: Fuse tensors together up a width smaller than ``fuse``.  The width
             is defined as sum of the logarithms of all the dimensions of a
             given tensor.
         qubit_order: If provided, the order of qubits to use.
-        normalize: If True, the total number of hits are divided by the number
-            of samples.
-        load_params: The parameters to pass to 'tnco.utils.circuit.load' to
-            convert circuit to a tensor.
-        optimizer_params: The parameters to pass to 'tnco.app.Optimizer' to
-            initialize a new optimizer.
+        normalize: If ``True``, the total number of hits are divided by the
+            number of samples.
         optimize_params: The parameters to pass to
-            'tnco.app.Optimizer.optimize' to optimize each partial contraction.
-        return_intermediate_state_only: If True, skip the sampling and return
-            the 'SamplingIntermediateState'.
+            ``tnco.app.Optimizer.optimize`` to optimize each partial
+            contraction.
+        return_intermediate_state_only: If ``True``, skip the sampling and
+            return the ``SamplingIntermediateState``.
         dtype: The type to use for the contraction.
         optimization_backend: The backend to use to manipulate arrays while
-            loading and optimazing the tensor network.
+            loading and optimizing the tensor network.
         contraction_backend: The backend to use for the contraction.
         seed: The seed to use for the sampling.
         verbose: Verbose output.
 
     Returns:
-        If 'return_intermediate_state_only', a 'SamplingIntermediateState' is
-        return to be reused multiple times. Othewise, it return a dictionary
-        with the fraction of hits for each bitstring sampled, and the order of
-        qubits. If 'normalize=False', the the number of hits is returned
-        instead of its fraction.
+        If ``return_intermediate_state_only``, a ``SamplingIntermediateState``
+        is returned to be reused multiple times. Otherwise, it returns a
+        dictionary with the fraction of hits for each bitstring sampled, and
+        the order of qubits. If ``normalize=False``, the number of hits is
+        returned instead of its fraction.
     """
 
     # Short for asarray
@@ -416,42 +414,30 @@ except ModuleNotFoundError:
 
 @dataclass(frozen=True)
 class Sampler:
-    """Sample bitstrings from circuit.
+    """Sample bitstrings from a circuit.
 
-    Sample bitstring from a circuit using the Bravyi-Gosset-Liu algorithm
+    Sample bitstrings from a circuit using the Bravyi-Gosset-Liu algorithm
     presented in "How to Simulate Quantum Measurement without Computing
     Marginals", Phys. Rev. Lett. 128, 220503 (2022).
 
     Args:
         max_width: Maximum width to use. The width is defined as sum of the
-            logarithms of all the dimensions of a given tensor.  Tensors are
+            logarithms of all the dimensions of a given tensor. Tensors are
             contracted so that the width of the contracted tensor is smaller
-            than 'max_width'.
+            than ``max_width``.
         n_jobs: Number of processes to use. By default, all available cores are
-            used. If 'n_jobs' is a positive number, 'n_jobs' processes will be
-            used. If 'n_jobs' is negative, 'n_cpus + n_jobs + 1' will be used.
-            If 'n_jobs' is zero, it will raise a 'ValueError'. (See:
-            'tnco.parallel.Parallel')
+            used. If ``n_jobs`` is a positive number, ``n_jobs`` processes will
+            be used. If ``n_jobs`` is negative, ``n_cpus + n_jobs + 1`` will be
+            used. If ``n_jobs`` is zero, it will raise a ``ValueError``. (See:
+            ``tnco.parallel.Parallel``)
         width_type: The type to use to represent the width. (See:
-            'tnco.optimize.finite_width.cost_model.SimpleCostModel')
+            ``tnco.optimize.finite_width.cost_model.SimpleCostModel``)
         cost_type: The type to use to represent the cost. (See:
-            'tnco.optimize.finite_width.cost_model.SimpleCostModel')
-        output_format: Format to use for the output. See Notes for more
-            details.
-        output_filename: If provided, dump the output to 'output_filename'. If
-            'output_filfename' has a '.gzip' or '.bz2' extension, it will be
-            compressed accordingly.
-        output_compression: If 'auto', the output will be compressed to the
-            format specified by 'output_compression'. Otherwise, the
-            compression format will be deduced from 'output_filename'. Valid
-            'output_compression' are 'none', 'bz2' and 'json'. If
-            'output_filename' is not provided, it will raise a 'ValueError'.
-        overwrite_output_file: If 'True', the 'output_filename' will be
-            overwritten if it exists.
-        atol: Absolute tollerance when checking for hyper-indices.
+            ``tnco.optimize.finite_width.cost_model.SimpleCostModel``)
+        atol: Absolute tolerance when checking for hyper-indices.
         dtype: The type to use for the arrays.
         optimization_backend: The backend to use to manipulate arrays while
-            loading and optimazing the tensor network.
+            loading and optimizing the tensor network.
         seed: Seed to use.
         verbose: Verbose output.
     """
@@ -460,7 +446,7 @@ class Sampler:
     width_type: Optional[str] = 'float32'
     cost_type: Optional[str] = 'float64'
     atol: Optional[float] = 1e-5
-    dtype: Optional[any] = None
+    dtype: Optional[Any] = None
     optimization_backend: Optional[str] = None
     seed: Optional[int] = None
     verbose: Optional[int] = False
@@ -501,48 +487,43 @@ class Sampler:
         contraction_backend: Optional[str] = None,
         **optimize_params
     ) -> Union[Tuple[Dict[str, int], Tuple[Qubit]], SamplingIntermediateState]:
-        """Sample bitstring from a circuit.
+        """Sample bitstrings from a circuit.
 
-        Sample bitstring from a circuit using the Bravyi-Gosset-Liu algorithm
+        Sample bitstrings from a circuit using the Bravyi-Gosset-Liu algorithm
         presented in "How to Simulate Quantum Measurement without Computing
         Marginals", Phys. Rev. Lett. 128, 220503 (2022).
 
         Args:
-            circuit: Circuit to sample from. If a 'SamplingIntermediateState'
-                is passed insted, the optimization phase of the circuit is
+            circuit: Circuit to sample from. If a ``SamplingIntermediateState``
+                is passed instead, the optimization phase of the circuit is
                 skipped and the intermediate state is used to sample.
             n_samples: The number of total samples to collect.
-            simplify: If 'True', gates that cancel each other will be
+            simplify: If ``True``, gates that cancel each other will be
                 simplified.
-            use_matrix_commutation: If 'True', gates will be commuted by
+            use_matrix_commutation: If ``True``, gates will be commuted by
                 performing the actual matrix commutation while simplifying the
                 circuit.
-            decompose_hyper_inds: If 'True', decompose gates to get
+            decompose_hyper_inds: If ``True``, decompose gates to get
                 hyper-indices.
-            fuse: Fuse tensors together up a width smaller than 'fuse'.  The
+            fuse: Fuse tensors together up a width smaller than ``fuse``.  The
                 width is defined as sum of the logarithms of all the dimensions
                 of a given tensor.
             qubit_order: If provided, the order of qubits to use.
-            normalize: If True, the total number of hits are divided by the
+            normalize: If ``True``, the total number of hits are divided by the
                 number of samples.
-            load_params: Parameters to pass to 'tnco.utils.circuit.load' to
-                convert circuit to a tensor.
-            optimizer_params: Parameters to pass to 'tnco.app.Optimizer' to
-                initialize a new optimizer.
-            optimize_params: Parameters to pass to 'tnco.app.Optimizer.optimize'
-                to optimize each partial contraction.
-            return_intermediate_state_only: If True, skip the sampling and
-                return the 'SamplingIntermediateState'.
+            return_intermediate_state_only: If ``True``, skip the sampling and
+                return the ``SamplingIntermediateState``.
             contraction_backend: The backend to use for the contraction.
             **optimize_params: Parameters to use to optimize the tensor network
-                contraction. (See 'tnco.app.Optimizer.optimize')
+                contraction. (See ``tnco.app.Optimizer.optimize``)
 
         Returns:
-            If 'return_intermediate_state_only', a 'SamplingIntermediateState'
-            is return to be reused multiple times. Othewise, it return a
-            dictionary with the fraction of hits for each bitstring sampled,
-            and the order of qubits. If 'normalize=False', the the number of
-            hits is returned instead of its fraction.
+            If ``return_intermediate_state_only``, a
+            ``SamplingIntermediateState`` is returned to be reused multiple
+            times. Otherwise, it returns a dictionary with the fraction of hits
+            for each bitstring sampled, and the order of qubits. If
+            ``normalize=False``, the number of hits is returned instead of its
+            fraction.
         """
 
         return sample(

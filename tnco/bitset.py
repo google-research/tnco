@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Bitset implementation."""
 
 from typing import Iterable, Optional, Union
 
@@ -25,19 +26,25 @@ class Bitset(Bitset_):
     Compact representation of bits.
 
     Args:
-        bits: Either a string representing the bits or a list of positions to
-            the set bits. In the latter case, the number of total bits 'n' must
-            be provided.
+        bits: Either a string representing the bits or a list of positions of
+            the set bits. In the latter case, the number of total bits ``n``
+            must be provided.
         n: The total number of bits.
 
     Raises:
-        ValueError: 'bits' are not in the right format, or too many / too few
-            'bits' are provided.
+        ValueError: If ``bits`` are not in the right format, or too many / too
+            few ``bits`` are provided.
+
+    Examples:
+        >>> from tnco.bitset import Bitset
+        >>> b = Bitset([0, 2], n=4)
+        >>> str(b)
+        '1010'
     """
 
     def __init__(self,
                  bits: Optional[Union[str, Iterable[int]]] = None,
-                 n: Optional[int] = None):
+                 n: Optional[int] = None) -> None:
         if bits is None:
             # If 'bits' is not provided, 'n' must be None or 0
             if n is not None and n != 0:

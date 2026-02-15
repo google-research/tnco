@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Probability functions for optimization."""
 
 from importlib import import_module
 from typing import Literal, Optional
@@ -25,12 +26,21 @@ def BaseProbability(*,
                     cost_type: Optional[Literal['float32', 'float64',
                                                 'float128',
                                                 'float1024']] = 'float64'):
-    """Acceptance probability.
+    """Factory for acceptance probability (always accept).
 
     Always accept any proposed move.
 
     Args:
         cost_type: Type to use for the cost.
+
+    Returns:
+        The probability object.
+
+    Examples:
+        >>> from tnco.optimize.prob import BaseProbability
+        >>> prob = BaseProbability()
+        >>> prob(10, 100)
+        1.0
     """
 
     # Check cost_type
@@ -48,12 +58,23 @@ def BaseProbability(*,
 def Greedy(*,
            cost_type: Optional[Literal['float32', 'float64', 'float128',
                                        'float1024']] = 'float64'):
-    """Greedy probability.
+    """Factory for greedy probability.
 
     Accept a move only if the cost is not increasing.
 
     Args:
         cost_type: Type to use for the cost.
+
+    Returns:
+        The probability object.
+
+    Examples:
+        >>> from tnco.optimize.prob import Greedy
+        >>> prob = Greedy()
+        >>> prob(-10, 100)
+        1.0
+        >>> prob(10, 100)
+        0.0
     """
 
     # Check cost_type
@@ -73,12 +94,18 @@ def SimulatedAnnealing(beta: float = 0,
                        cost_type: Optional[Literal['float32', 'float64',
                                                    'float128',
                                                    'float1024']] = 'float64'):
-    """Simulated Annealing. (Deprecated in 'v0.2', see 'MetropolisHastings')
+    """Factory for Simulated Annealing (Deprecated).
 
-    Accept a move using the Metropolis-Hastings probability.
+    Accept a move using the Metropolis-Hastings probability. Deprecated in
+    ``v0.2``, see ``MetropolisHastings``.
+
 
     Args:
+        beta: Inverse temperature.
         cost_type: Type to use for the cost.
+
+    Returns:
+        The probability object.
     """
     warn(
         "'SimulatedAnnealing' is deprecated, and it will be "
@@ -95,12 +122,24 @@ def MetropolisHastings(beta: float = 0,
                        cost_type: Optional[Literal['float32', 'float64',
                                                    'float128',
                                                    'float1024']] = 'float64'):
-    """Metropolis-Hastings probability.
+    """Factory for Metropolis-Hastings probability.
 
     Accept a move using the Metropolis-Hastings probability.
 
     Args:
+        beta: Inverse temperature.
         cost_type: Type to use for the cost.
+
+    Returns:
+        The probability object.
+
+    Examples:
+        >>> from tnco.optimize.prob import MetropolisHastings
+        >>> prob = MetropolisHastings(beta=1)
+        >>> prob(-10, 100)
+        1.0
+        >>> prob(10, 100) < 1
+        True
     """
 
     # Check cost_type
