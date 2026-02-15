@@ -15,6 +15,7 @@
 import functools as fts
 import itertools as its
 import json
+import operator as op
 import pickle
 from decimal import Decimal
 from os import environ
@@ -32,6 +33,7 @@ from tnco.app import Optimizer
 from tnco.app import Tensor as TS
 from tnco.app import TensorNetwork as TN
 from tnco.app import load_tn
+from tnco.app.circuit import Sampler
 from tnco.testing.utils import generate_random_tensors
 
 # Initialize RNG
@@ -322,3 +324,76 @@ def test_OptimizeTN(random_seed, **kwargs):
         map(lambda xs, ys: frozenset(xs) == frozenset(ys),
             map(lambda xs: tuple(map(lambda p: inds_order[p], xs)), tn.ts_inds),
             map(lambda tag: ts_inds[int(tag['name'])], tn.ts_tags)))
+
+
+@repeat(30)
+def test_Sampling(random_seed):
+    # Initialize random generator
+    rng = Random(random_seed)
+
+    # Get params
+    simplify = rng.randrange(2)
+
+    # Initialize circuit
+    n_qubits = 5
+    n_moments = 10
+    circuit = cirq.testing.random_circuit(n_qubits,
+                                          n_moments,
+                                          1,
+                                          random_state=random_seed)
+    qubits = sorted(circuit.all_qubits())
+
+    # Set number of samples
+    n_samples = 300
+
+    # Set peak
+    peak = bin(rng.randrange(2**n_qubits))[2:].zfill(n_qubits)
+
+    # Get random initial state
+    initial_state = cirq.Circuit(
+        (cirq.X if int(b) else cirq.I).on(q)
+        for q, b in zip(qubits, peak)) + (cirq.H**0.5).on_each(qubits)
+
+    # Build peaked circuit
+    circuit = initial_state + circuit + cirq.inverse(circuit)
+
+    # Get probability of peak
+    peak_prob = abs(cirq.Simulator().simulate(
+        circuit, qubit_order=qubits).state_vector()[int(peak, 2)])**2
+    assert peak_prob > 0.1
+
+    # Initialize sampler
+    sampler = Sampler(seed=random_seed, n_jobs=1)
+
+    # Get intermediate state
+    state = sampler.sample(circuit,
+                           simplify=simplify,
+                           return_intermediate_state_only=True,
+                           betas=(0, 1e3),
+                           n_steps=20,
+                           n_runs=2)
+
+    # State should be pickeable
+    state_ = pickle.loads(pickle.dumps(state))
+    assert all(
+        all(x[i] == y[i] for i in [0, 3, 4]) for x, y in zip(state, state_))
+    assert all(
+        all(np.allclose(x, y)
+            for x, y in zip(x[2], y[2]))
+        for x, y in zip(state, state_)
+        if x[0] is not None)
+    assert all(x[1].path == y[1].path
+               for x, y in zip(state, state_)
+               if x[0] is not None)
+
+    # Sample bitstrings
+    bitstrings, qubit_order = sampler.sample(state,
+                                             n_samples=n_samples,
+                                             qubit_order=qubits)
+    assert qubit_order == tuple(qubits)
+
+    # Get peak and probability
+    sampled_peak, sampled_prob = mit.first(
+        sorted(bitstrings.items(), key=op.itemgetter(1), reverse=True))
+    assert sampled_peak == peak
+    assert abs(sampled_prob - peak_prob) < 2 * 1 / np.sqrt(n_samples)
