@@ -72,9 +72,7 @@ jobs:
     - name: Run Doctests for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
         matrix.python-version }} (${{ matrix.target }})
       run: |
-        for f in $(grep -l ">>>" $(find tnco -name "*.py")); do
-          python3 -m doctest $f || exit 1
-        done
+        pytest --doctest-modules tnco/
 
     - name: Run Tests for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
         matrix.python-version }} (${{ matrix.target }})
