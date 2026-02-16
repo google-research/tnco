@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Parallelization utilities."""
 
 import itertools as its
 from multiprocessing.shared_memory import SharedMemory
 from struct import calcsize, pack_into, unpack_from
 from threading import TIMEOUT_MAX, Thread, Timer
 from time import sleep
-from typing import Callable, Iterable, NoReturn, Optional, Tuple, Union
+from typing import Any, Callable, Iterable, Optional, Tuple, Union
 from warnings import warn
 
 import more_itertools as mit
@@ -28,19 +29,28 @@ __all__ = ['Buffer', 'Parallel']
 
 
 class Buffer:
-    """Buffer for shared memory.
+    """A shared memory buffer.
 
     Buffer for shared memory.
 
     Args:
-        sequence_or_size: Initialize 'Buffer' with given sequence or by the
-            given size.
-        dtype: A valid type.
+        sequence_or_size: The initial sequence of data or the size of the
+            buffer.
+        dtype: The data type of the elements in the buffer. Must be a single
+            character format string compatible with ``struct`` module.
+
+    Examples:
+        >>> from tnco.parallel import Buffer
+        >>> b = Buffer([1, 2, 3], dtype='i')
+        >>> len(b)
+        3
+        >>> b[0]
+        1
     """
 
     def __init__(self,
-                 sequence_or_size: Union[Iterable[any], int],
-                 dtype: str = 'q'):
+                 sequence_or_size: Union[Iterable[Any], int],
+                 dtype: str = 'q') -> None:
 
         # Check dtype
         if len(dtype) != 1:
@@ -69,30 +79,30 @@ class Buffer:
         if sequence:
             pack_into(self.dtype * size, self.shm.buf, 0, *sequence)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.shm.size // calcsize(self.dtype)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(list(self))
 
-    def __getitem__(self, pos):
+    def __getitem__(self, pos: int) -> Any:
         if pos >= len(self):
             raise IndexError("list index out of range")
         return unpack_from(self.dtype, self.shm.buf,
                            pos * calcsize(self.dtype))[0]
 
-    def __setitem__(self, pos, value):
+    def __setitem__(self, pos: int, value: Any) -> None:
         if pos >= len(self):
             raise IndexError("list index out of range")
         pack_into(self.dtype, self.shm.buf, pos * calcsize(self.dtype), value)
 
     @property
-    def dtype(self):
+    def dtype(self) -> str:
         return self._dtype
 
 
-def Parallel(core: Callable,
-             *args,
+def Parallel(core: Callable[..., Any],
+             *args: Any,
              description: Optional[str] = "Processing...",
              text: Optional[str] = "",
              n_jobs: Optional[int] = -1,
@@ -101,35 +111,40 @@ def Parallel(core: Callable,
              buffers: Optional[Iterable[Tuple[str, str]]] = (),
              refresh_per_second: Optional[float] = None,
              leave: Optional[bool] = False,
-             **kwargs) -> NoReturn:
-    """Parallelize 'core'.
+             **kwargs: Any) -> Any:
+    """Parallelize ``core``.
 
-    'Parallel' can be used to parallelize an arbitrary 'core'.
+    Executes a function in parallel.
 
     Args:
         core: Function to parallelize. The core must have the keyword
-            parameters 'idx' (which is used to identify the process), 'status'
-            (which is used by the process to inform the main process of its
-            status), and 'stop' (which instruct the process to stop if 'True').
-            All the arguments 'args' and keyword arguments 'kwargs' are passed
-            to the 'core'.
-        description: Description to use.
-        text: 'rich.progress.TextColumn' for its format.
+            parameters ``idx`` (which is used to identify the process),
+            ``status`` (which is used by the process to inform the main process
+            of its status), and ``stop`` (which instruct the process to stop if
+            ``True``). All the arguments ``args`` and keyword arguments
+            ``kwargs`` are passed to the ``core``.
+        description: Description to use for the progress bar.
+        text: ``rich.progress.TextColumn`` formatting string for additional
+            text.
         n_jobs: Number of processes to use. By default, all available cores are
-            used. If 'n_jobs' is a positive number, 'n_jobs' processes will be
-            used. If 'n_jobs' is negative, 'n_cpus + n_jobs + 1' will be used.
-            If 'n_jobs' is zero, it will raise a 'ValueError'. (See:
-            'joblib.Parallel')
-        timeout: If provided, set the 'stop' variables to all process to 'True'
-            after 'timeout' seconds have passed.
-        verbose: Verbose output.
+            used. If ``n_jobs`` is a positive number, ``n_jobs`` processes will
+            be used. If ``n_jobs`` is negative, ``n_cpus + n_jobs + 1`` will be
+            used. If ``n_jobs`` is zero, it will raise a ``ValueError``. (See:
+            ``joblib.Parallel``).
+        timeout: If provided, sets the ``stop`` variables for all processes to
+            ``True`` after ``timeout`` seconds have passed.
+        verbose: If ``True``, prints verbose output.
         buffers: Buffers used to communicate between processes. Each buffer is
-            of the form '(buffer_name, type)', with 'buffer_name' being the
-            name of the buffer and 'type' its type (See:
-            'tnco.parallel.Buffer'). Buffers are then passed as keyword
-            arguments to 'core'.
-        refresh_per_second: Number of refresh per seconds.
-        leave: If 'True', progress bars are kept at the end of the process.
+            of the form ``(buffer_name, type)``, with ``buffer_name`` being the
+            name of the buffer and ``type`` its type (See:
+            ``tnco.parallel.Buffer``). Buffers are then passed as keyword
+            arguments to ``core``.
+        refresh_per_second: Number of refresh updates per second for the
+            progress bar.
+        leave: If ``True``, progress bars are kept after completion.
+
+    Returns:
+        The results of the parallel execution.
 
     Examples:
         def example(x, *, idx, status, stop):

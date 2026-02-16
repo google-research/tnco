@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contraction Tree."""
 
 import functools as fts
 import itertools as its
@@ -36,23 +37,31 @@ __all__ = ['ContractionTree', 'traverse_tree']
 class ContractionTree(_ContractionTree):
     """Contraction tree.
 
-    Object representing any contraction tree.
+    Class representing a contraction tree.
 
     Args:
-        path: Path to use to create the contraction tree.
-        ts_inds: List of indices, with each item being the indices of a
-            tensor.
+        path: Path used to create the contraction tree.
+        ts_inds: List of indices for each tensor.
         dims: Dimensions of each index.
-        output_inds: The list of output indices. It must be provided
-            if 'ts_inds' has hyper-indices.
-        check_shared_inds: Check if all contracted tensors share at
-            least one index.
-        verbose: Verbose output.
+        output_inds: The list of output indices. It must be provided if
+            ``ts_inds`` has hyper-indices.
+        check_shared_inds: Check if all contracted tensors share at least one
+            index.
+        verbose: If ``True``, prints verbose output.
 
     Raises:
         ValueError: If the provided parameters are not consistent.
-        ValueError: If 'check_shared_inds' is True and not the contraction path
-            has contracted tensors not sharing an index.
+        ValueError: If ``check_shared_inds`` is ``True`` and the contraction
+            path has contracted tensors that do not share an index.
+
+    Examples:
+        >>> from tnco.ctree import ContractionTree
+        >>> path = [(0, 1)]
+        >>> ts_inds = [['i', 'j'], ['j', 'k']]
+        >>> dims = {'i': 2, 'j': 2, 'k': 2}
+        >>> ctree = ContractionTree(path, ts_inds, dims)
+        >>> ctree.max_width()
+        2.0
     """
 
     def __init__(self,
@@ -63,7 +72,7 @@ class ContractionTree(_ContractionTree):
                  output_inds: Optional[Iterable[Index]] = None,
                  check_shared_inds: Optional[bool] = False,
                  verbose: Optional[bool] = False,
-                 **kwargs):
+                 **kwargs) -> None:
         # Get cache if present
         _cache = kwargs.pop('_cache', None)
         if kwargs:
@@ -242,25 +251,25 @@ class ContractionTree(_ContractionTree):
                          check_shared_inds=check_shared_inds)
 
     @staticmethod
-    def __build__(*args):
+    def __build__(*args) -> 'ContractionTree':
         nodes, ts_inds, dims, _cache = args
         return ContractionTree(nodes, ts_inds, dims, _cache=_cache)
 
-    def __reduce__(self):
+    def __reduce__(self) -> Tuple[Any, ...]:
         return self.__build__, (self.nodes, self.inds[:], dict(self.dims),
                                 (self._n_tensors, self._tensors_pos,
                                  self._inds_order))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return super().__eq__(other) and self._inds_order == other._inds_order
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'ContractionTree(n_nodes={len(self)}, n_inds={self.n_inds})'
 
     def all_inds(self) -> FrozenSet[Index]:
-        """Return all indices.
+        """Returns all indices.
 
-        Return all indices.
+        Returns all indices included in this contraction tree.
 
         Returns:
             All indices included in this contraction tree.
@@ -268,9 +277,9 @@ class ContractionTree(_ContractionTree):
         return frozenset(self._inds_order)
 
     def output_inds(self) -> FrozenSet[Index]:
-        """Return output indices.
+        """Returns output indices.
 
-        Return output indices.
+        Returns the output indices of the contraction tree.
 
         Returns:
             The output indices in this contraction tree.
@@ -279,9 +288,9 @@ class ContractionTree(_ContractionTree):
 
     @property
     def nodes(self) -> List[Node]:
-        """Return nodes.
+        """Returns nodes.
 
-        Return a list of nodes.
+        Returns a list of nodes in the contraction tree.
 
         Returns:
             A list of nodes.
@@ -290,9 +299,9 @@ class ContractionTree(_ContractionTree):
 
     @property
     def inds(self) -> List[FrozenSet[Index]]:
-        """Return indices.
+        """Returns indices.
 
-        Return a list of indices for each node.
+        Returns a list of indices for each node.
 
         Returns:
             A list of indices.
@@ -300,11 +309,13 @@ class ContractionTree(_ContractionTree):
 
         class IndsProxy:
 
-            def __init__(self, inds, inds_map):
+            def __init__(self, inds, inds_map) -> None:
                 self._inds_order = inds
                 self._inds_map = inds_map
 
-            def __getitem__(self, key):
+            def __getitem__(
+                self, key: Union[int, slice]
+            ) -> Union[FrozenSet[Index], Tuple[FrozenSet[Index], ...]]:
 
                 def get_inds(xs):
                     return frozenset(
@@ -320,9 +331,9 @@ class ContractionTree(_ContractionTree):
 
     @property
     def dims(self) -> Dict[Any, int]:
-        """Map of the dimensions.
+        """Map of dimensions.
 
-        Return a map of all the dimensions for each index.
+        Returns a map of dimensions for each index.
 
         Returns:
             Dimensions for each index.
@@ -337,9 +348,9 @@ class ContractionTree(_ContractionTree):
                     its.repeat(dims) if isinstance(dims, int) else dims)))
 
     def path(self) -> List[Tuple[int, int]]:
-        """Return contraction path in linear (einsum) format.
+        """Returns contraction path in linear (einsum) format.
 
-        Return contraction path in linear (einsum) format.
+        Returns the contraction path in linear (einsum) format.
 
         Returns:
             The contraction path.
@@ -379,9 +390,9 @@ class ContractionTree(_ContractionTree):
     def max_width(self) -> float:
         """Maximum width.
 
-        Return the maximum width among all tensors in the contraction tree. The
-        width of a tensor is defined as the sum of the logarithms base 2 of the
-        dimensions of its indices.
+        Calculates the maximum width among all tensors in the contraction tree.
+        The width of a tensor is defined as the sum of the logarithms base 2 of
+        the dimensions of its indices.
 
         Returns:
             The maximum width.
@@ -397,16 +408,16 @@ def traverse_tree(ctree: ContractionTree,
                   callback: Callable[[int], NoReturn],
                   *,
                   verbose: Optional[int] = False) -> NoReturn:
-    """Explore 'tree' and call 'callback' for each node of the tree.
+    """Traverses ``tree`` and calls ``callback`` for each node.
 
-    Explore 'tree' and call 'callback' for each node of the tree. The
-    'callback' must accept an integer as argument, which correspond to the
-    position of the node in the contraction tree.
+    Traverses ``tree`` and calls ``callback`` for each node of the tree. The
+    ``callback`` must accept an integer as an argument, which corresponds to
+    the position of the node in the contraction tree.
 
     Args:
         ctree: Contraction tree to traverse.
-        callback: The 'callback' function to call.
-        verbose: Verbose output.
+        callback: The callback function to call.
+        verbose: If ``True``, prints verbose output.
     """
     with Progress(disable=(verbose <= 0), console=Console(stderr=True)) as pbar:
         task = pbar.add_task("Exploring contraction tree...", total=len(ctree))

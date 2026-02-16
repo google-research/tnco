@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Cost model for finite width optimization."""
 
 from importlib import import_module
 from typing import Dict, FrozenSet, Iterable, Literal, Optional, Union
@@ -37,7 +38,7 @@ class BaseCostModel:
 
 
 class SimpleCostModel(BaseCostModel):
-    """Return contraction cost.
+    """Simple cost model.
 
     Return the contraction cost between two tensors. The contraction cost in
     this simple model corresponds to:
@@ -53,7 +54,7 @@ class SimpleCostModel(BaseCostModel):
     where j are all the non-sparse indices between the two tensors (counted
     once), k are all the sparse-indices between the two tensors (counted once),
     and n_projs are the maximum number of allowed projections among all the
-    sparse indices. While this model does not account of the actual
+    sparse indices. While this model does not account for the actual
     configurations of sparse indices, it is a good proxy for the actual cost
     when the actual configurations of sparse indices are random enough.
 
@@ -61,7 +62,7 @@ class SimpleCostModel(BaseCostModel):
         max_width: The maximum tensor width allowed while contracting the
             tensor network. The width of tensor is defined as the sum of the
             logarithm base 2 of the tensor's dimensions.
-        width_type: The type to use to reprensent the tensor width while
+        width_type: The type to use to represent the tensor width while
             optimizing the tensor network contraction.
         cost_type: The type to use to represent the cost of contraction while
             optimizing the tensor network contraction.

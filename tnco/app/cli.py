@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Command-line interface utilities."""
 
 from inspect import Parameter, Signature, signature
 from typing import Callable
@@ -22,10 +23,11 @@ from tnco.app import Optimizer
 
 
 def wraps(fn: Callable) -> Callable:
-    """Apply 'fn' signature.
+    """Decorator to copy the signature and docstring from a function.
 
-    'wraps' is a decorator to add 'self' + 'fn' signature, and 'fn.__doc__' to
-    a function. Useful when a non-method function is added as a method.
+    ``wraps`` is a decorator to add ``self`` + ``fn`` signature, and
+    ``fn.__doc__`` to a function. Useful when a non-method function is added as
+    a method.
 
     Args:
         fn: Function to copy the signature and the docstring from.

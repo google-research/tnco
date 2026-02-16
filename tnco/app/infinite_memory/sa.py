@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Simulated Annealing Optimizer for Infinite Memory."""
 
 import json
 from dataclasses import dataclass
@@ -58,7 +59,7 @@ class JSONEncoder(BaseJSONEncoder):
 
 @dataclass(repr=False, frozen=True, eq=False)
 class ContractionResults(BaseContractionResults):
-    """Contraction results.
+    """Results of a contraction optimization.
 
     Contraction results for simulated annealing with no memory constraints.
 
@@ -67,9 +68,9 @@ class ContractionResults(BaseContractionResults):
             tensor network for each disconnected path.
         disconnected_paths: The number of total disconnected paths is equal to
             the number of connected components in the optimized tensor network.
-            Each path is in linear (einsum) format and assume that each
-            path is run independently using all the tensors in the
-            original tensor network.
+            Each path is in linear (einsum) format and assumes that each path
+            is run independently using all the tensors in the original tensor
+            network.
     """
     disconnected_costs: List[float]
     disconnected_paths: List[List[Tuple[int, int]]]
@@ -86,7 +87,7 @@ class ContractionResults(BaseContractionResults):
 
 
 class Optimizer(BaseOptimizer):
-    """Optimize tensor network with simulated annealing (infinite memory)
+    """Optimizes a tensor network using simulated annealing (infinite memory).
 
     Optimize the tensor network using simulated annealing and assuming infinite
     memory.
@@ -100,28 +101,28 @@ class Optimizer(BaseOptimizer):
                  n_projs: Optional[int] = None,
                  timeout: Optional[float] = None,
                  **load_tn_options) -> Any:
-        """Optimize the tensor network 'tn'.
-
-        Optimize the tensor network 'tn'.
+        """Optimizes the tensor network ``tn``.
 
         Args:
             tn: The tensor network to optimize. Multiple formats are valid.
-                (See: 'tnco.app.load_tn' for all the valid options)
+                (See: ``tnco.app.load_tn`` for all the valid options)
             betas: The inverse temperature to use in the optimization. If
-                'betas' is a tuple of two elements (and the number of steps
-                'n_steps' is provided), the inverve temperature beta will be
-                linearly interpolated between 'betas[0]' and 'betas[1]'.
-                Otherwise, 'betas' will be used as inverse temperatures.
+                ``betas`` is a tuple of two elements (and the number of steps
+                ``n_steps`` is provided), the inverve temperature beta will be
+                linearly interpolated between ``betas[0]`` and ``betas[1]``.
+                Otherwise, ``betas`` will be used as inverse temperatures.
             n_steps: Number of steps for the optimization. It must be provided
-                if 'betas' is a tuple of float representing the initial and
+                if ``betas`` is a tuple of float representing the initial and
                 final inverse temperature.
-            n_runs: Number of indipendent runs to perform.
-            n_projs: If 'tn' has sparse indices, the total number of
+            n_runs: Number of independent runs to perform.
+            n_projs: If ``tn`` has sparse indices, the total number of
                 projections to consider among all the sparse indices.
-            timeout: If provided, stop optimzation after 'timeout' seconds.
+            timeout: If provided, stop optimization after ``timeout`` seconds.
+            **load_tn_options: Additional options passed to
+                ``tnco.app.load_tn``.
 
         Returns:
-            See: 'tnco.app.dump_results'
+            See: ``tnco.app.dump_results``.
 
         Raises:
             ValueError: If parameters are not valid.

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Main application logic."""
 
 import bz2
 import functools as fts
@@ -56,16 +57,17 @@ class JSONEncoder(json.JSONEncoder):
 
 @dataclass(repr=False, frozen=True, eq=False)
 class BaseContractionResults:
-    """Base class for the contraction results.
+    """Base class for contraction results.
 
-    Contraction results.
+    Base class for the contraction results.
 
     Args:
         cost: The number of operations to perform the contration for the given
-            'path'.
+            ``path``.
         runtime_s: The number of seconds it took to optimize the tensor network
-            and get 'path'.
-        path: A path in linear (einsum) format with an expected cost of 'cost'.
+            and get ``path``.
+        path: A path in linear (einsum) format with an expected cost of
+            ``cost``.
     """
     cost: float
     runtime_s: float
@@ -86,10 +88,10 @@ class BaseContractionResults:
 
 
 def load_file(filename: str) -> Any:
-    """Load an object from 'filename'.
+    """Loads an object from a file.
 
-    Load an object from 'filename'. The object can be of any type and the file
-    can be compressed.
+    Loads an object from ``filename``. The object can be of any type and the
+    file can be compressed.
 
     Args:
         filename: Path to the file to load.
@@ -98,7 +100,7 @@ def load_file(filename: str) -> Any:
         Loaded object.
 
     Raises:
-        FileNotFoundError: 'filename' does not exist or not accessible.
+        FileNotFoundError: If ``filename`` does not exist or is not accessible.
     """
     # Validate filename
     try:
@@ -154,13 +156,13 @@ def load_tn(obj: Any,
             output_index_token: Optional[str] = '*',
             sparse_index_token: Optional[str] = '/',
             atol: Optional[float] = 1e-5,
-            dtype: Optional[any] = None,
+            dtype: Optional[Any] = None,
             backend: Optional[str] = None,
             seed: Optional[int] = None,
             verbose: Optional[int] = False) -> TensorNetwork:
-    """Load tensor network from any 'obj'.
+    """Loads a tensor network from various object types.
 
-    The function loads a tensor network from 'obj' of any type. See Notes for
+    The function loads a tensor network from ``obj`` of any type. See Notes for
     the supported formats.
 
     Args:
@@ -168,43 +170,43 @@ def load_tn(obj: Any,
         fuse: Maximum width to use to fuse the tensors. The width is defined as
             sum of the logarithms of all the dimensions of a given tensor.
             Tensors are contracted so that the width of the contracted tensor
-            is smaller than 'fuse'.
-        decompose_hyper_inds: If 'True', decompose diagonal tensors to
+            is smaller than ``fuse``.
+        decompose_hyper_inds: If ``True``, decompose diagonal tensors to
             hyper-indices.
-        simplify_circuit: If 'True' and 'obj' is a circuit, gates that cancel
-            each other will be simplified.
-        initial_state: Initial state state to apply to the circuit. If a 'dict'
+        simplify_circuit: If ``True`` and ``obj`` is a circuit, gates that
+            cancel each other will be simplified.
+        initial_state: Initial state state to apply to the circuit. If a
+            ``dict`` is used, qubits are the keys and the corresponding values
+            can be either a single char token between ``'01+-'``, or a 1x2
+            matrix. If a qubit is missing, it is considered open. If a single
+            token / matrix is used, the same is applied to all qubits. If
+            ``None``, all qubits are open.
+        final_state: Final state state to apply to the circuit. If a ``dict``
             is used, qubits are the keys and the corresponding values can be
-            either a single char token between '01+-', or a 1x2 matrix. If a
-            qubit is missing, it is considered open. If a single token / matrix
-            is used, the same is applied to all qubits. If 'None', all qubits
-            are open.
-        final_state: Final state state to apply to the circuit. If a 'dict' is
-            used, qubits are the keys and the corresponding values can be
-            either a single char token between '01+-', or a 1x2 matrix. If a
-            qubit is missing, it is considered open. If a single token / matrix
-            is used, the same is applied to all qubits. If 'None', all qubits
-            are open.
-        output_index_token: If 'obj' is a list of indices, the token to use to
-            identify output inds.
-        sparse_index_token: If 'obj' is a list of indices, the token to use to
-            identify sparse inds.
-        atol: Absolute tollerance when checking for hyper-indices.
+            either a single char token between ``'01+-'``, or a 1x2 matrix. If
+            a qubit is missing, it is considered open. If a single token /
+            matrix is used, the same is applied to all qubits. If ``None``, all
+            qubits are open.
+        output_index_token: If ``obj`` is a list of indices, the token to use
+            to identify output inds.
+        sparse_index_token: If ``obj`` is a list of indices, the token to use
+            to identify sparse inds.
+        atol: Absolute tolerance when checking for hyper-indices.
         dtype: Type to use for arrays.
-        backend: Backend to use to fuse arrays. See: `autoray.do`.
+        backend: Backend to use to fuse arrays. See: ``autoray.do``.
         seed: Seed to use.
-        verbose: Verbose output.
+        verbose: If ``True``, prints verbose output.
 
     Returns:
         The loaded tensor network.
 
     Raises:
-        TypeError: If 'obj' is not recognized.
+        TypeError: If ``obj`` is not recognized.
 
     Notes:
-        'load_tn' accepts 'objs' in multiple formats:
+        ``load_tn`` accepts ``obj`` in multiple formats:
 
-        - Objects of 'tnco.app.TensorNetwork'
+        - Objects of ``tnco.app.TensorNetwork``
         - List of gates of the form:
             [
                 (matrix_1, (qubit_1_1, qubits_1_2, ..)),
@@ -219,9 +221,9 @@ def load_tn(obj: Any,
                 ...
                 (index_dimension_n, tensorname_n_1, tensorname_n_2, ...),
             ]
-          If an index contains 'output_index_token', that index is considered
+          If an index contains ``output_index_token``, that index is considered
           an output index. Similarly, if an index contains
-          'sparse_index_token', that index is considered a sparse index.
+          ``sparse_index_token``, that index is considered a sparse index.
         - String of list of indices of the form:
           '''
           index_dimension_1 tensorname_1_1 tensorname_1_2 ...
@@ -229,19 +231,25 @@ def load_tn(obj: Any,
           ...
           index_dimension_n tensorname_n_1 tensorname_n_2 ...
           '''
-          If an index contains 'output_index_token', that index is considered
+          If an index contains ``output_index_token``, that index is considered
           an output index. Similarly, if an index contains
-          'sparse_index_token', that index is considered a sparse index.
-        - Third-parties quantum circuits, such as 'cirq.Circuit' or
-          'qiskit.QuantumCircuit'
+          ``sparse_index_token``, that index is considered a sparse index.
+        - Third-parties quantum circuits, such as ``cirq.Circuit`` or
+          ``qiskit.QuantumCircuit``
         - Third-parties quantum circuits in JSON format
         - Strings in QASM format
         - Filename where any of the above abjects is stored. The file can be
           compressed.
-        - If 'stdin', read string from stdin and parse it against the above
+        - If ``stdin``, read string from stdin and parse it against the above
           options.
 
-        If 'obj' is not recognized, a 'TypeError' will be raised.
+        If ``obj`` is not recognized, a ``TypeError`` will be raised.
+
+    Examples:
+        >>> from tnco.app import load_tn
+        >>> # Load from list of indices
+        >>> inds = [[2, 'i', 'j'], [2, 'j', 'k']]
+        >>> tn = load_tn(inds)
     """
     # Load all options
     options = dict(locals())
@@ -565,48 +573,50 @@ def dump_results(tn: TensorNetwork,
                  output_compression: Optional[str] = 'auto',
                  overwrite_output_file: Optional[bool] = False,
                  **kwargs) -> Any:
-    """Dump 'tn' and 'res' in the desired format.
+    """Dumps results to a file or returns them.
 
-    Dump 'tn' and 'res' in the desired format.
+    Dump ``tn`` and ``res`` in the desired format.
 
     Args:
         tn: Tensor Network to dump.
         res: Results to dump.
         output_format: Format to use for the output. See Notes for more
             details.
-        output_filename: If provided, dump the output to 'output_filename'. If
-            'output_filfename' has a '.gzip' or '.bz2' extension, it will be
-            compressed accordingly.
-        output_compression: If 'auto', the output will be compressed to the
-            format specified by 'output_compression'. Otherwise, the
-            compression format will be deduced from 'output_filename'. Valid
-            'output_compression' are 'none', 'bz2' and 'json'. If
-            'output_filename' is not provided, it will raise a 'ValueError'.
-        overwrite_output_file:If 'True', the 'output_filename' will be
+        output_filename: If provided, dump the output to ``output_filename``.
+            If ``output_filfename`` has a ``.gzip`` or ``.bz2`` extension, it
+            will be compressed accordingly.
+        output_compression: If ``'auto'``, the output will be compressed to the
+            format specified by ``output_compression``. Otherwise, the
+            compression format will be deduced from ``output_filename``. Valid
+            ``output_compression`` are ``'none'``, ``'bz2'`` and ``'json'``. If
+            ``output_filename`` is not provided, it will raise a
+            ``ValueError``.
+        overwrite_output_file: If ``True``, the ``output_filename`` will be
             overwritten if it exists.
 
     Returns:
         See Notes.
 
     Raises:
-        ValueError: 'output_format' is not supported.
-        ValueError: 'output_compression' is not supported or 'output_filename'
-            is not provided when compressing output.
-        FileExistsError: If 'output_filename' already exists, unless
-            'overwrite_output_file=True'.
+        ValueError: ``output_format`` is not supported.
+        ValueError: ``output_compression`` is not supported or
+            ``output_filename`` is not provided when compressing output.
+        FileExistsError: If ``output_filename`` already exists, unless
+            ``overwrite_output_file=True``.
 
     Notes:
         The output format depends on the provided arguments.
 
-        If 'output_format' is None or 'raw', the output will be the tuple '(tn,
-        res)', with 'tn' being the tensor network used in the simulation and
-        'res' the results from the optimization. If 'output_format' is 'json',
-        both 'tn' and 'res' are dumped to the json format.
+        If ``output_format`` is ``None`` or ``'raw'``, the output will be the
+        tuple ``(tn, res)``, with ``tn`` being the tensor network used in the
+        simulation and ``res`` the results from the optimization. If
+        ``output_format`` is ``'json'``, both ``tn`` and ``res`` are dumped to
+        the json format.
 
-        If 'output_filename' is not specified, the function will return the
+        If ``output_filename`` is not specified, the function will return the
         output in the specified format. Otherwise, the output is dumped to
-        'output_filename'. In this case, if 'output_format=raw', then 'pickle'
-        is used to dump the results on the file.
+        ``output_filename``. In this case, if ``output_format=raw``, then
+        ``pickle`` is used to dump the results on the file.
     """
     # Check if only check is needed
     check_only = kwargs.pop('check_only', False)
@@ -697,41 +707,42 @@ def dump_results(tn: TensorNetwork,
 
 @dataclass(frozen=True)
 class BaseOptimizer:
-    """Base class for the optimizer.
+    """Base class for tensor network optimizers.
 
     Optimize the tensor network.
 
     Args:
         max_width: Maximum width to use. The width is defined as sum of the
-            logarithms of all the dimensions of a given tensor.  Tensors are
-            contracted so that the width of the contracted tensor is smaller
-            than 'max_width'.
+            logarithms (base 2) of all the dimensions of a given tensor.
+            Tensors are contracted so that the width of the contracted tensor
+            is smaller than ``max_width``.
         n_jobs: Number of processes to use. By default, all available cores are
-            used. If 'n_jobs' is a positive number, 'n_jobs' processes will be
-            used. If 'n_jobs' is negative, 'n_cpus + n_jobs + 1' will be used.
-            If 'n_jobs' is zero, it will raise a 'ValueError'. (See:
-            'tnco.parallel.Parallel')
+            used. If ``n_jobs`` is a positive number, ``n_jobs`` processes will
+            be used. If ``n_jobs`` is negative, ``n_cpus + n_jobs + 1`` will be
+            used. If ``n_jobs`` is zero, it will raise a ``ValueError``. (See:
+            ``tnco.parallel.Parallel``)
         width_type: The type to use to represent the width. (See:
-            'tnco.optimize.finite_width.cost_model.SimpleCostModel')
+            ``tnco.optimize.finite_width.cost_model.SimpleCostModel``)
         cost_type: The type to use to represent the cost. (See:
-            'tnco.optimize.finite_width.cost_model.SimpleCostModel')
+            ``tnco.optimize.finite_width.cost_model.SimpleCostModel``)
         output_format: Format to use for the output. See Notes for more
             details.
-        output_filename: If provided, dump the output to 'output_filename'. If
-            'output_filfename' has a '.gzip' or '.bz2' extension, it will be
-            compressed accordingly.
-        output_compression: If 'auto', the output will be compressed to the
-            format specified by 'output_compression'. Otherwise, the
-            compression format will be deduced from 'output_filename'. Valid
-            'output_compression' are 'none', 'bz2' and 'json'. If
-            'output_filename' is not provided, it will raise a 'ValueError'.
-        overwrite_output_file: If 'True', the 'output_filename' will be
+        output_filename: If provided, dump the output to ``output_filename``.
+            If ``output_filfename`` has a ``.gzip`` or ``.bz2`` extension, it
+            will be compressed accordingly.
+        output_compression: If ``'auto'``, the output will be compressed to the
+            format specified by ``output_compression``. Otherwise, the
+            compression format will be deduced from ``output_filename``. Valid
+            ``output_compression`` are ``'none'``, ``'bz2'`` and ``'json'``. If
+            ``output_filename`` is not provided, it will raise a
+            ``ValueError``.
+        overwrite_output_file: If ``True``, the ``output_filename`` will be
             overwritten if it exists.
-        atol: Absolute tollerance when checking for hyper-indices.
+        atol: Absolute tolerance when checking for hyper-indices.
         dtype: Type to use for arrays.
-        backend: Backend to use to fuse arrays. See: `autoray.do`.
+        backend: Backend to use to fuse arrays. See: ``autoray.do``.
         seed: Seed to use.
-        verbose: Verbose output.
+        verbose: If ``True``, prints verbose output.
     """
     max_width: Optional[float] = None
     n_jobs: Optional[int] = -1
@@ -742,12 +753,12 @@ class BaseOptimizer:
     output_compression: Optional[str] = 'auto'
     overwrite_output_file: Optional[bool] = False
     atol: Optional[float] = 1e-5
-    dtype: Optional[any] = None
+    dtype: Optional[Any] = None
     backend: Optional[str] = None
     seed: Optional[int] = None
     verbose: Optional[int] = False
 
-    def optimize(self, *args, **kwargs):
+    def optimize(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError()
 
     def _load_tn(self, tn, **load_tn_options):
@@ -768,7 +779,7 @@ class BaseOptimizer:
                             overwrite_output_file=self.overwrite_output_file,
                             **dump_results_options)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Initialize common rng
         self._rng = Random(self.seed)
 
@@ -786,49 +797,54 @@ def Optimizer(method: Optional[str] = 'sa',
               output_compression: Optional[str] = 'auto',
               overwrite_output_file: Optional[bool] = False,
               atol: Optional[float] = 1e-5,
-              dtype: Optional[any] = None,
+              dtype: Optional[Any] = None,
               backend: Optional[str] = None,
               seed: Optional[int] = None,
               verbose: Optional[int] = False) -> BaseOptimizer:
-    """Optimize the tensor network.
+    """Factory function to create an optimizer.
 
     Optimize the tensor network.
 
     Args:
         method: The method to use for the optimization.
         max_width: Maximum width to use. The width is defined as sum of the
-            logarithms of all the dimensions of a given tensor.  Tensors are
+            logarithms of all the dimensions of a given tensor. Tensors are
             contracted so that the width of the contracted tensor is smaller
-            than 'max_width'.
+            than ``max_width``.
         n_jobs: Number of processes to use. By default, all available cores are
-            used. If 'n_jobs' is a positive number, 'n_jobs' processes will be
-            used. If 'n_jobs' is negative, 'n_cpus + n_jobs + 1' will be used.
-            If 'n_jobs' is zero, it will raise a 'ValueError'. (See:
-            'tnco.parallel.Parallel')
+            used. If ``n_jobs`` is a positive number, ``n_jobs`` processes will
+            be used. If ``n_jobs`` is negative, ``n_cpus + n_jobs + 1`` will be
+            used. If ``n_jobs`` is zero, it will raise a ``ValueError``. (See:
+            ``tnco.parallel.Parallel``)
         width_type: The type to use to represent the width. (See:
-            'tnco.optimize.finite_width.cost_model.SimpleCostModel')
+            ``tnco.optimize.finite_width.cost_model.SimpleCostModel``)
         cost_type: The type to use to represent the cost. (See:
-            'tnco.optimize.finite_width.cost_model.SimpleCostModel')
+            ``tnco.optimize.finite_width.cost_model.SimpleCostModel``)
         output_format: Format to use for the output. See Notes for more
             details.
-        output_filename: If provided, dump the output to 'output_filename'. If
-            'output_filfename' has a '.gzip' or '.bz2' extension, it will be
-            compressed accordingly.
-        output_compression: If 'auto', the output will be compressed to the
-            format specified by 'output_compression'. Otherwise, the
-            compression format will be deduced from 'output_filename'. Valid
-            'output_compression' are 'none', 'bz2' and 'json'. If
-            'output_filename' is not provided, it will raise a 'ValueError'.
-        overwrite_output_file: If 'True', the 'output_filename' will be
+        output_filename: If provided, dump the output to ``output_filename``.
+            If ``output_filfename`` has a ``.gzip`` or ``.bz2`` extension, it
+            will be compressed accordingly.
+        output_compression: If ``'auto'``, the output will be compressed to the
+            format specified by ``output_compression``. Otherwise, the
+            compression format will be deduced from ``output_filename``. Valid
+            ``output_compression`` are ``'none'``, ``'bz2'`` and ``'json'``. If
+            ``output_filename`` is not provided, it will raise a
+            ``ValueError``.
+        overwrite_output_file: If ``True``, the ``output_filename`` will be
             overwritten if it exists.
-        atol: Absolute tollerance when checking for hyper-indices.
+        atol: Absolute tolerance when checking for hyper-indices.
         dtype: Type to use for arrays.
-        backend: Backend to use to fuse arrays. See: `autoray.do`.
+        backend: Backend to use to fuse arrays. See: ``autoray.do``.
         seed: Seed to use.
-        verbose: Verbose output.
+        verbose: If ``True``, prints verbose output.
 
     Returns:
         The optimizer.
+
+    Examples:
+        >>> from tnco.app import Optimizer
+        >>> opt = Optimizer(method='sa')
     """
     # Get all options
     opts = locals()

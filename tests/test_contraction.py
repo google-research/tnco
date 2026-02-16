@@ -20,6 +20,7 @@ from random import Random
 
 import more_itertools as mit
 import pytest
+
 from tnco.ctree import ContractionTree
 from tnco.optimize.finite_width import Optimizer as FW_Optimizer
 from tnco.optimize.finite_width.cost_model import \

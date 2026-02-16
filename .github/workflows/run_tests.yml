@@ -69,6 +69,11 @@ jobs:
         fi
         pip install .[parallel,testing] --config-settings=cmake.build-type=${{ matrix.target }} --verbose
 
+    - name: Run Doctests for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
+        matrix.python-version }} (${{ matrix.target }})
+      run: |
+        pytest --doctest-modules tnco/
+
     - name: Run Tests for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
         matrix.python-version }} (${{ matrix.target }})
       if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'g++' && matrix.python-version

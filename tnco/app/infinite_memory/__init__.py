@@ -11,8 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Finite width optimization module."""
-
-from tnco.optimize.finite_width.optimizer import Optimizer
-
-__all__ = ['Optimizer']
+"""Infinite memory application module."""

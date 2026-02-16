@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Tensor Network definitions for the application."""
 
 import itertools as its
 import json
@@ -18,7 +19,7 @@ import operator as op
 from collections import Counter
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any, Dict, FrozenSet, List, Optional, Tuple
+from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple
 
 import autoray as ar
 import more_itertools as mit
@@ -29,15 +30,15 @@ __all__ = ['Tensor', 'TensorNetwork']
 
 
 class JSONEncoder(json.JSONEncoder):
-    """Helper for JSONEncoder.
+    """Custom JSON encoder for tensor network objects.
 
     Helper for JSONEncoder.
     """
 
     def default(self, obj) -> Any:
-        """Encode objects to JSON.
+        """Encodes objects to JSON.
 
-        Extend functionality of JSON.
+        Extends functionality of JSON.
 
         Args:
             obj: The object to encode.
@@ -70,24 +71,31 @@ class JSONEncoder(json.JSONEncoder):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class Tensor:
-    """Tensor.
+    """Represents a single tensor in a network.
 
     Object representing a single tensor.
 
     Args:
         inds: A list of indices.
-        dims: Dimensions associated to each index. It must be provided if
-            'array' is not provided.
-        array: Matrix associated to the tensor. It must be provided if 'dims'
-            is not provided.
-        tags: Tags associated to the tensor.
+        dims: Dimensions associated with each index. It must be provided if
+            ``array`` is not provided.
+        array: Matrix associated with the tensor. It must be provided if
+            ``dims`` is not provided.
+        tags: Tags associated with the tensor.
+
+    Examples:
+        >>> import numpy as np
+        >>> from tnco.app import Tensor
+        >>> t = Tensor(array=np.eye(2), inds=('i', 'j'))
+        >>> t.ndim
+        2
     """
     inds: Tuple[Index]
     dims: Optional[Tuple[int]] = None
     array: Optional[Matrix] = None
-    tags: Optional[Dict[any, any]] = None
+    tags: Optional[Dict[Any, Any]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
 
         def is_int(x):
             try:
@@ -128,7 +136,7 @@ class Tensor:
         if self.array is not None and self.array.shape != self.dims:
             raise ValueError("'dims' are not consistent with 'array'.")
 
-    def __eq__(self, other, *, atol: float = 1e-5):
+    def __eq__(self, other: Any, *, atol: float = 1e-5) -> bool:
         if (self.array is None) ^ (other.array is None):
             return False
         if self.array is not None and not all(
@@ -136,7 +144,7 @@ class Tensor:
             return False
         return self.inds == other.inds and self.dims == other.dims
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Tensor(ndim={}, array={}{}{})'.format(
             self.ndim, None if self.array is None else self.array.shape,
             '' if self.array is None else ', dtype={}'.format(self.array.dtype),
@@ -146,7 +154,7 @@ class Tensor:
     def ndim(self) -> int:
         """Number of dimensions.
 
-        Number of dimensions.
+        Returns the number of dimensions.
 
         Returns:
             The number of dimensions.
@@ -154,9 +162,9 @@ class Tensor:
         return len(self.dims)
 
     def to_json(self) -> Any:
-        """Dump to JSON format.
+        """Dumps to JSON format.
 
-        Dump the tensor in JSON format.
+        Dumps the tensor in JSON format.
 
         Returns:
             The tensor in JSON format.
@@ -167,23 +175,32 @@ class Tensor:
 
 @dataclass(frozen=True, repr=False)
 class TensorNetwork:
-    """Tensor network.
+    """Represents a network of tensors.
 
     Object representing the tensor network.
 
     Args:
         tensors: List of tensors.
-        output_inds: Output indices of 'TensorNetwork'. It must be provided if
-            'TensorNetwork' has hyper-indices.
+        output_inds: Output indices of ``TensorNetwork``. It must be provided
+            if ``TensorNetwork`` has hyper-indices.
         sparse_inds: List of indices to consider sparse.
-        tags: Tags associated to the tensor network.
+        tags: Tags associated with the tensor network.
+
+    Examples:
+        >>> import numpy as np
+        >>> from tnco.app import Tensor, TensorNetwork
+        >>> t1 = Tensor(array=np.eye(2), inds=('i', 'j'))
+        >>> t2 = Tensor(array=np.ones(2), inds=('j',))
+        >>> tn = TensorNetwork([t1, t2])
+        >>> tn.n_tensors
+        2
     """
     tensors: Tuple[Tensor]
     output_inds: Optional[FrozenSet[Index]] = None
     sparse_inds: Optional[FrozenSet[Index]] = None
     tags: Optional[Dict[Any, Any]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Convert
         object.__setattr__(self, 'tensors', tuple(self.tensors))
         if self.output_inds is not None:
@@ -250,7 +267,7 @@ class TensorNetwork:
         object.__setattr__(self, 'tags',
                            dict(() if self.tags is None else self.tags))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'TensorNetwork(n_tensors={}, n_inds={})'.format(
             self.n_tensors, self.n_inds)
 
@@ -258,7 +275,7 @@ class TensorNetwork:
     def n_tensors(self) -> int:
         """Number of tensors.
 
-        Number of tensors.
+        Returns the number of tensors.
 
         Returns:
             The total number of tensors.
@@ -269,7 +286,7 @@ class TensorNetwork:
     def n_inds(self) -> int:
         """Number of indices.
 
-        Number of indices.
+        Returns the number of indices.
 
         Returns:
             The total number of indices.
@@ -280,7 +297,7 @@ class TensorNetwork:
     def ts_inds(self) -> List[List[Index]]:
         """List of indices for each tensor.
 
-        Returns the indices associated to each tensor.
+        Returns the indices associated with each tensor.
 
         Returns:
             A list of indices for each tensor.
@@ -291,10 +308,10 @@ class TensorNetwork:
     def arrays(self) -> List[Array]:
         """List of arrays for each tensor.
 
-        Returns the array associated to each tensor.
+        Returns the array associated with each tensor.
 
         Returns:
-            A list of indices for each tensor.
+            A list of arrays for each tensor.
         """
         return tuple(map(lambda t: t.array, self.tensors))
 
@@ -302,7 +319,7 @@ class TensorNetwork:
     def ts_tags(self) -> List[Dict[Any, Any]]:
         """List of tags for each tensor.
 
-        Returns the tags associated to each tensor.
+        Returns the tags associated with each tensor.
 
         Returns:
             A list of tags for each tensor.
@@ -313,10 +330,10 @@ class TensorNetwork:
     def inds(self) -> FrozenSet[Index]:
         """Set of indices.
 
-        Return all indices associated to the tensor network.
+        Returns all indices associated with the tensor network.
 
         Returns:
-            All indices associated to the tensor network.
+            All indices associated with the tensor network.
         """
         return self._inds
 
@@ -324,20 +341,20 @@ class TensorNetwork:
     def dims(self) -> Dict[Any, int]:
         """Map of dimensions.
 
-        Return the dimensions of each index.
+        Returns the dimensions of each index.
 
         Returns:
             A map of indices and their dimension.
         """
         return MappingProxyType(self._dims)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.n_tensors
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> Tensor:
         return self.tensors[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tensor]:
         return iter(self.tensors)
 
     def to_json(self):

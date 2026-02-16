@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Ordered Frozen Set."""
 
 from itertools import chain
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from more_itertools import unique_everseen
 
@@ -21,57 +22,62 @@ __all__ = ['OrderedFrozenSet']
 
 
 class OrderedFrozenSet:
-    pass
+    """An ordered immutable set.
 
-
-class OrderedFrozenSet:
-    """Ordered 'frozenset'.
-
-    Similar to 'frozenset', but the order of the elements is kept consistent.
+    Similar to ``frozenset``, but maintains the insertion order of elements.
 
     Args:
-        iterable: iterable to add to the set.
+        iterable: An iterable of elements to add to the set.
+
+    Examples:
+        >>> from tnco.ordered_frozenset import OrderedFrozenSet
+        >>> s = OrderedFrozenSet([3, 1, 2, 1])
+        >>> s
+        OrderedFrozenSet((3, 1, 2))
+        >>> list(s)
+        [3, 1, 2]
     """
 
-    def __init__(self, iterable: Iterable[Any] = (), /):
+    def __init__(self, iterable: Iterable[Any] = (), /) -> None:
         self._order = tuple(unique_everseen(iterable))
         self._set = frozenset(self._order)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '{}({})'.format(type(self).__name__, self._order)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Any]:
         return iter(self._order)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self._order)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._order)
 
-    def copy(self) -> OrderedFrozenSet:
-        """Return a shallow copy of itself.
+    def copy(self) -> 'OrderedFrozenSet':
+        """Returns a shallow copy of itself.
 
-        Return a shallow copy of itself.
+        Returns a shallow copy of this ``OrderedFrozenSet``.
 
         Returns:
             A shallow copy of itself.
         """
         return OrderedFrozenSet(self)
 
-    def difference(self, other: Iterable) -> OrderedFrozenSet:
+    def difference(self, other: Iterable) -> 'OrderedFrozenSet':
         """Difference.
 
-        Return the difference with 'other'.
+        Returns the difference with ``other``.
 
         Args:
-            other: The other set to perform the operation.
+            other: The other set to perform the operation with.
 
         Returns:
-            The results of the operation.
+            A new ``OrderedFrozenSet`` with elements in this set that are not
+            in ``other``.
         """
 
         if not isinstance(other, OrderedFrozenSet):
@@ -79,16 +85,17 @@ class OrderedFrozenSet:
         return OrderedFrozenSet(
             filter(lambda x: x not in other._set, self._order))
 
-    def intersection(self, other: Iterable) -> OrderedFrozenSet:
+    def intersection(self, other: Iterable) -> 'OrderedFrozenSet':
         """Intersection.
 
-        Return the intersection with 'other'.
+        Returns the intersection with ``other``.
 
         Args:
-            other: The other set to perform the operation.
+            other: The other set to perform the operation with.
 
         Returns:
-            The results of the operation.
+            A new ``OrderedFrozenSet`` with elements common to this set and
+            ``other``.
         """
 
         if not isinstance(other, OrderedFrozenSet):
@@ -96,56 +103,58 @@ class OrderedFrozenSet:
         return OrderedFrozenSet(filter(lambda x: x in other._set, self._order))
 
     def isdisjoint(self, other: Iterable) -> bool:
-        """Check for common elements.
+        """Checks for common elements.
 
-        Check if this 'OrderedFrozenSet' shares elements with 'other'.
+        Checks if this ``OrderedFrozenSet`` shares no elements with ``other``.
 
         Args:
-            other: The other set to perform the operation.
+            other: The other set to perform the operation with.
 
         Returns:
-            'True' if there are not shared elements.
+            ``True`` if there are no shared elements, ``False`` otherwise.
         """
 
         return self._set.isdisjoint(other)
 
     def issubset(self, other: Iterable) -> bool:
-        """Check if subset.
+        """Checks if subset.
 
-        Check if this 'OrderedFrozenSet' is a subset of 'other'.
+        Checks if this ``OrderedFrozenSet`` is a subset of ``other``.
 
         Args:
-            other: The other set to perform the operation.
+            other: The other set to perform the operation with.
 
         Returns:
-            'True' if subset of 'other'.
+            ``True`` if this set is a subset of ``other``, ``False`` otherwise.
         """
 
         return self._set.issubset(other)
 
     def issuperset(self, other: Iterable) -> bool:
-        """Check if superset.
+        """Checks if superset.
 
-        Check if this 'OrderedFrozenSet' is a superset of 'other'.
+        Checks if this ``OrderedFrozenSet`` is a superset of ``other``.
 
         Args:
-            other: The other set to perform the operation.
+            other: The other set to perform the operation with.
 
         Returns:
-            'True' if superset of 'other'.
+            ``True`` if this set is a superset of ``other``, ``False``
+            otherwise.
         """
         return self._set.issuperset(other)
 
-    def symmetric_difference(self, other: Iterable) -> OrderedFrozenSet:
-        """Symmetryc difference.
+    def symmetric_difference(self, other: Iterable) -> 'OrderedFrozenSet':
+        """Symmetric difference.
 
-        Return the symmetric difference with 'other'.
+        Returns the symmetric difference with ``other``.
 
         Args:
-            other: The other set to perform the operation.
+            other: The other set to perform the operation with.
 
         Returns:
-            The results of the operation.
+            A new ``OrderedFrozenSet`` with elements in either this set or
+            ``other`` but not both.
         """
 
         if not isinstance(other, OrderedFrozenSet):
@@ -154,23 +163,23 @@ class OrderedFrozenSet:
         return OrderedFrozenSet(
             filter(lambda x: x in sd, chain(self._order, other._order)))
 
-    def union(self, other: Iterable) -> OrderedFrozenSet:
+    def union(self, other: Iterable) -> 'OrderedFrozenSet':
         """Union.
 
-        Return the union with 'other'.
+        Returns the union with ``other``.
 
         Args:
-            other: The other set to perform the operation.
+            other: The other set to perform the operation with.
 
         Returns:
-            The results of the operation.
+            A new ``OrderedFrozenSet`` with elements from both sets.
         """
 
         if not isinstance(other, OrderedFrozenSet):
             other = OrderedFrozenSet(other)
         return OrderedFrozenSet(chain(self._order, other._order))
 
-    def __or__(self, other):
+    def __or__(self, other: Any) -> 'OrderedFrozenSet':
         if not isinstance(other, (OrderedFrozenSet, set, frozenset)):
             raise TypeError(
                 "unsupported operand type(s) for |: '{}' and '{}'".format(
@@ -178,7 +187,7 @@ class OrderedFrozenSet:
                     type(other).__name__))
         return self.union(other)
 
-    def __and__(self, other):
+    def __and__(self, other: Any) -> 'OrderedFrozenSet':
         if not isinstance(other, (OrderedFrozenSet, set, frozenset)):
             raise TypeError(
                 "unsupported operand type(s) for &: '{}' and '{}'".format(
@@ -186,7 +195,7 @@ class OrderedFrozenSet:
                     type(other).__name__))
         return self.intersection(other)
 
-    def __xor__(self, other):
+    def __xor__(self, other: Any) -> 'OrderedFrozenSet':
         if not isinstance(other, (OrderedFrozenSet, set, frozenset)):
             raise TypeError(
                 "unsupported operand type(s) for ^: '{}' and '{}'".format(
@@ -194,7 +203,7 @@ class OrderedFrozenSet:
                     type(other).__name__))
         return self.symmetric_difference(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: Any) -> 'OrderedFrozenSet':
         if not isinstance(other, (OrderedFrozenSet, set, frozenset)):
             raise TypeError(
                 "unsupported operand type(s) for ^: '{}' and '{}'".format(
@@ -202,7 +211,7 @@ class OrderedFrozenSet:
                     type(other).__name__))
         return self.difference(other)
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> bool:
         if isinstance(other, OrderedFrozenSet):
             return self._set < other._set
         if isinstance(other, (set, frozenset)):
@@ -212,7 +221,7 @@ class OrderedFrozenSet:
                 type(self).__name__,
                 type(other).__name__))
 
-    def __le__(self, other):
+    def __le__(self, other: Any) -> bool:
         if isinstance(other, OrderedFrozenSet):
             return self._set <= other._set
         if isinstance(other, (set, frozenset)):
@@ -222,7 +231,7 @@ class OrderedFrozenSet:
                 type(self).__name__,
                 type(other).__name__))
 
-    def __gt__(self, other):
+    def __gt__(self, other: Any) -> bool:
         if isinstance(other, OrderedFrozenSet):
             return self._set > other._set
         if isinstance(other, (set, frozenset)):
@@ -232,7 +241,7 @@ class OrderedFrozenSet:
                 type(self).__name__,
                 type(other).__name__))
 
-    def __ge__(self, other):
+    def __ge__(self, other: Any) -> bool:
         if isinstance(other, OrderedFrozenSet):
             return self._set >= other._set
         if isinstance(other, (set, frozenset)):
@@ -242,7 +251,7 @@ class OrderedFrozenSet:
                 type(self).__name__,
                 type(other).__name__))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, OrderedFrozenSet):
             return self._set == other._set
         if isinstance(other, (set, frozenset)):
