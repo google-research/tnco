@@ -349,7 +349,7 @@ def test_LoadUnitary(random_seed, **kwargs):
 
     # Only Kronecker deltas should be present
     assert all(np.allclose(x, np.eye(2)) for x in arrays)
-    assert all(x[0] == y[0] and x[1] == 'i' and y[1] == 'f' for x, y in ts_inds)
+    assert all(x[0] == y[0] and x[1] == 'f' and y[1] == 'i' for x, y in ts_inds)
     assert sorted(mit.flatten(ts_inds)) == sorted(output_inds)
 
 
