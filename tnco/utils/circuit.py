@@ -401,6 +401,12 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
     else:
         all_gates = circuit
 
+    # For each missing qubit, add an identity
+    for missing_qubit in qubits.difference(
+            mit.flatten(map(op.itemgetter(1), circuit))):
+        all_gates.append((ar.do('eye', 2, dtype=dtype,
+                                like=backend), (missing_qubit,)))
+
     # Build TN
     qubit_map = defaultdict(int)
     arrays = []
@@ -484,55 +490,7 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
         # Update arrays
         arrays.extend(map(get_delta, map(len, kronecker_delta_inds)))
 
-    else:
-        # Some qubits might be still open despite it should be closed. The
-        # reason is because it should be mapped to an actual open qubit.
-        closed_but_open_qubits = list(q for q, n in Counter(
-            x for x in mit.flatten(ts_inds) if x in closed_qubits).items()
-                                      if n == 1)
 
-        # It might happen that a pair of disconnected would both appear in
-        # closed_but_open_qubits. We need to remove them from ts_inds.
-        qubits_to_remove = OrderedFrozenSet(q for q, n in Counter(
-            map(op.itemgetter(0), closed_but_open_qubits)).items() if n == 2)
-        for qubit in qubits_to_remove:
-            pos = list(
-                mit.locate(ts_inds,
-                           lambda xs: len(xs) == 1 and xs[0][0] == qubit))
-            assert len(pos) == 2
-            del ts_inds[pos[1]]
-            del ts_inds[pos[0]]
-            del arrays[pos[1]]
-            del arrays[pos[0]]
-
-        # Update loose qubits
-        closed_but_open_qubits = list(
-            q for q in closed_but_open_qubits if q[0] not in qubits_to_remove)
-
-        # Update loose qubits
-        for p in mit.locate(
-                ts_inds,
-                lambda xs: len(xs) == 1 and xs[0] in closed_but_open_qubits):
-            qubit = ts_inds[p][0]
-            inv_qubit = (qubit[0], 'i' if qubit[1] == 'f' else 'f')
-            assert qubit in closed_qubits and inv_qubit in open_qubits
-            ts_inds[p] = (inv_qubit,)
-
-        # Some qubits might be entirely missing. In this case, let's add a
-        # Kronecker delta
-        missing_qubits = Counter(
-            map(
-                op.itemgetter(0),
-                open_qubits.difference(
-                    OrderedFrozenSet(
-                        x for x in mit.flatten(ts_inds) if x in open_qubits))))
-
-        # Missing qubits should always be in pairs
-        assert all(n == 2 for n in missing_qubits.values())
-
-        # Add Kronecker deltas for each missing qubit
-        arrays.extend(map(get_delta, its.repeat(2, len(missing_qubits))))
-        ts_inds.extend(((q, 'i'), (q, 'f')) for q in missing_qubits)
 
     # Update output
     output_inds = open_qubits
