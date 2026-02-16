@@ -291,13 +291,13 @@ def svd(array: Array,
         >>> left_inds = ['i']
         >>> U, s, Vh = svd(array, inds, left_inds, svd_index_name='k')
         >>> U
-        [array([[1., 0.],
-               [0., 1.]]), ('i', 'k')]
+        (array([[1., 0.],
+               [0., 1.]]), ('i', 'k'))
         >>> s
-        [array([1., 1.]), ('k',)]
+        (array([1., 1.]), ('k',))
         >>> Vh
-        [array([[1., 0.],
-               [0., 1.]]), ('k', 'j')]
+        (array([[1., 0.],
+               [0., 1.]]), ('k', 'j'))
     """
 
     # Convert
