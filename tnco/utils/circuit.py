@@ -17,7 +17,7 @@ import functools as fts
 import itertools as its
 import math
 import operator as op
-from collections import Counter, defaultdict
+from collections import defaultdict
 from random import Random
 from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
@@ -489,8 +489,6 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
 
         # Update arrays
         arrays.extend(map(get_delta, map(len, kronecker_delta_inds)))
-
-
 
     # Update output
     output_inds = open_qubits
