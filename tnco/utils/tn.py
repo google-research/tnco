@@ -43,10 +43,10 @@ def get_random_contraction_path(
         ts_inds: Iterable[List[Index]],
         output_inds: Optional[Iterable[Index]] = None,
         *,
-        merge_paths: Optional[bool] = True,
-        autocomplete: Optional[bool] = True,
+        merge_paths: bool = True,
+        autocomplete: bool = True,
         seed: Optional[int] = None,
-        verbose: Optional[int] = False,
+        verbose: int = False,
         **kwargs) -> Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]:
     """Generates a random contraction path.
 
@@ -306,12 +306,11 @@ def get_einsum_subscripts(ts_inds: Iterable[List[Index]],
                             map(inds_map.get, output_inds))
 
 
-def merge_contraction_paths(
-        n_tensors: int,
-        paths: Iterable[List[Tuple[int, int]]],
-        *,
-        autocomplete: Optional[bool] = True,
-        verbose: Optional[int] = False) -> List[Tuple[int, int]]:
+def merge_contraction_paths(n_tensors: int,
+                            paths: Iterable[List[Tuple[int, int]]],
+                            *,
+                            autocomplete: bool = True,
+                            verbose: int = False) -> List[Tuple[int, int]]:
     """Merges contraction paths.
 
     Merges multiple contraction paths into a single path.
@@ -379,9 +378,9 @@ def merge_contraction_paths(
 def split_contraction_path(
     n_tensors: int,
     path: Iterable[Tuple[int, int]],
-    return_connected_components: Optional[bool] = False,
-    normalize_paths: Optional[bool] = False,
-    verbose: Optional[int] = False
+    return_connected_components: bool = False,
+    normalize_paths: bool = False,
+    verbose: int = False
 ) -> Union[List[List[Tuple[int, int]]], Tuple[List[List[Tuple[int, int]]],
                                               List[FrozenSet[int]]]]:
     """Splits a contraction path.
@@ -555,8 +554,8 @@ def fuse(
     *,
     exclude_inds: Optional[Iterable[Index]] = (),
     seed: Optional[int] = None,
-    return_fused_inds: Optional[bool] = False,
-    verbose: Optional[int] = False
+    return_fused_inds: bool = False,
+    verbose: int = False
 ) -> Tuple[List[Tuple[int, int]], Optional[List[Tuple[Index]]]]:
     """Fuses tensors.
 
@@ -865,7 +864,7 @@ def contract(
     dims: Optional[Union[int, Dict[Index, int]]] = None,
     *,
     backend: Optional[str] = None,
-    verbose: Optional[int] = False
+    verbose: int = False
 ) -> Tuple[List[List[Index]], FrozenSet[Index], Optional[List[Array]]]:
     """Contracts a tensor network.
 

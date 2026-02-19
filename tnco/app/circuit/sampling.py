@@ -95,20 +95,20 @@ def sample(
     circuit: Union[Iterable[Tuple[Matrix, Tuple[Qubit]]],
                    SamplingIntermediateState],
     optimizer: Optimizer,
-    n_samples: Optional[int] = 1,
+    n_samples: int = 1,
     *,
-    simplify: Optional[bool] = True,
-    use_matrix_commutation: Optional[bool] = True,
-    decompose_hyper_inds: Optional[bool] = True,
-    fuse: Optional[float] = 4,
+    simplify: bool = True,
+    use_matrix_commutation: bool = True,
+    decompose_hyper_inds: bool = True,
+    fuse: float = 4,
     qubit_order: Optional[Iterable[Qubit]] = None,
-    normalize: Optional[bool] = True,
-    return_intermediate_state_only: Optional[bool] = False,
+    normalize: bool = True,
+    return_intermediate_state_only: bool = False,
     dtype: Optional[Any] = None,
     optimization_backend: Optional[str] = None,
     contraction_backend: Optional[str] = None,
     seed: Optional[int] = None,
-    verbose: Optional[int] = False,
+    verbose: int = False,
     **optimize_params
 ) -> Union[Tuple[Dict[str, int], Tuple[Qubit]], SamplingIntermediateState]:
     """Sample bitstrings from a circuit.
@@ -442,14 +442,14 @@ class Sampler:
         verbose: Verbose output.
     """
     max_width: Optional[float] = None
-    n_jobs: Optional[int] = -1
-    width_type: Optional[str] = 'float32'
-    cost_type: Optional[str] = 'float64'
-    atol: Optional[float] = 1e-5
+    n_jobs: int = -1
+    width_type: str = 'float32'
+    cost_type: str = 'float64'
+    atol: float = 1e-5
     dtype: Optional[Any] = None
     optimization_backend: Optional[str] = None
     seed: Optional[int] = None
-    verbose: Optional[int] = False
+    verbose: int = False
 
     def __post_init__(self):
         # Get rng
@@ -475,15 +475,15 @@ class Sampler:
     def sample(
         self,
         circuit: Union[Circuit, SamplingIntermediateState],
-        n_samples: Optional[int] = 1,
+        n_samples: int = 1,
         *,
-        simplify: Optional[bool] = True,
-        use_matrix_commutation: Optional[bool] = True,
-        decompose_hyper_inds: Optional[bool] = True,
-        fuse: Optional[float] = 4,
+        simplify: bool = True,
+        use_matrix_commutation: bool = True,
+        decompose_hyper_inds: bool = True,
+        fuse: float = 4,
         qubit_order: Optional[Iterable[Qubit]] = None,
-        normalize: Optional[bool] = True,
-        return_intermediate_state_only: Optional[bool] = False,
+        normalize: bool = True,
+        return_intermediate_state_only: bool = False,
         contraction_backend: Optional[str] = None,
         **optimize_params
     ) -> Union[Tuple[Dict[str, int], Tuple[Qubit]], SamplingIntermediateState]:

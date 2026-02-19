@@ -55,12 +55,12 @@ class Optimizer:
                  ctree: ContractionTree,
                  cmodel: BaseCostModel,
                  *,
-                 slice_update: Optional[Literal['greedy']] = 'greedy',
+                 slice_update: Literal['greedy'] = 'greedy',
                  max_number_new_slices: int = 0,
-                 skip_slices: Iterable[Index] = None,
+                 skip_slices: Optional[Iterable[Index]] = None,
                  seed: Optional[Union[int, str]] = None,
-                 disable_shared_inds: Optional[bool] = False,
-                 atol: Optional[float] = 1e-5,
+                 disable_shared_inds: bool = False,
+                 atol: float = 1e-5,
                  **kwargs) -> None:
 
         # Check cost model
@@ -292,7 +292,7 @@ class Optimizer:
     def is_valid(self,
                  *,
                  atol: float = 1e-5,
-                 return_message: str = False) -> bool:
+                 return_message: bool = False) -> bool:
         """Check if ``Optimizer`` is in a valid state.
 
         Check if ``Optimizer`` is in a valid state.

@@ -73,10 +73,10 @@ class SimpleCostModel(BaseCostModel):
     def __init__(self,
                  max_width: float,
                  *,
-                 width_type: Optional[Literal['float32', 'float64',
-                                              'float128']] = 'float32',
-                 cost_type: Optional[Literal['float32', 'float64', 'float128',
-                                             'float1024']] = 'float64',
+                 width_type: Literal['float32', 'float64',
+                                     'float128'] = 'float32',
+                 cost_type: Literal['float32', 'float64', 'float128',
+                                    'float1024'] = 'float64',
                  sparse_inds: Optional[Iterable[Index]] = None,
                  n_projs: Optional[int] = None):
 

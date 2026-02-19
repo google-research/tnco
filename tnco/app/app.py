@@ -147,19 +147,18 @@ def load_file(filename: str) -> Any:
 
 def load_tn(obj: Any,
             *,
-            fuse: Optional[float] = 4,
-            decompose_hyper_inds: Optional[bool] = True,
-            simplify_circuit: Optional[bool] = True,
-            initial_state: Optional[Union[str, Dict[Qubit, Matrix],
-                                          None]] = '0',
-            final_state: Optional[Union[str, Dict[Qubit, Matrix], None]] = '0',
-            output_index_token: Optional[str] = '*',
-            sparse_index_token: Optional[str] = '/',
-            atol: Optional[float] = 1e-5,
+            fuse: float = 4,
+            decompose_hyper_inds: bool = True,
+            simplify_circuit: bool = True,
+            initial_state: Union[str, Dict[Qubit, Matrix], None] = '0',
+            final_state: Union[str, Dict[Qubit, Matrix], None] = '0',
+            output_index_token: str = '*',
+            sparse_index_token: str = '/',
+            atol: float = 1e-5,
             dtype: Optional[Any] = None,
             backend: Optional[str] = None,
             seed: Optional[int] = None,
-            verbose: Optional[int] = False) -> TensorNetwork:
+            verbose: int = False) -> TensorNetwork:
     """Loads a tensor network from various object types.
 
     The function loads a tensor network from ``obj`` of any type. See Notes for
@@ -570,8 +569,8 @@ def dump_results(tn: TensorNetwork,
                  *,
                  output_format: Optional[str] = None,
                  output_filename: Optional[str] = None,
-                 output_compression: Optional[str] = 'auto',
-                 overwrite_output_file: Optional[bool] = False,
+                 output_compression: str = 'auto',
+                 overwrite_output_file: bool = False,
                  **kwargs) -> Any:
     """Dumps results to a file or returns them.
 
@@ -745,18 +744,18 @@ class BaseOptimizer:
         verbose: If ``True``, prints verbose output.
     """
     max_width: Optional[float] = None
-    n_jobs: Optional[int] = -1
-    width_type: Optional[str] = 'float32'
-    cost_type: Optional[str] = 'float64'
+    n_jobs: int = -1
+    width_type: str = 'float32'
+    cost_type: str = 'float64'
     output_format: Optional[str] = None
     output_filename: Optional[str] = None
-    output_compression: Optional[str] = 'auto'
-    overwrite_output_file: Optional[bool] = False
-    atol: Optional[float] = 1e-5
+    output_compression: str = 'auto'
+    overwrite_output_file: bool = False
+    atol: float = 1e-5
     dtype: Optional[Any] = None
     backend: Optional[str] = None
     seed: Optional[int] = None
-    verbose: Optional[int] = False
+    verbose: int = False
 
     def optimize(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError()
@@ -787,20 +786,20 @@ class BaseOptimizer:
         self._dump_results(None, None, check_only=True)
 
 
-def Optimizer(method: Optional[str] = 'sa',
+def Optimizer(method: str = 'sa',
               max_width: Optional[float] = None,
-              n_jobs: Optional[int] = -1,
-              width_type: Optional[str] = 'float32',
-              cost_type: Optional[str] = 'float64',
+              n_jobs: int = -1,
+              width_type: str = 'float32',
+              cost_type: str = 'float64',
               output_format: Optional[str] = None,
               output_filename: Optional[str] = None,
-              output_compression: Optional[str] = 'auto',
-              overwrite_output_file: Optional[bool] = False,
-              atol: Optional[float] = 1e-5,
+              output_compression: str = 'auto',
+              overwrite_output_file: bool = False,
+              atol: float = 1e-5,
               dtype: Optional[Any] = None,
               backend: Optional[str] = None,
               seed: Optional[int] = None,
-              verbose: Optional[int] = False) -> BaseOptimizer:
+              verbose: int = False) -> BaseOptimizer:
     """Factory function to create an optimizer.
 
     Optimize the tensor network.

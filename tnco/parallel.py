@@ -103,14 +103,14 @@ class Buffer:
 
 def Parallel(core: Callable[..., Any],
              *args: Any,
-             description: Optional[str] = "Processing...",
-             text: Optional[str] = "",
-             n_jobs: Optional[int] = -1,
+             description: str = "Processing...",
+             text: str = "",
+             n_jobs: int = -1,
              timeout: Optional[float] = None,
-             verbose: Optional[int] = False,
-             buffers: Optional[Iterable[Tuple[str, str]]] = (),
+             verbose: int = False,
+             buffers: Iterable[Tuple[str, str]] = (),
              refresh_per_second: Optional[float] = None,
-             leave: Optional[bool] = False,
+             leave: bool = False,
              **kwargs: Any) -> Any:
     """Parallelize ``core``.
 
