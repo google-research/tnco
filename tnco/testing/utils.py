@@ -38,7 +38,7 @@ __all__ = [
 
 def get_connected_components(ts_inds: Iterable[List[Index]],
                              *,
-                             verbose: Optional[int] = False) -> List[List[int]]:
+                             verbose: int = False) -> List[List[int]]:
     """Identifies connected components.
 
     Identifies connected components in the tensor network.
@@ -179,15 +179,15 @@ def generate_random_inds(n: int, *, seed: Optional[int] = None) -> List[Index]:
 
 
 def generate_random_tensors(
-    n_tensors: int,
-    n_inds: int,
-    k: Optional[int] = 2,
-    *,
-    n_output_inds: Optional[int] = 0,
-    n_cc: Optional[int] = 1,
-    randomize_names: Optional[bool] = True,
-    seed: Optional[int] = None,
-    verbose: Optional[int] = False
+        n_tensors: int,
+        n_inds: int,
+        k: int = 2,
+        *,
+        n_output_inds: int = 0,
+        n_cc: int = 1,
+        randomize_names: bool = True,
+        seed: Optional[int] = None,
+        verbose: int = False
 ) -> Tuple[List[List[IndexName]], FrozenSet[IndexName]]:
     """Generates a random tensor network.
 

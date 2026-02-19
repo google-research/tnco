@@ -37,8 +37,8 @@ __all__ = ['load']
 def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
             gate_B: Tuple[Matrix, Iterable[Qubit]],
             *,
-            use_matrix_commutation: Optional[bool] = True,
-            atol: Optional[float] = 1e-8) -> bool:
+            use_matrix_commutation: bool = True,
+            atol: float = 1e-8) -> bool:
     """Checks if two gates commute.
 
     Args:
@@ -133,7 +133,7 @@ def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
 def same(gate_A: Tuple[Matrix, Iterable[Qubit]],
          gate_B: Tuple[Matrix, Iterable[Qubit]],
          *,
-         atol: Optional[float] = 1e-8) -> bool:
+         atol: float = 1e-8) -> bool:
     """Checks if two gates are equivalent (up to a global phase).
 
     Args:
@@ -202,17 +202,17 @@ def same(gate_A: Tuple[Matrix, Iterable[Qubit]],
 @fts.singledispatch
 def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
          *,
-         initial_state: Optional[Union[str, Dict[Qubit, Matrix], None]] = '0',
-         final_state: Optional[Union[str, Dict[Qubit, Matrix], None]] = '0',
-         simplify: Optional[bool] = True,
-         use_matrix_commutation: Optional[bool] = True,
-         decompose_hyper_inds: Optional[bool] = True,
-         fuse: Optional[float] = 4,
+         initial_state: Union[str, Dict[Qubit, Matrix], None] = '0',
+         final_state: Union[str, Dict[Qubit, Matrix], None] = '0',
+         simplify: bool = True,
+         use_matrix_commutation: bool = True,
+         decompose_hyper_inds: bool = True,
+         fuse: float = 4,
          dtype: Optional[Any] = None,
-         atol: Optional[float] = 1e-8,
+         atol: float = 1e-8,
          backend: Optional[str] = None,
          seed: Optional[int] = None,
-         verbose: Optional[int] = False,
+         verbose: int = False,
          **kwargs) -> Tuple[List[Array], List[Tuple[Index]], FrozenSet[Index]]:
     """Loads a quantum circuit and converts it to a tensor network.
 

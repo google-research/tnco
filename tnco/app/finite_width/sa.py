@@ -113,9 +113,9 @@ class Optimizer(BaseOptimizer):
                  tn: Any,
                  betas: Union[Tuple[float, float], Iterable[float]],
                  n_steps: Optional[int] = None,
-                 n_runs: Optional[int] = 1,
+                 n_runs: int = 1,
                  n_projs: Optional[int] = None,
-                 update_slices: Optional[int] = 10,
+                 update_slices: int = 10,
                  timeout: Optional[float] = None,
                  **load_tn_options) -> Any:
         """Optimizes the tensor network ``tn``.

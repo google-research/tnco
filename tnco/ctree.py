@@ -70,8 +70,8 @@ class ContractionTree(_ContractionTree):
                  dims: Union[Dict[Index, int], int],
                  *,
                  output_inds: Optional[Iterable[Index]] = None,
-                 check_shared_inds: Optional[bool] = False,
-                 verbose: Optional[bool] = False,
+                 check_shared_inds: bool = False,
+                 verbose: bool = False,
                  **kwargs) -> None:
         # Get cache if present
         _cache = kwargs.pop('_cache', None)
@@ -407,7 +407,7 @@ class ContractionTree(_ContractionTree):
 def traverse_tree(ctree: ContractionTree,
                   callback: Callable[[int], NoReturn],
                   *,
-                  verbose: Optional[int] = False) -> NoReturn:
+                  verbose: int = False) -> NoReturn:
     """Traverses ``tree`` and calls ``callback`` for each node.
 
     Traverses ``tree`` and calls ``callback`` for each node of the tree. The

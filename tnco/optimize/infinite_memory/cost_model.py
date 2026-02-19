@@ -64,8 +64,8 @@ class SimpleCostModel(BaseCostModel):
 
     def __init__(self,
                  *,
-                 cost_type: Optional[Literal['float32', 'float64', 'float128',
-                                             'float1024']] = 'float64',
+                 cost_type: Literal['float32', 'float64', 'float128',
+                                    'float1024'] = 'float64',
                  sparse_inds: Optional[Iterable[Index]] = None,
                  n_projs: Optional[int] = None):
 

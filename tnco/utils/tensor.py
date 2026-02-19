@@ -29,7 +29,7 @@ from tnco.typing import Array, Index
 __all__ = ['decompose_hyper_inds', 'get_einsum_subscripts', 'tensordot', 'svd']
 
 
-def is_diagonal(array: Array, /, *, atol: Optional[float] = 1e-8) -> bool:
+def is_diagonal(array: Array, /, *, atol: float = 1e-8) -> bool:
     """Checks if an array is diagonal.
 
     Checks if the given array is diagonal.
@@ -67,7 +67,7 @@ def decompose_hyper_inds(
     array: Array,
     inds: Iterable[Index],
     *,
-    atol: Optional[float] = 1e-8,
+    atol: float = 1e-8,
     **kwargs
 ) -> Tuple[Tuple[Array, List[Index]], Dict[Index, FrozenSet[Index]]]:
     """Decomposes an array into hyper-indices.
@@ -178,7 +178,7 @@ def tensordot(
     /,
     *,
     hyper_inds: Optional[Iterable[Index]] = None,
-    return_inds_only: Optional[bool] = False
+    return_inds_only: bool = False
 ) -> Union[Tuple[Array, List[Index]], List[Index]]:
     """Contracts two tensors.
 
@@ -261,7 +261,7 @@ def svd(array: Array,
         left_inds: Iterable[Index],
         *,
         svd_index_name: Optional[Any] = None,
-        atol: Optional[float] = 1e-8,
+        atol: float = 1e-8,
         seed: Optional[int] = None) -> List[Tuple[Array, Tuple[Index, ...]]]:
     """Performs Singular Value Decomposition (SVD).
 

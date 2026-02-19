@@ -97,7 +97,7 @@ class Optimizer(BaseOptimizer):
                  tn: Any,
                  betas: Union[Tuple[float, float], Iterable[float]],
                  n_steps: Optional[int] = None,
-                 n_runs: Optional[int] = 1,
+                 n_runs: int = 1,
                  n_projs: Optional[int] = None,
                  timeout: Optional[float] = None,
                  **load_tn_options) -> Any:

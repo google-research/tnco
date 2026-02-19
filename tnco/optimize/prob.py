@@ -14,7 +14,7 @@
 """Probability functions for optimization."""
 
 from importlib import import_module
-from typing import Literal, Optional
+from typing import Literal
 from warnings import warn
 
 __all__ = [
@@ -23,9 +23,8 @@ __all__ = [
 
 
 def BaseProbability(*,
-                    cost_type: Optional[Literal['float32', 'float64',
-                                                'float128',
-                                                'float1024']] = 'float64'):
+                    cost_type: Literal['float32', 'float64', 'float128',
+                                       'float1024'] = 'float64'):
     """Factory for acceptance probability (always accept).
 
     Always accept any proposed move.
@@ -56,8 +55,8 @@ def BaseProbability(*,
 
 
 def Greedy(*,
-           cost_type: Optional[Literal['float32', 'float64', 'float128',
-                                       'float1024']] = 'float64'):
+           cost_type: Literal['float32', 'float64', 'float128',
+                              'float1024'] = 'float64'):
     """Factory for greedy probability.
 
     Accept a move only if the cost is not increasing.
@@ -91,9 +90,8 @@ def Greedy(*,
 
 def SimulatedAnnealing(beta: float = 0,
                        *,
-                       cost_type: Optional[Literal['float32', 'float64',
-                                                   'float128',
-                                                   'float1024']] = 'float64'):
+                       cost_type: Literal['float32', 'float64', 'float128',
+                                          'float1024'] = 'float64'):
     """Factory for Simulated Annealing (Deprecated).
 
     Accept a move using the Metropolis-Hastings probability. Deprecated in
@@ -119,9 +117,8 @@ def SimulatedAnnealing(beta: float = 0,
 
 def MetropolisHastings(beta: float = 0,
                        *,
-                       cost_type: Optional[Literal['float32', 'float64',
-                                                   'float128',
-                                                   'float1024']] = 'float64'):
+                       cost_type: Literal['float32', 'float64', 'float128',
+                                          'float1024'] = 'float64'):
     """Factory for Metropolis-Hastings probability.
 
     Accept a move using the Metropolis-Hastings probability.
