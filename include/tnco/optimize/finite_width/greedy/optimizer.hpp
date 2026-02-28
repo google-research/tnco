@@ -470,8 +470,9 @@ void init(py::module &m, const std::string &name) {
                     std::optional<bitset_type>>(),
            "ctree"_a, "cmodel"_a, py::kw_only(), "max_number_new_slices"_a = 0,
            "seed"_a = std::nullopt, "disable_shared_inds"_a = false,
-           "atol"_a = 1e-5, "skip_slices"_a, "min_ctree"_a = std::nullopt,
-           "slices"_a = std::nullopt, "min_slices"_a = std::nullopt)
+           "atol"_a = 1e-5, "skip_slices"_a = std::nullopt,
+           "min_ctree"_a = std::nullopt, "slices"_a = std::nullopt,
+           "min_slices"_a = std::nullopt)
       .def("update", &self_type::update, "prob"_a, py::pos_only(),
            py::kw_only(), "update_slices"_a = true)
       .def_property_readonly("cmodel", &self_type::cmodel)

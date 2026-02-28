@@ -115,3 +115,4 @@ jobs:
       run: |
         pip install jupyterlab papermill
         papermill examples/Optimization.ipynb /dev/null
+        papermill examples/BaseOptimization.ipynb /dev/null
