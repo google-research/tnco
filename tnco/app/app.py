@@ -108,7 +108,6 @@ def load_file(filename: str) -> Any:
     except ValidationError as e:
         raise ValueError("'filename' is not valid ({})".format(e))
 
-    # Check that file exists
     # Check that file exists and it's a file.
     filename = Path(filename).expanduser()
     if not filename.is_file():
