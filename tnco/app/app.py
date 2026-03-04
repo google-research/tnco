@@ -109,9 +109,10 @@ def load_file(filename: str) -> Any:
         raise ValueError("'filename' is not valid ({})".format(e))
 
     # Check that file exists
-    filename = Path(filename).resolve()
-    if not filename.exists():
-        raise FileNotFoundError("'{}' does not exist.".format(filename))
+    # Check that file exists and it's a file.
+    filename = Path(filename).expanduser()
+    if not filename.is_file():
+        raise FileNotFoundError("'{}' does not exist or is not a file.".format(filename))
 
     def load(binary):
         """
