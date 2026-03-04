@@ -108,9 +108,11 @@ def load_file(filename: str) -> Any:
     except ValidationError as e:
         raise ValueError("'filename' is not valid ({})".format(e))
 
-    # Check that file exists
-    if not Path(filename).exists:
-        raise FileNotFoundError("'{}' does not exist.".format(filename))
+    # Check that file exists and it's a file.
+    filename = Path(filename).expanduser()
+    if not filename.is_file():
+        raise FileNotFoundError(
+            "'{}' does not exist or is not a file.".format(filename))
 
     def load(binary):
         """
@@ -141,7 +143,7 @@ def load_file(filename: str) -> Any:
         return binary
 
     # Load as binary
-    with open(filename, 'rb') as file:
+    with filename.open('rb') as file:
         return load(file.read())
 
 
@@ -638,7 +640,8 @@ def dump_results(tn: TensorNetwork,
             raise ValueError("'output_filename' is not valid ({})".format(e))
 
     # Check if filename already exists
-    output_filename = None if output_filename is None else Path(output_filename)
+    output_filename = (None if output_filename is None else
+                       Path(output_filename).expanduser())
     if output_filename:
         if not overwrite_output_file and output_filename.exists():
             raise FileExistsError(
@@ -671,13 +674,13 @@ def dump_results(tn: TensorNetwork,
         # Is suffix a valid compression?
         if (suffix := (output_filename.suffix[1:] if output_compression
                        == 'auto' else output_compression)) == 'gzip':
-            open = gzip.open
+            open_ = gzip.open
             compress_ = True
         elif suffix == 'bz2':
-            open = bz2.open
+            open_ = bz2.open
             compress_ = True
         else:
-            open = io.open
+            open_ = io.open
             compress_ = False
 
         # Is the output a string?
@@ -687,14 +690,14 @@ def dump_results(tn: TensorNetwork,
                 output = output.encode()
 
             # Dump
-            with open(output_filename, 'w') as file_:
+            with open_(output_filename, 'w') as file_:
                 file_.write(output)
 
             # Return
             return None
 
         # Otherwise, dump it as pickle
-        with open(output_filename, 'w' if compress_ else 'bw') as file_:
+        with open_(output_filename, 'w' if compress_ else 'bw') as file_:
             pickle.dump(output, file_)
 
         # Return
