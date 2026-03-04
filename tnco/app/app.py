@@ -641,7 +641,7 @@ def dump_results(tn: TensorNetwork,
 
     # Check if filename already exists
     output_filename = (None if output_filename is None else
-                       Path(output_filename).resolve(strict=False))
+                       Path(output_filename).expanduser())
     if output_filename:
         if not overwrite_output_file and output_filename.exists():
             raise FileExistsError(
