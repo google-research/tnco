@@ -19,6 +19,7 @@
 
 #include <array>
 #include <cstdint>
+#include <variant>
 
 namespace tnco::node {
 

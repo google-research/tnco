@@ -45,9 +45,9 @@ struct CostModel {
   auto operator=(CostModel &&) -> CostModel & = delete;
   virtual ~CostModel() = default;
 
-  [[nodiscard]] virtual auto contraction_cost(const bitset_type &inds_A,
-                                              const bitset_type &inds_B,
-                                              const bitset_type &inds_C,
+  [[nodiscard]] virtual auto contraction_cost(const bitset_type &inds_in1,
+                                              const bitset_type &inds_in2,
+                                              const bitset_type &inds_out,
                                               const dims_type &dims) const
       -> cost_type {
     /*
@@ -87,8 +87,8 @@ void init(py::module &m, const std::string &name) {
            [](const self_type &self, const self_type &other) -> auto {
              return true;
            })
-      .def("contraction_cost", &self_type::contraction_cost, "inds_A"_a,
-           "inds_B"_a, "inds_C"_a, "dims"_a)
+      .def("contraction_cost", &self_type::contraction_cost, "inds_in1"_a,
+           "inds_in2"_a, "inds_out"_a, "dims"_a)
       .def_property_readonly("cost_type", [](const self_type &self) -> auto {
         return type_to_str<cost_type>();
       });

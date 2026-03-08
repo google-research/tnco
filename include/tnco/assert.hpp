@@ -15,6 +15,7 @@
 #pragma once
 
 #include <sstream>
+#include <stdexcept>
 
 namespace tnco {
 

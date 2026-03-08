@@ -188,9 +188,9 @@ struct Optimizer : optimize::optimizer::Optimizer {
       if (new_sliced_width_B <= p_cmodel->max_width) {
         // Get new costs for B and A
         const auto new_ccost_A =
-            cmodel.contraction_cost(inds_A, new_inds_B, inds_E, dims, slices);
+            cmodel.contraction_cost(new_inds_B, inds_E, inds_A, dims, slices);
         const auto new_ccost_B =
-            cmodel.contraction_cost(new_inds_B, inds_D, inds_C, dims, slices);
+            cmodel.contraction_cost(inds_D, inds_C, new_inds_B, dims, slices);
 
         // Get the delta cost
         const auto delta_cost =
@@ -343,11 +343,16 @@ struct Optimizer : optimize::optimizer::Optimizer {
     }
 
     // Check final cost
-    if (const auto rel_error = abs((log(total_cost) - log(get_total_cost())) /
-                                   log(get_total_cost()));
-        rel_error > 1e-2) {
-      throw std::logic_error("Total cost is not properly cached (rel. error: " +
-                             tnco::to_string(rel_error * 100) + "%)");
+    if (const auto actual_total_cost = get_total_cost();
+        actual_total_cost > 0) {
+      if (const auto rel_error =
+              abs((log(total_cost) - log(actual_total_cost)) /
+                  log(actual_total_cost));
+          rel_error > 1e-2) {
+        throw std::logic_error(
+            "Total cost is not properly cached (rel. error: " +
+            tnco::to_string(rel_error * 100) + "%)");
+      }
     }
 #endif
 

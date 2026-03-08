@@ -49,8 +49,13 @@ struct Probability final : prob::base::Probability<T...> {
 #endif
       -> cost_type override {
     ASSERT(delta_cost <= 0 || (delta_cost / old_cost) >= -1, "Domain error.");
-    return delta_cost <= 0 ? cost_type{1}
-                           : pow(1 + (delta_cost / old_cost), -beta);
+    if (delta_cost <= 0) {
+      return cost_type{1};
+    }
+    if (old_cost == 0) {
+      return cost_type{0};
+    }
+    return pow(1 + (delta_cost / old_cost), -beta);
   }
 
   [[nodiscard]] auto clone() const noexcept -> clone_ptr_type override {

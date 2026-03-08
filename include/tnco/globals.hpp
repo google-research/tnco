@@ -15,6 +15,7 @@
 #pragma once
 
 #include <random>
+#include <sstream>
 
 #include "bitset.hpp"
 #include "ctree.hpp"
