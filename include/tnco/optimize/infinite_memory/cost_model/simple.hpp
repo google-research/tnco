@@ -62,21 +62,21 @@ struct CostModel : cost_model::base::CostModel<T...> {
   using bitset_type = typename base_type::bitset_type;
   using dims_type = typename base_type::dims_type;
 
-  [[nodiscard]] auto contraction_cost(const bitset_type &inds_A,
-                                      const bitset_type &inds_B,
-                                      const bitset_type &inds_C,
+  [[nodiscard]] auto contraction_cost(const bitset_type &inds_in1,
+                                      const bitset_type &inds_in2,
+                                      const bitset_type &inds_out,
                                       const dims_type &dims) const
 #ifdef NDEBUG
       noexcept
 #endif
       -> cost_type override {
-    ASSERT(std::size(inds_A) == std::size(inds_B) &&
-               std::size(inds_A) == std::size(inds_C),
+    ASSERT(std::size(inds_in1) == std::size(inds_in2) &&
+               std::size(inds_in1) == std::size(inds_out),
            "Indices must have the same size.");
-    ASSERT(inds_C.is_subset_of(inds_A | inds_B),
-           "'inds_C' must be a subset of 'inds_A | inds_B'.");
+    ASSERT(inds_out.is_subset_of(inds_in1 | inds_in2),
+           "'inds_out' must be a subset of 'inds_in1 | inds_in2'.");
     return std::visit(
-        [inds = inds_A | inds_B](auto &&dims) -> auto {
+        [inds = inds_in1 | inds_in2](auto &&dims) -> auto {
           return get_cost<cost_type>(inds, dims);
         },
         dims);

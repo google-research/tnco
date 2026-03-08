@@ -20,6 +20,7 @@
 #include <numeric>
 #include <stack>
 #include <tnco/assert.hpp>
+#include <variant>
 #include <vector>
 
 namespace tnco::tree {

@@ -150,9 +150,9 @@ struct Optimizer : optimize::optimizer::Optimizer {
       auto &ccost_A = cost_cache.contraction_cost[pos_A];
       auto &ccost_B = cost_cache.contraction_cost[pos_B];
       const auto new_ccost_A =
-          cmodel.contraction_cost(inds_A, new_inds_B, inds_E, dims);
+          cmodel.contraction_cost(new_inds_B, inds_E, inds_A, dims);
       const auto new_ccost_B =
-          cmodel.contraction_cost(new_inds_B, inds_D, inds_C, dims);
+          cmodel.contraction_cost(inds_D, inds_C, new_inds_B, dims);
 
       // Get the delta cost
       const auto delta_cost = (new_ccost_B - ccost_B) + (new_ccost_A - ccost_A);
@@ -206,11 +206,16 @@ struct Optimizer : optimize::optimizer::Optimizer {
     }
 
     // Check final cost
-    if (const auto rel_error = abs((log(total_cost) - log(get_total_cost())) /
-                                   log(get_total_cost()));
-        rel_error > 1e-2) {
-      throw std::logic_error("Total cost is not properly cached (rel. error: " +
-                             tnco::to_string(rel_error * 100) + "%)");
+    if (const auto actual_total_cost = get_total_cost();
+        actual_total_cost > 0) {
+      if (const auto rel_error =
+              abs((log(total_cost) - log(actual_total_cost)) /
+                  log(actual_total_cost));
+          rel_error > 1e-2) {
+        throw std::logic_error(
+            "Total cost is not properly cached (rel. error: " +
+            tnco::to_string(rel_error * 100) + "%)");
+      }
     }
 #endif
   }

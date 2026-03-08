@@ -73,9 +73,9 @@ struct CostModel {
     return std::numeric_limits<width_type>::signaling_NaN();
   }
 
-  [[nodiscard]] virtual auto contraction_cost(const bitset_type &inds_A,
-                                              const bitset_type &inds_B,
-                                              const bitset_type &inds_C,
+  [[nodiscard]] virtual auto contraction_cost(const bitset_type &inds_in1,
+                                              const bitset_type &inds_in2,
+                                              const bitset_type &inds_out,
                                               const dims_type &dims,
                                               const bitset_type &slices) const
       -> cost_type {
@@ -123,8 +123,8 @@ void init(py::module &m, const std::string &name) {
       .def_readonly("max_width", &self_type::max_width)
       .def("width", &self_type::width, "inds"_a, "dims"_a)
       .def("delta_width", &self_type::delta_width, "inds"_a, "dims"_a, "pos"_a)
-      .def("contraction_cost", &self_type::contraction_cost, "inds_A"_a,
-           "inds_B"_a, "inds_C"_a, "dims"_a, "slices"_a)
+      .def("contraction_cost", &self_type::contraction_cost, "inds_in1"_a,
+           "inds_in2"_a, "inds_out"_a, "dims"_a, "slices"_a)
       .def_property_readonly("width_type",
                              [](const self_type &self) -> auto {
                                return type_to_str<width_type>();

@@ -104,7 +104,7 @@ struct FixedFloat {
     return *this;
   }
 
-  auto operator/=(const FixedFloat &x) -> FixedFloat {
+  auto operator/=(const FixedFloat &x) -> FixedFloat & {
     mpfr_div(_x, _x, x._x, rounding);
     return *this;
   }
@@ -575,9 +575,10 @@ void init(py::module &m, const std::string &name) {
            [](const self_type &self, const long double &other) -> auto {
              return self >= other;
            })
-      .def("isinf", [](const self_type &self) -> auto { return isnan(self); })
+      .def("isinf", [](const self_type &self) -> auto { return isinf(self); })
       .def("isnan", [](const self_type &self) -> auto { return isnan(self); })
-      .def("signbit", [](const self_type &self) -> auto { return isnan(self); })
+      .def("signbit",
+           [](const self_type &self) -> auto { return signbit(self); })
       .def(py::pickle(
           [](const self_type &self) -> std::string { return dump(self); },
           [](const std::string &state) -> auto {

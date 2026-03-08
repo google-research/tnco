@@ -44,10 +44,10 @@ struct CostCache {
             cache.contraction_cost[pos] = 0;
             cache.partial_cost[pos] = 0;
           } else {
-            const auto &inds_A = ctree.inds[pos];
-            const auto &inds_B = ctree.inds[node.children[0]];
-            const auto &inds_C = ctree.inds[node.children[1]];
-            const auto cost_A = ccost(inds_A, inds_B, inds_C, ctree.dims);
+            const auto &inds_out = ctree.inds[pos];
+            const auto &inds_in1 = ctree.inds[node.children[0]];
+            const auto &inds_in2 = ctree.inds[node.children[1]];
+            const auto cost_A = ccost(inds_in1, inds_in2, inds_out, ctree.dims);
             const auto &pcost_B = cache.partial_cost[node.children[0]];
             const auto &pcost_C = cache.partial_cost[node.children[1]];
             cache.contraction_cost[pos] = cost_A;
@@ -83,10 +83,10 @@ struct HyperCache {
       if (const auto &node = ctree.nodes[pos]; node.is_leaf()) {
         hyper_inds[pos] = bitset_type(n_inds);
       } else {
-        const auto &inds_A = ctree.inds[pos];
-        const auto &inds_B = ctree.inds[node.children[0]];
-        const auto &inds_C = ctree.inds[node.children[1]];
-        hyper_inds[pos] = inds_A & inds_B & inds_C;
+        const auto &inds_out = ctree.inds[pos];
+        const auto &inds_in1 = ctree.inds[node.children[0]];
+        const auto &inds_in2 = ctree.inds[node.children[1]];
+        hyper_inds[pos] = inds_out & inds_in1 & inds_in2;
       }
     }
   }
@@ -106,10 +106,10 @@ template <typename CostType, typename CTree, typename CCost>
   tnco::utils::traverse(
       ctree, [&ctree, &ccost, &total_cost = total_cost](auto &&pos) -> auto {
         if (const auto &node = ctree.nodes[pos]; !node.is_leaf()) {
-          const auto &inds_A = ctree.inds[pos];
-          const auto &inds_B = ctree.inds[node.children[0]];
-          const auto &inds_C = ctree.inds[node.children[1]];
-          total_cost += ccost(inds_A, inds_B, inds_C, ctree.dims);
+          const auto &inds_out = ctree.inds[pos];
+          const auto &inds_in1 = ctree.inds[node.children[0]];
+          const auto &inds_in2 = ctree.inds[node.children[1]];
+          total_cost += ccost(inds_in1, inds_in2, inds_out, ctree.dims);
         }
       });
   return total_cost;

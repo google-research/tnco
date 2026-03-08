@@ -126,19 +126,19 @@ class SimpleCostModel(BaseCostModel):
         """
         return self._n_projs
 
-    def contraction_cost(self, inds_A: Iterable[Index], inds_B: Iterable[Index],
-                         inds_C: Iterable[Index], dims: Union[Dict[Index, int],
-                                                              int]) -> float:
+    def contraction_cost(self, inds_in1: Iterable[Index],
+                         inds_in2: Iterable[Index], inds_out: Iterable[Index],
+                         dims: Union[Dict[Index, int], int]) -> float:
         """Contraction cost.
 
-        Return the cost of contracting 'inds_A' with 'inds_B', to return
-        'inds_C'. It also takes into account any sparse index and the presence
-        of sliced indices.
+        Return the cost of contracting 'inds_in1' with 'inds_in2', to return
+        'inds_out'. It also takes into account any sparse index and the
+        presence of sliced indices.
 
         Args:
-            inds_A: The indices of tensor A.
-            inds_B: The indices of tensor B.
-            inds_C: The indices of the tensor after contracting A with B.
+            inds_in1: The indices of the first tensor.
+            inds_in2: The indices of the second tensor.
+            inds_out: The indices of the tensor after the contraction.
             dims: The dimensions for each index.
 
         Returns:
@@ -149,12 +149,12 @@ class SimpleCostModel(BaseCostModel):
         """
 
         # Convert to tuple
-        inds_A = tuple(inds_A)
-        inds_B = tuple(inds_B)
-        inds_C = tuple(inds_C)
+        inds_in1 = tuple(inds_in1)
+        inds_in2 = tuple(inds_in2)
+        inds_out = tuple(inds_out)
 
         # Get all inds
-        all_inds = tuple(mit.unique_everseen(inds_A + inds_B + inds_C))
+        all_inds = tuple(mit.unique_everseen(inds_in1 + inds_in2 + inds_out))
         if self.sparse_inds is not None:
             all_inds = tuple(
                 mit.unique_everseen(all_inds + tuple(self.sparse_inds)))
@@ -175,12 +175,12 @@ class SimpleCostModel(BaseCostModel):
         core = self.__get_core__(all_inds)
 
         # Convert
-        inds_A, inds_B, inds_C = map(
+        inds_in1, inds_in2, inds_out = map(
             lambda xs: Bitset(map(all_inds.index, xs), len(all_inds)),
-            (inds_A, inds_B, inds_C))
+            (inds_in1, inds_in2, inds_out))
 
         # Get result
-        return core.contraction_cost(inds_A, inds_B, inds_C, dims)
+        return core.contraction_cost(inds_in1, inds_in2, inds_out, dims)
 
     def __get_core__(self, inds_order: Iterable[Index]):
         # Convert

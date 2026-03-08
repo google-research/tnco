@@ -133,23 +133,23 @@ struct CostModel : simple::CostModel<T...> {
         dims);
   }
 
-  [[nodiscard]] auto contraction_cost(const bitset_type &inds_A,
-                                      const bitset_type &inds_B,
-                                      const bitset_type &inds_C,
+  [[nodiscard]] auto contraction_cost(const bitset_type &inds_in1,
+                                      const bitset_type &inds_in2,
+                                      const bitset_type &inds_out,
                                       const dims_type &dims,
                                       const bitset_type &slices) const
 #ifdef NDEBUG
       noexcept
 #endif
       -> cost_type override {
-    ASSERT(std::size(inds_A) == std::size(inds_B) &&
-               std::size(inds_A) == std::size(inds_C) &&
-               std::size(inds_A) == std::size(slices),
+    ASSERT(std::size(inds_in1) == std::size(inds_in2) &&
+               std::size(inds_in1) == std::size(inds_out) &&
+               std::size(inds_in1) == std::size(slices),
            "Indices  and slices must have the same size.");
-    ASSERT(inds_C.is_subset_of(inds_A | inds_B),
-           "'inds_C' must be a subset of 'inds_A | inds_B'.");
+    ASSERT(inds_out.is_subset_of(inds_in1 | inds_in2),
+           "'inds_out' must be a subset of 'inds_in1 | inds_in2'.");
     return std::visit(
-        [inds = inds_A | inds_B | slices, &sparse_inds = this->sparse_inds,
+        [inds = inds_in1 | inds_in2 | slices, &sparse_inds = this->sparse_inds,
          &n_projs = this->n_projs](auto &&dims) -> auto {
           return infinite_memory::cost_model::simple_sparse_inds::get_cost<
               cost_type>(inds, sparse_inds, n_projs, dims);
