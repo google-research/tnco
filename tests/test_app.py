@@ -369,6 +369,7 @@ def test_Sampling(random_seed):
     state = sampler.sample(circuit,
                            simplify=simplify,
                            return_intermediate_state_only=True,
+                           random_greedy_max_time=0.1,
                            betas=(0, 1e3),
                            n_steps=20,
                            n_runs=2)

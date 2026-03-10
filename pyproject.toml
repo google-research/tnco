@@ -48,6 +48,7 @@ dependencies = [
   "autoray",
   "fire",
   "more_itertools",
+  "opt_einsum",
   "pathvalidate",
   "rich"
 ]
@@ -65,7 +66,6 @@ formatting = [
 testing = [
   "cirq",
   "numpy",
-  "opt_einsum",
   "ply",
   "pytest",
   "pytest-repeat",

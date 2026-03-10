@@ -171,7 +171,10 @@ class ContractionTree(_ContractionTree):
 
                 # Get shared
                 shared_ = ix_ & iy_
-                if check_shared_inds and not shared_:
+
+                # Check for shared inds, unless either 'ix_' or 'iy_' is a
+                # scalar
+                if check_shared_inds and ix_ and iy_ and not shared_:
                     raise ValueError("'check_shared_inds' failed.")
 
                 # Get new inds

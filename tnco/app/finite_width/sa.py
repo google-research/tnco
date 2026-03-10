@@ -112,10 +112,12 @@ class Optimizer(BaseOptimizer):
     def optimize(self,
                  tn: Any,
                  betas: Union[Tuple[float, float], Iterable[float]],
+                 *,
                  n_steps: Optional[int] = None,
                  n_runs: int = 1,
                  n_projs: Optional[int] = None,
                  update_slices: int = 10,
+                 random_greedy_max_time: float = 0.5,
                  timeout: Optional[float] = None,
                  **load_tn_options) -> Any:
         """Optimizes the tensor network ``tn``.
@@ -135,6 +137,9 @@ class Optimizer(BaseOptimizer):
             n_projs: If ``tn`` has sparse indices, the total number of
                 projections to consider among all the sparse indices.
             update_slices: Number of steps to wait before updating the slices.
+            random_greedy_max_time: Maximum time to dedicate to the initial
+                search of a random contraction path. (See:
+                ``tnco.utils.tn.get_random_contraction_path``)
             timeout: If provided, stop optimization after ``timeout`` seconds.
             **load_tn_options: Additional options passed to
                 ``tnco.app.load_tn``.
@@ -188,9 +193,13 @@ class Optimizer(BaseOptimizer):
                            runtime_s=[])
 
             # Get random contraction path
-            for path in tn_utils.get_random_contraction_path(tn.ts_inds,
-                                                             merge_paths=False,
-                                                             seed=seed):
+            for path in tn_utils.get_random_contraction_path(
+                    tn.ts_inds,
+                    tn.output_inds,
+                    tn.dims,
+                    max_time=random_greedy_max_time,
+                    merge_paths=False,
+                    seed=seed):
 
                 # If path is trivial, skip optimization
                 if not path:

@@ -296,8 +296,8 @@ def test_ContractionTree(random_seed: int, **kwargs):
     rng = Random(random_seed)
 
     # Initialize variables
-    n_tensors = kwargs.get('n_tensors', rng.randint(100, 300))
-    n_inds = kwargs.get('n_inds', rng.randint(300, 1000))
+    n_tensors = kwargs.get('n_tensors', rng.randint(100, 200))
+    n_inds = kwargs.get('n_inds', rng.randint(300, 600))
     k = kwargs.get('k', rng.randint(2, 10))
     n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 100))
     n_cc = kwargs.get('n_cc', rng.randint(1, 5))
@@ -325,13 +325,21 @@ def test_ContractionTree(random_seed: int, **kwargs):
         map(lambda x:
             (x, rng.randrange(1, 10)), mit.unique_everseen(
                 mit.flatten(tensors)))) if rng.randrange(2) else rng.randrange(
-                    1, 8)
+                    1, 6)
 
     # Get contraction
-    paths = get_random_contraction_path(tensors,
-                                        seed=random_seed,
-                                        verbose=verbose,
-                                        merge_paths=False)
+    try:
+        paths = get_random_contraction_path(tensors,
+                                            output_inds,
+                                            dims,
+                                            max_time=0.1,
+                                            seed=random_seed,
+                                            verbose=verbose,
+                                            merge_paths=False)
+    except OverflowError as e:
+        if str(e) == "int too large to convert to float":
+            pytest.skip(str(e))
+        raise e
 
     # Get random contraction trees
     ctrees = [

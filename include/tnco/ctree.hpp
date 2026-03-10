@@ -139,7 +139,8 @@ struct ContractionTree : TreeType {
       if (const auto &node_ = this->nodes[i_]; !node_.is_leaf()) {
         if (const auto &xs_c0_ = inds[node_.children[0]],
             &xs_c1_ = inds[node_.children[1]], &xs_ = inds[i_];
-            (check_shared_inds && !xs_c0_.intersects(xs_c1_)) ||
+            (check_shared_inds && xs_c0_.any() && xs_c1_.any() &&
+             !xs_c0_.intersects(xs_c1_)) ||
             !(xs_c0_ ^ xs_c1_).is_subset_of(xs_) ||
             !xs_.is_subset_of(xs_c0_ | xs_c1_)) {
           return {false, "Contraction is not valid."};
