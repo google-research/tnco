@@ -42,7 +42,8 @@ endmacro()
 macro(InstallPackage PATH TARGET)
   # Build
   execute_process(
-    COMMAND ${CMAKE_COMMAND} -B build -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/external
+    COMMAND ${CMAKE_COMMAND} -B build
+            -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/external
     WORKING_DIRECTORY ${PATH}
   )
 

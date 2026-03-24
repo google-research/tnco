@@ -16,8 +16,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 # Set the project name
-set(project_name "tnco_core")
-project(${project_name} LANGUAGES CXX)
+project(tnco_core LANGUAGES CXX)
 
 # Set the C++ standard to c++17
 set(CMAKE_CXX_STANDARD 17)
@@ -42,14 +41,15 @@ include(${CMAKE_SOURCE_DIR}/scripts/pybind11.cmake)
 # Include MPFR
 include(${CMAKE_SOURCE_DIR}/scripts/mpfr.cmake)
 
-# Include TNCO headers
-include_directories(${CMAKE_SOURCE_DIR}/include/)
-
 # Get all source files
-file(GLOB_RECURSE SOURCES "./include/tnco/*.cpp")
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "include/tnco/*.cpp")
 
 # Initialize PyBind11 library
-pybind11_add_module(${project_name} ${SOURCES})
+pybind11_add_module(${PROJECT_NAME} ${SOURCES})
+
+# Include TNCO headers as target specific (modern CMake)
+target_include_directories(${PROJECT_NAME} PRIVATE
+                           ${CMAKE_SOURCE_DIR}/include/)
 
 # Install core
-install(TARGETS ${project_name} DESTINATION .)
+install(TARGETS ${PROJECT_NAME} DESTINATION .)

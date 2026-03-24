@@ -13,11 +13,11 @@
 # limitations under the License.
 """Circuit utilities."""
 
+from collections import defaultdict
 import functools as fts
 import itertools as its
 import math
 import operator as op
-from collections import defaultdict
 from random import Random
 from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
@@ -26,10 +26,13 @@ import more_itertools as mit
 from rich.console import Console
 from rich.progress import track
 
+from tnco.ordered_frozenset import OrderedFrozenSet
+from tnco.typing import Array
+from tnco.typing import Index
+from tnco.typing import Matrix
+from tnco.typing import Qubit
 import tnco.utils.tensor as tensor_utils
 import tnco.utils.tn as tn_utils
-from tnco.ordered_frozenset import OrderedFrozenSet
-from tnco.typing import Array, Index, Matrix, Qubit
 
 __all__ = ['load']
 

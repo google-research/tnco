@@ -17,8 +17,22 @@ name: C++ Linter
 on:
   push:
     branches: [main]
+    paths:
+      - 'include/**'
+      - 'scripts/cpp_linter.sh'
+      - 'scripts/*.cmake'
+      - 'CMakeLists.txt'
+      - '.clang-tidy'
+      - '.github/workflows/cpp_linter.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'include/**'
+      - 'scripts/cpp_linter.sh'
+      - 'scripts/*.cmake'
+      - 'CMakeLists.txt'
+      - '.clang-tidy'
+      - '.github/workflows/cpp_linter.yml'
 
 permissions:
   contents: read
@@ -29,6 +43,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
 
     - name: Install baseline
       run: |
@@ -49,4 +68,5 @@ jobs:
 
     - name: Call linter
       run: |
-        bash scripts/cpp_linter.sh --install --build build/
+        pip install -U $(bash scripts/cpp_linter.sh --config)
+        bash scripts/cpp_linter.sh --build build/

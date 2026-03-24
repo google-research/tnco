@@ -20,7 +20,8 @@ find_package(pybind11)
 if (NOT pybind11_FOUND AND DEFINED ENV{DOWNLOAD_DEPS})
   GitClone(pybind11 https://github.com/pybind/pybind11.git)
   InstallPackage(${pybind11_SOURCE_DIR} install/fast)
-  find_package(pybind11 PATHS ${CMAKE_BINARY_DIR}/external/share/cmake/pybind11)
+  find_package(pybind11
+               PATHS ${CMAKE_BINARY_DIR}/external/share/cmake/pybind11)
 endif()
 
 if (NOT pybind11_FOUND)
