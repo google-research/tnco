@@ -23,9 +23,12 @@ import numpy as np
 import pytest
 import qiskit
 from qiskit.circuit.random import random_circuit
-from quimb.tensor import Tensor, TensorNetwork
+from quimb.tensor import Tensor
+from quimb.tensor import TensorNetwork
 
-from tnco.utils.circuit import commute, load, same
+from tnco.utils.circuit import commute
+from tnco.utils.circuit import load
+from tnco.utils.circuit import same
 
 # Initialize RNG
 rng = Random(

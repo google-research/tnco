@@ -13,22 +13,23 @@
 # limitations under the License.
 """Simulated Annealing Optimizer for Infinite Memory."""
 
-import json
 from dataclasses import dataclass
+import json
 from sys import stderr
 from time import perf_counter
 from typing import Any, Iterable, List, Optional, Tuple, Union
 
 import more_itertools as mit
 
-import tnco.utils.tn as tn_utils
-from tnco.app.app import BaseContractionResults, BaseOptimizer
+from tnco.app.app import BaseContractionResults
+from tnco.app.app import BaseOptimizer
 from tnco.app.app import JSONEncoder as BaseJSONEncoder
 from tnco.ctree import ContractionTree
 from tnco.optimize.infinite_memory import Optimizer as OptimizerImpl
 from tnco.optimize.infinite_memory.cost_model import SimpleCostModel
 from tnco.optimize.prob import MetropolisHastings
 from tnco.parallel import Parallel
+import tnco.utils.tn as tn_utils
 
 
 class JSONEncoder(BaseJSONEncoder):

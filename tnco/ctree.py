@@ -13,21 +13,23 @@
 # limitations under the License.
 """Contraction Tree."""
 
+from collections import Counter
 import functools as fts
 import itertools as its
 import math
 import operator as op
-from collections import Counter
 from types import MappingProxyType
 from typing import (Any, Callable, Dict, FrozenSet, Iterable, List, NoReturn,
                     Optional, Tuple, Union)
 
 import more_itertools as mit
 from rich.console import Console
-from rich.progress import Progress, track
+from rich.progress import Progress
+from rich.progress import track
 from tnco_core import ContractionTree as _ContractionTree
 from tnco_core import Node
-from tnco_core.utils import get_contraction, traverse
+from tnco_core.utils import get_contraction
+from tnco_core.utils import traverse
 
 from tnco.typing import Index
 

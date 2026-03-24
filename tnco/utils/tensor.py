@@ -24,7 +24,8 @@ import autoray as ar
 import more_itertools as mit
 
 from tnco.ordered_frozenset import OrderedFrozenSet
-from tnco.typing import Array, Index
+from tnco.typing import Array
+from tnco.typing import Index
 
 __all__ = ['decompose_hyper_inds', 'get_einsum_subscripts', 'tensordot', 'svd']
 

@@ -19,15 +19,15 @@ usage() {
 }
 
 # Parse options using getopt
-OPTIONS=$(getopt -o h --long help,install,fix -- "$@")
+OPTIONS=$(getopt -o h --long help,config,fix -- "$@")
 if [[ $? -ne 0 ]]; then
     usage
 fi
 
 while [[ $# -ne 0 ]]; do
     case "$1" in
-        --install)
-            INSTALL=true
+        --config)
+            CONFIG=true
             shift
             ;;
         --fix)
@@ -47,56 +47,62 @@ while [[ $# -ne 0 ]]; do
     esac
 done
 
-# Fix clang-format version
-CLANG_FORMAT_VERSION=19.1.3
-
-# Fix yapf version
-YAPF_VERSION=0.43.0
-
-# Fix isort version
-ISORT_VERSION=5.13.2
-
-# Fix ruff version
-RUFF_VERSION=0.14.1
+# Fix versions
+get_version() {
+  grep "$1==" pyproject.toml | sed -E "s/.*$1==([^ \"]+).*/\1/"
+}
+CLANG_FORMAT_VERSION=$(get_version clang-format)
+YAPF_VERSION=$(get_version yapf)
+ISORT_VERSION=$(get_version isort)
+RUFF_VERSION=$(get_version ruff)
 
 FAILED="\033[91m[FAILED]\033[0m"
 OK="\033[92m[  OK  ]\033[0m"
 WARNING="\033[93m[WARNIN]\033[0m"
 
 # Install
-if [[ -n ${INSTALL} ]]; then
-  pip install clang-format==${CLANG_FORMAT_VERSION} \
-              yapf==${YAPF_VERSION} \
+if [[ -n ${CONFIG} ]]; then
+  echo clang-format==${CLANG_FORMAT_VERSION} \
+               yapf==${YAPF_VERSION} \
               isort==${ISORT_VERSION} \
-              ruff==${RUFF_VERSION}
+               ruff==${RUFF_VERSION}
+  exit 0
 fi
 
 # Check clang-format version
-if [[ $(clang-format --version 2>/dev/null | awk "{ print (\$3 == \"${CLANG_FORMAT_VERSION}\") }") != 1 ]]; then
+CF_VER_CHK=$(clang-format --version 2>/dev/null | \
+  awk "{ print (\$3 == \"${CLANG_FORMAT_VERSION}\") }")
+if [[ ${CF_VER_CHK} != 1 ]]; then
   echo "clang-format==${CLANG_FORMAT_VERSION} is required" >&2
   exit 1
 fi
 
 # Check yapf version
-if [[ $(yapf --version 2>/dev/null | awk "{ print (\$2 == \"${YAPF_VERSION}\") }") != 1 ]]; then
+YAPF_VER_CHK=$(yapf --version 2>/dev/null | \
+  awk "{ print (\$2 == \"${YAPF_VERSION}\") }")
+if [[ ${YAPF_VER_CHK} != 1 ]]; then
   echo "yapf==${YAPF_VERSION} is required" >&2
   exit 1
 fi
 
 # Check isort version
-if [[ $(isort --version 2>/dev/null | grep -i version | awk "{ print (\$2 == \"${ISORT_VERSION}\") }") != 1 ]]; then
+ISORT_VER_CHK=$(isort --version 2>/dev/null | grep -i version | \
+  awk "{ print (\$2 == \"${ISORT_VERSION}\") }")
+if [[ ${ISORT_VER_CHK} != 1 ]]; then
   echo "isort==${ISORT_VERSION} is required" >&2
   exit 1
 fi
 
 # Check ruff version
-if [[ $(ruff --version 2>/dev/null | awk "{ print (\$2 == \"${RUFF_VERSION}\") }") != 1 ]]; then
+RUFF_VER_CHK=$(ruff --version 2>/dev/null | \
+  awk "{ print (\$2 == \"${RUFF_VERSION}\") }")
+if [[ ${RUFF_VER_CHK} != 1 ]]; then
   echo "ruff==${RUFF_VERSION} is required" >&2
   exit 1
 fi
 
 # Check ruff
-if ! ruff --version >/dev/null; then
+if ! ruff --version >/dev/null 2>&1; then
   echo "ruff is required" >&2
   exit 1
 fi
@@ -104,8 +110,8 @@ fi
 # Check cpp files
 CLANG_FORMAT_CMD='clang-format --style=google'
 CPP_FILES=$(git ls-files --exclude-per-directory=.gitignore | \
-            grep -iE $'(\.cpp|\.hpp)' | \
-            parallel 'echo {} $(file {}) |
+            grep -iE '\.(cpp|hpp)$' | \
+            parallel 'echo {} $(file {}) | \
                       grep -E "(C|C\+\+) source" | awk "{print \$1}"')
 CLANG_FORMAT_FAILED=$(echo -n ${CPP_FILES} | tr ' ' '\n' | parallel "
   if [[ \$(${CLANG_FORMAT_CMD} --output-replacements-xml {} | wc -l) -gt 3 ]];
@@ -121,7 +127,7 @@ CLANG_FORMAT_FAILED=$(echo -n ${CPP_FILES} | tr ' ' '\n' | parallel "
 YAPF_CMD='yapf --style=google'
 PYTHON_FILES=$(git ls-files --exclude-per-directory=.gitignore | \
                grep -v 'README.md' | \
-               parallel 'echo {} $(file {}) |
+               parallel 'echo {} $(file {}) | \
                          grep -E "Python script" | awk "{print \$1}"')
 YAPF_FAILED=$(echo -n ${PYTHON_FILES} | tr ' ' '\n' | parallel "
   if [[ \$(${YAPF_CMD} -d {} | wc -l) -gt 0 ]];
@@ -146,7 +152,7 @@ ISORT_FAILED=$(echo -n ${PYTHON_FILES} | tr ' ' '\n' | parallel "
    echo \"(isort)\" {} >&2" | tr '\n' ' ')
 
 # Check for files with rows too long
-LONG_ROWS=$(git ls-files | grep -E $"\.(cpp|hpp|py)" | \
+LONG_ROWS=$(git ls-files | grep -E '\.(cpp|hpp|py)$' | \
                parallel 'echo {} $(($(\
                 if [[ -s {} ]]; then \
                   cat {} | awk "{ print length }" | sort -g | \
@@ -161,19 +167,19 @@ done
 
 # Check for trailing whitespaces
 TRAIL_FAILED=$(git ls-files | parallel 'echo {} $(cat {} | \
-                              grep '[[:blank:]]'$ | wc -l)' | \
+                              grep "[[:blank:]]$" | wc -l)' | \
                               awk '$NF > 0 { $NF=""; print $1 }')
-
 
 RED_BLOCK='\033[41m$\033[0m'
 if [[ -n ${TRAIL_FAILED} ]]; then
-  parallel "echo @@@@ {}; cat {} | grep --color=always -n '[[:blank:]]'$" ::: ${TRAIL_FAILED} | \
-                              awk "{
-                                if(\$1 == \"@@@@\")
-                                  print \"${FAILED} \" \$2
-                                else
-                                  print \$0\"${RED_BLOCK}\"
-                              }"
+  parallel "echo @@@@ {}; cat {} | grep --color=always -n '[[:blank:]]$'" \
+    ::: ${TRAIL_FAILED} | \
+    awk "{
+      if(\$1 == \"@@@@\")
+        print \"${FAILED} \" \$2
+      else
+        print \$0\"${RED_BLOCK}\"
+    }"
 fi
 
 # Linting
@@ -187,30 +193,35 @@ fi
 
 if [[ -n "${CLANG_FORMAT_FAILED}" ]]; then
   echo -e "${FAILED} Some C/C++ files are not properly formatted." \
-          "Run:\n\n           ${CLANG_FORMAT_CMD} -i ${CLANG_FORMAT_FAILED}\n" >&2
+          "Run:\n\n          ${CLANG_FORMAT_CMD} -i ${CLANG_FORMAT_FAILED}\n" \
+          >&2
 fi
 
 if [[ -n "${YAPF_FAILED}" ]]; then
   echo -e "${FAILED} Some Python files are not properly formatted." \
-          "Run:\n\n           ${YAPF_CMD} -i ${YAPF_FAILED}\n" >&2
+          "Run:\n\n          ${YAPF_CMD} -i ${YAPF_FAILED}\n" >&2
 fi
 
 if [[ -n "${ISORT_FAILED}" ]]; then
   echo -e "${WARNING} Imports in some Python files are out of order." \
-          "Run:\n\n           ${ISORT_CMD} ${ISORT_FAILED}\n" >&2
+          "Run:\n\n          ${ISORT_CMD} --overwrite-in-place ${ISORT_FAILED}\n" >&2
 fi
 
 # Try to fix the errors
 if [[ -n ${FIX} ]]; then
   if [[ -n "${CLANG_FORMAT_FAILED}" ]]; then
-    echo -en "\033[92m[FIXING]\033[0m C++: "${CLANG_FORMAT_FAILED}"\n"
+    echo -en "\033[92m[FIXING]\033[0m C++: ${CLANG_FORMAT_FAILED}\n"
     ${CLANG_FORMAT_CMD} -i ${CLANG_FORMAT_FAILED}
   fi
   if [[ -n "${YAPF_FAILED}" ]]; then
-    echo -en "\033[92m[FIXING]\033[0m Python: "${YAPF_FAILED}"\n"
+    echo -en "\033[92m[FIXING]\033[0m Python: ${YAPF_FAILED}\n"
     ${YAPF_CMD} -i ${YAPF_FAILED}
   fi
-  if [[ "${LINTING_FAILED}" > 0 ]]; then
+  if [[ -n "${ISORT_FAILED}" ]]; then
+    echo -en "\033[92m[FIXING]\033[0m isort: ${ISORT_FAILED}\n"
+    ${ISORT_CMD} ${ISORT_FAILED}
+  fi
+  if [[ "${LINTING_FAILED}" -gt 0 ]]; then
     echo -en "\033[92m[FIXING]\033[0m Ruff\n"
     ruff check tnco/ tests/ --fix
   fi
@@ -220,7 +231,8 @@ fi
 # Raise error
 if [[ -n "${CLANG_FORMAT_FAILED}" || \
       -n "${YAPF_FAILED}" || \
+      -n "${ISORT_FAILED}" || \
       -n "${TRAIL_FAILED}" || \
-      "${LINTING_FAILED}" > 0 ]]; then
+      "${LINTING_FAILED}" -gt 0 ]]; then
   exit 1
 fi

@@ -13,7 +13,10 @@
 # limitations under the License.
 """Application module for tnco."""
 
-from tnco.app.app import Optimizer, dump_results, load_tn
-from tnco.app.tn import Tensor, TensorNetwork
+from tnco.app.app import dump_results
+from tnco.app.app import load_tn
+from tnco.app.app import Optimizer
+from tnco.app.tn import Tensor
+from tnco.app.tn import TensorNetwork
 
 __all__ = ['Tensor', 'TensorNetwork', 'load_tn', 'dump_results', 'Optimizer']

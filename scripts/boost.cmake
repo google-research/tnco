@@ -18,7 +18,7 @@ find_package(Boost)
 
 if (NOT Boost_FOUND)
   if (DEFINED ENV{DOWNLOAD_DEPS})
-    message(STATUS "Downloads 'boost'")
+    message(STATUS "Downloading 'boost'")
 
     # Download boost
     FetchContent_Declare(

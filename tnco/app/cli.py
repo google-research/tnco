@@ -13,7 +13,9 @@
 # limitations under the License.
 """Command-line interface utilities."""
 
-from inspect import Parameter, Signature, signature
+from inspect import Parameter
+from inspect import Signature
+from inspect import signature
 from typing import Callable
 
 from fire import Fire

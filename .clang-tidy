@@ -22,4 +22,5 @@ Checks: 'performance-*,
          -readability-magic-numbers,
          -readability-function-cognitive-complexity,
          -readability-identifier-length'
-WarningsAsErrors: '*'
+WarningsAsErrors: '*,
+                   -bugprone-easily-swappable-parameters'
