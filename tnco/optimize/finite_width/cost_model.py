@@ -14,7 +14,7 @@
 """Cost model for finite width optimization."""
 
 from importlib import import_module
-from typing import Dict, FrozenSet, Iterable, Literal, Optional, Union
+from typing import Dict, FrozenSet, Iterable, List, Literal, Optional, Union
 
 import more_itertools as mit
 
@@ -34,6 +34,9 @@ class BaseCostModel:
         raise NotImplementedError()
 
     def width(*args, **kwargs):
+        raise NotImplementedError()
+
+    def get_max_width(*args, **kwargs):
         raise NotImplementedError()
 
 
@@ -217,6 +220,54 @@ class SimpleCostModel(BaseCostModel):
 
         # Get result
         return core.width(inds, dims)
+
+    def get_max_width(self, ts_inds: Iterable[List[Index]],
+                      dims: Union[Dict[Index, int], int]) -> float:
+        """Return the maximum width of a tensor network.
+
+        It returns the maximum width of a tensors network given its indices and
+        the dimension of each index. It also takes into account the presence of
+        sparse indices.
+
+        Args:
+            ts_inds: The tensor network's indices.
+            dims: The dimensions of each index.
+
+        Returns:
+            The maximum width of the tensor network.
+        """
+
+        # Convert iterator
+        ts_inds = list(ts_inds)
+
+        # Handle empty case
+        if not ts_inds:
+            return 0.0
+
+        # Map all indices
+        all_inds = list(mit.unique_everseen(mit.flatten(ts_inds)))
+        if self.sparse_inds is not None:
+            all_inds = list(
+                mit.unique_everseen(all_inds + list(self.sparse_inds)))
+
+        # Create mapping
+        inds_map = dict((x, i) for i, x in enumerate(all_inds))
+
+        # Try to convert dims to int
+        try:
+            dims = int(dims)
+        except (ValueError, TypeError):
+            dims = tuple(map(dims.get, all_inds))
+            if any(d is None for d in dims):
+                raise ValueError("Some dimensions are missing.")
+
+        # Get core
+        core = self.__get_core__(all_inds)
+
+        # Convert indices, and get maximum width
+        return max(
+            core.width(xs, dims) for xs in (
+                Bitset(map(inds_map.get, xs), len(all_inds)) for xs in ts_inds))
 
     def delta_width(self, inds: Iterable[Index],
                     dims: Union[Dict[Index, int], int], index: Index) -> float:
