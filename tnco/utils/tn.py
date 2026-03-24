@@ -21,7 +21,6 @@ from bisect import bisect_left
 from collections import Counter, defaultdict
 from random import Random
 from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
-from warnings import warn
 
 import autoray as ar
 import more_itertools as mit
@@ -41,27 +40,34 @@ __all__ = [
 
 def get_random_contraction_path(
         ts_inds: Iterable[List[Index]],
-        output_inds: Optional[Iterable[Index]] = None,
+        output_inds: Iterable[Index],
+        dims: Union[int, Dict[Index, int]],
         *,
         merge_paths: bool = True,
         autocomplete: bool = True,
         seed: Optional[int] = None,
-        verbose: int = False,
+        verbose: int = 0,
+        temperature: float = 1.0,
         **kwargs) -> Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]:
     """Generates a random contraction path.
 
-    Generates a random contraction path for the given tensor indices.
+    Generates a random contraction path for the given tensor indices using a
+    random-greedy approach.
 
     Args:
         ts_inds: List of indices for each tensor.
-        output_inds: (Deprecated) List of output indices.
+        output_inds: List of output indices.
+        dims: Dimensions of indices.
         merge_paths: If ``True``, merges all paths even if tensors are
             disconnected. If ``False``, returns separate paths for each
             connected component.
         autocomplete: If ``True`` and ``merge_paths=True``, connects
             disconnected components.
         seed: Random seed.
-        verbose: If ``True``, prints verbose output.
+        verbose: Verbosity level.
+        temperature: Temperature for Boltzmann sampling. A temperature close
+            to zero is peaked around the minimum cost, while a large
+            temperature is flat.
 
     Returns:
         A list of contraction steps (linear einsum format). If
@@ -72,174 +78,222 @@ def get_random_contraction_path(
     Examples:
         >>> from tnco.utils.tn import get_random_contraction_path
         >>> ts_inds = [['i', 'j'], ['j', 'k'], ['k', 'l']]
-        >>> get_random_contraction_path(ts_inds, seed=42)
-        [(0, 1), (0, 1)]
+        >>> get_random_contraction_path(ts_inds, ['i', 'l'], 2, seed=42)
+        [(1, 2), (0, 1)]
     """
-    if output_inds is not None:
-        warn(
-            "'output_inds' is deprecated, "
-            "and it will be removed in version '0.2'.",
-            DeprecationWarning,
-            stacklevel=2)
-
     # Extra args
     _return_contraction = kwargs.pop('_return_contraction', False)
     if kwargs:
-        raise TypeError("Got an expected keyword argument(s).")
+        raise TypeError(
+            f"Got an unexpected keyword argument(s): {kwargs.keys()}")
 
     # Initialize random number generator
     rng = Random(seed)
 
-    # Convert to list
-    ts_inds = list(ts_inds)
+    # Ensure temperature is non-negative
+    if temperature < 0:
+        raise ValueError("temperature must be non-negative")
 
-    # Store the initial number of tensors
+    # Convert to list and ensure determinism
+    ts_inds = list(map(list, ts_inds))
     n_tensors = len(ts_inds)
 
-    # First, let's map all indices to ints
-    inds_map = dict(zip(mit.unique_everseen(mit.flatten(ts_inds)), its.count()))
+    # Map indices to integers deterministically
+    all_inds = list(mit.unique_everseen(mit.flatten(ts_inds)))
 
-    # Remap inds
-    ts_inds = list(map(lambda xs: frozenset(map(inds_map.get, xs)), ts_inds))
+    # Check output_inds consistency
+    if not frozenset(output_inds).issubset(all_inds):
+        raise ValueError("'output_inds' is not consistent with 'ts_inds'.")
 
-    # Get map index->tensors
-    index2tensors = mit.map_reduce(
-        mit.flatten(
-            its.starmap(lambda t, xs: zip(its.repeat(t), xs),
-                        enumerate(ts_inds))), op.itemgetter(1),
-        op.itemgetter(0))
+    # Check dims consistency
+    if not isinstance(dims,
+                      (int, float)) and not frozenset(all_inds).issubset(dims):
+        raise ValueError("'ts_inds' has indices not in 'dims'.")
 
-    # Count how many times an index is contracted
-    hyper_count = dict(
-        filter(
-            op.itemgetter(1),
-            zip(index2tensors,
-                map(lambda xs: len(xs) - 1, index2tensors.values()))))
+    inds_map = {idx: i for i, idx in enumerate(all_inds)}
 
-    # Split indices in connected components
-    color2inds = dict(map(lambda x: (x, frozenset([x])), range(len(inds_map))))
-    index2color = dict(enumerate(range(len(inds_map))))
-    for xs in track(ts_inds,
-                    description="Getting connected components ...",
-                    disable=(verbose <= 0),
-                    console=Console(stderr=True)):
-        if len(xs):
-            # Get all colors
-            colors = frozenset(map(index2color.get, xs))
+    # Remap tensors to sets of ints
+    ts_inds = [OrderedFrozenSet(inds_map[idx] for idx in ts) for ts in ts_inds]
+    output_inds = OrderedFrozenSet(inds_map[idx] for idx in output_inds)
 
-            # Get all inds
-            xs = fts.reduce(op.or_, map(color2inds.get, colors))
+    # Precompute log dims for cost calculation
+    if isinstance(dims, (int, float)):
+        log_dims = [math.log2(dims)] * len(all_inds)
+    else:
+        log_dims = list(map(math.log2, map(dims.get, all_inds)))
 
-            # Update colors
-            color2inds[mit.first(colors)] = xs
-            index2color.update(zip(xs, its.repeat(mit.first(colors))))
+    # Find connected components deterministically
+    index2tensors = mit.map_reduce(its.chain.from_iterable(
+        zip(inds, its.repeat(i)) for i, inds in enumerate(ts_inds)),
+                                   keyfunc=op.itemgetter(0),
+                                   valuefunc=op.itemgetter(1))
 
-    # Initialize paths
+    remaining_tensors = set(range(n_tensors))
+    ccs = []
+    while remaining_tensors:
+        start_t = min(remaining_tensors)
+        cc = set()
+        stack = [start_t]
+        remaining_tensors.remove(start_t)
+        while stack:
+            t = stack.pop()
+            cc.add(t)
+            neighbors = set(
+                its.chain.from_iterable(
+                    map(index2tensors.__getitem__,
+                        ts_inds[t]))) & remaining_tensors
+            remaining_tensors.difference_update(neighbors)
+            stack.extend(sorted(neighbors))
+        ccs.append(sorted(cc))
+
+    ccs.sort(key=min)
+
+    # Paths for each CC
     paths = []
 
-    # Swap location of two elements in an array
-    def swap(a, x, y):
-        a[x], a[y] = a[y], a[x]
-
-    # Split the available indices in connected components
-    avail_inds_cc = mit.map_reduce(index2color.items(), op.itemgetter(1),
-                                   op.itemgetter(0)).values()
+    # Store index counts globally
+    hyper_count = Counter(mit.flatten(ts_inds))
 
     # For each connected components ...
-    for i, avail_inds in enumerate(avail_inds_cc):
-        # Initialize contracted tensors
-        contracted_tensors = set()
+    for i_cc, cc_tensors in enumerate(ccs):
+        if len(cc_tensors) <= 1:
+            paths.append([])
+            continue
 
-        # Initialize path
-        path = []
+        # Local state for this CC
+        active_tensors = set(cc_tensors)
+        cc_index2tensors = mit.map_reduce(its.chain.from_iterable(
+            zip(ts_inds[t], its.repeat(t)) for t in cc_tensors),
+                                          keyfunc=op.itemgetter(0),
+                                          valuefunc=op.itemgetter(1),
+                                          reducefunc=set)
+
+        # Candidates for this CC: (log_cost, t1, t2)
+        queue = []
+
+        def add_candidates(t_new):
+            neighbors = set(
+                its.chain.from_iterable(
+                    map(cc_index2tensors.__getitem__,
+                        ts_inds[t_new]))) & active_tensors
+            neighbors.discard(t_new)
+
+            queue.extend((
+                sum(map(log_dims.__getitem__, sorted(ts_inds[t1] |
+                                                     ts_inds[t2]))), t1, t2)
+                         for t1, t2 in (sorted((t_new, neighbor))
+                                        for neighbor in sorted(neighbors)))
+
+        # Initial candidates for this CC
+        queue.extend(
+            (sum(map(log_dims.__getitem__, sorted(ts_inds[t1] | ts_inds[t2]))),
+             t1, t2) for t1, t2 in mit.unique_everseen(
+                 its.chain.from_iterable(
+                     its.combinations(sorted(t), 2)
+                     for t in cc_index2tensors.values())))
+
+        cc_path = []
 
         with Progress(disable=(verbose <= 0),
                       console=Console(stderr=True)) as pbar:
 
-            # Size of the progress bar
-            total_pbar = len(avail_inds)
+            task = pbar.add_task(
+                f"Getting contraction path ({i_cc + 1}/{len(ccs)}) ...",
+                total=len(cc_tensors) - 1)
 
-            # Add progress bar
-            task = pbar.add_task("Getting contraction path ({}/{}) ...".format(
-                i + 1, len(avail_inds_cc)),
-                                 total=total_pbar)
+            while len(active_tensors) > 1:
+                # Cleanup queue to only valid ones
+                queue = [
+                    item for item in queue
+                    if item[1] in active_tensors and item[2] in active_tensors
+                ]
 
-            # While there are available indices
-            while avail_inds:
-                # Select a random index
-                swap(avail_inds, rng.randrange(len(avail_inds)), -1)
-                index = avail_inds[-1]
+                if not queue:
+                    # Should not happen in a CC
+                    break
 
-                # If index has been already fully contracted, skip
-                if index not in hyper_count or len(index2tensors[index]) <= 1:
-                    avail_inds.pop()
-                    continue
+                c_min = min(map(op.itemgetter(0), queue))
 
-                # Get two random tensors
-                tx, ty = rng.sample(list(
-                    filter(lambda t: t not in contracted_tensors,
-                           index2tensors[index])),
-                                    k=2)
+                # Boltzmann sampling: p(c) ~ exp(-(c - c_min) / temperature)
+                # T is a threshold to avoid overflow / underflow
+                T = 50.0
 
-                # Get indices
-                xs, ys = ts_inds[tx], ts_inds[ty]
+                if temperature <= 0.0:
+                    # Purely greedy
+                    chosen_item = rng.choice(
+                        sorted(c for c in queue if c[0] == c_min))
+                else:
+                    # Sample proportional to weights
+                    chosen_item = rng.choices(
+                        queue,
+                        weights=[
+                            math.exp(-min((cost - c_min) / temperature, T))
+                            for cost, _, _ in queue
+                        ],
+                        k=1)[0]
 
-                # Get shared inds
-                shared = xs & ys
+                _, t1, t2 = chosen_item
 
-                # They should always share an index
-                assert len(shared)
+                # Contract t1, t2 -> t3
+                inds12 = ts_inds[t1] | ts_inds[t2]
+                shared = ts_inds[t1] & ts_inds[t2]
+                t3_inds = [
+                    idx for idx in inds12
+                    if not (hyper_count[idx] == 2 and idx not in output_inds and
+                            idx in shared)
+                ]
 
-                # Update hyper-count for each shared index
-                for x in shared:
-                    hyper_count[x] -= 1
-                    if hyper_count[x] == 0:
-                        del hyper_count[x]
+                t3 = len(ts_inds)
+                ts_inds.append(OrderedFrozenSet(t3_inds))
 
-                # Get new set of indices
-                tz = len(ts_inds)
-                zs = (xs ^ ys).union(filter(lambda x: x in hyper_count, shared))
+                active_tensors.difference_update({t1, t2})
+                active_tensors.add(t3)
 
-                # Update inds
-                for x in zs:
-                    index2tensors[x].append(tz)
+                # Update index counts and mapping
+                for t_old, inds_old in ((t1, ts_inds[t1]), (t2, ts_inds[t2])):
+                    for idx in inds_old:
+                        hyper_count[idx] -= 1
+                        cc_index2tensors[idx].remove(t_old)
 
-                # Update tensors
-                contracted_tensors |= {tx, ty}
-                ts_inds.append(zs)
+                for idx in t3_inds:
+                    hyper_count[idx] += 1
+                    cc_index2tensors[idx].add(t3)
 
-                # Update path
-                path.append((tx, ty, tz))
+                cc_path.append((t1, t2, t3))
+
+                # Add new candidates involving t3
+                add_candidates(t3)
 
                 # Update pbar
-                pbar.update(task, completed=total_pbar - len(avail_inds))
+                pbar.update(task, advance=1)
 
             # Final update
-            pbar.update(task, completed=total_pbar, refresh=True)
+            pbar.update(task, completed=len(cc_tensors) - 1, refresh=True)
 
-            # Append to all paths
-            paths.append(path)
+        paths.append(cc_path)
 
     # For testing only
     if _return_contraction:
         return paths
 
-    # Normalize paths
+    # Normalize paths to linear (einsum) format
     linear_paths = []
-    for i, path in enumerate(paths):
+    for i_cc, cc_path in enumerate(paths):
         linear_path = []
+        # Each path starts with the full range of tensors to stay compatible
+        # with merge_contraction_paths logic.
         loc = list(range(n_tensors))
-        for x, y, z in track(
-                path,
-                description="Convert to linear (einsum) path ({}/{}) ...".
-                format(i + 1, len(paths)),
+        for t1, t2, t3 in track(
+                cc_path,
+                description=
+                f"Convert to linear (einsum) path ({i_cc + 1}/{len(ccs)}) ...",
                 disable=(verbose <= 1),
                 console=Console(stderr=True)):
-            px, py = sorted(map(lambda x: bisect_left(loc, x), (x, y)))
-            loc.pop(py)
-            loc.pop(px)
-            loc.append(z)
-            linear_path.append((px, py))
+            p1, p2 = sorted(bisect_left(loc, x) for x in (t1, t2))
+            loc.pop(p2)
+            loc.pop(p1)
+            loc.append(t3)
+            linear_path.append((p1, p2))
         linear_paths.append(linear_path)
 
     # Merge paths if needed

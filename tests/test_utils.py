@@ -242,11 +242,15 @@ def test_GetRandomContractionPath(random_seed: int, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
+                                        output_inds,
+                                        2,
                                         seed=random_seed,
                                         merge_paths=False)
 
     # Calling twice should give the same answer with the same seed
     assert paths == get_random_contraction_path(ts_inds,
+                                                output_inds,
+                                                2,
                                                 seed=random_seed,
                                                 merge_paths=False)
 
@@ -324,6 +328,8 @@ def test_GetRandomContractionPath(random_seed: int, **kwargs):
 
     # Get raw contraction
     contractions = get_random_contraction_path(ts_inds,
+                                               output_inds,
+                                               2,
                                                seed=random_seed,
                                                _return_contraction=True)
 
@@ -395,6 +401,8 @@ def test_GetRandomContractionTree(random_seed: int, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
+                                        output_inds,
+                                        2,
                                         seed=random_seed,
                                         merge_paths=False)
 
@@ -634,6 +642,8 @@ def test_OptimizerInfiniteMemory(random_seed: int, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
+                                        output_inds,
+                                        dims,
                                         seed=random_seed,
                                         merge_paths=False)
 
@@ -837,6 +847,8 @@ def test_OptimizerFiniteWidth(random_seed: int, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
+                                        output_inds,
+                                        dims,
                                         seed=random_seed,
                                         merge_paths=False)
 
@@ -1153,14 +1165,19 @@ def test_TNGetEinsumSubscripts(random_seed: int, **kwargs):
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
 
     # Get random tensors
-    ts_inds, output_inds = generate_random_tensors(
-        n_tensors=n_tensors,
-        n_inds=n_inds,
-        k=k,
-        n_output_inds=n_output_inds,
-        n_cc=n_cc,
-        randomize_names=randomize_names,
-        seed=random_seed)
+    try:
+        ts_inds, output_inds = generate_random_tensors(
+            n_tensors=n_tensors,
+            n_inds=n_inds,
+            k=k,
+            n_output_inds=n_output_inds,
+            n_cc=n_cc,
+            randomize_names=randomize_names,
+            seed=random_seed)
+    except ValueError as e:
+        if str(e) == "Too few indices.":
+            pytest.skip(str(e))
+        raise e
 
     # Get all inds
     all_inds = frozenset(mit.flatten(ts_inds))
@@ -1497,6 +1514,8 @@ def test_GetLargestIntermediate(random_seed: int, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
+                                        output_inds,
+                                        dims,
                                         seed=random_seed,
                                         merge_paths=False)
     assert len(paths) == 1
@@ -1550,6 +1569,8 @@ def test_DecomposeHyperIndsTN(random_seed: int, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
+                                        output_inds,
+                                        dims,
                                         seed=random_seed,
                                         merge_paths=False)
     assert len(paths) == 1
@@ -1674,6 +1695,8 @@ def test_merge_contraction_paths(random_seed, **kwargs):
 
     # Get paths
     paths = get_random_contraction_path(ts_inds,
+                                        output_inds,
+                                        dims,
                                         seed=random_seed,
                                         merge_paths=False)
 
@@ -1712,16 +1735,19 @@ def test_split_contraction_path(random_seed, **kwargs):
         pytest.skip("Too few indices")
 
     # Get tensors
-    ts_inds, _ = generate_random_tensors(n_tensors=n_tensors,
-                                         n_inds=n_inds,
-                                         k=k,
-                                         n_cc=n_cc,
-                                         n_output_inds=n_output_inds,
-                                         randomize_names=randomize_names,
-                                         seed=random_seed)
+    ts_inds, output_inds = generate_random_tensors(
+        n_tensors=n_tensors,
+        n_inds=n_inds,
+        k=k,
+        n_cc=n_cc,
+        n_output_inds=n_output_inds,
+        randomize_names=randomize_names,
+        seed=random_seed)
 
     # Get path
     path = get_random_contraction_path(ts_inds,
+                                       output_inds,
+                                       2,
                                        seed=random_seed,
                                        autocomplete=False)
 
