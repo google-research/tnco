@@ -234,9 +234,8 @@ def get_random_contraction_path(
                 inds1, inds2 = ts_inds[t1], ts_inds[t2]
                 shared = inds1 & inds2
                 t3_inds = [
-                    idx for idx in inds1 | inds2
-                    if hyper_count[idx] > 2 or idx in output_inds or
-                    idx not in shared
+                    idx for idx in inds1 | inds2 if hyper_count[idx] > 2 or
+                    idx in output_inds or idx not in shared
                 ]
 
                 t3 = len(ts_inds)
