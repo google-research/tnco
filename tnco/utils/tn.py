@@ -94,10 +94,6 @@ def get_random_contraction_path(
     if temperature < 0:
         raise ValueError("temperature must be non-negative")
 
-    # Convert to list and ensure determinism
-    ts_inds = list(map(list, ts_inds))
-    n_tensors = len(ts_inds)
-
     # Map indices to integers deterministically
     all_inds = list(mit.unique_everseen(mit.flatten(ts_inds)))
 
@@ -115,12 +111,13 @@ def get_random_contraction_path(
     # Remap tensors to sets of ints
     ts_inds = [OrderedFrozenSet(inds_map[idx] for idx in ts) for ts in ts_inds]
     output_inds = OrderedFrozenSet(inds_map[idx] for idx in output_inds)
+    n_tensors = len(ts_inds)
 
     # Precompute log dims for cost calculation
     if isinstance(dims, (int, float)):
         log_dims = [math.log2(dims)] * len(all_inds)
     else:
-        log_dims = list(map(math.log2, map(dims.get, all_inds)))
+        log_dims = [math.log2(dims[idx]) for idx in all_inds]
 
     # Find connected components deterministically
     index2tensors = mit.map_reduce(its.chain.from_iterable(
@@ -208,23 +205,24 @@ def get_random_contraction_path(
                     if item[1] in active_tensors and item[2] in active_tensors
                 ]
 
-                if not queue:
-                    # Should not happen in a CC
-                    break
+                # 'queue' should never be empty
+                assert queue
 
+                # Get minimum cost
                 c_min = min(map(op.itemgetter(0), queue))
 
                 # Boltzmann sampling: p(c) ~ exp(-(c - c_min) / temperature)
                 # T is a threshold to avoid overflow / underflow
                 T = 50.0
 
+                # Purely greedy
                 if temperature <= 0.0:
-                    # Purely greedy
-                    chosen_item = rng.choice(
+                    _, t1, t2 = rng.choice(
                         sorted(c for c in queue if c[0] == c_min))
+
+                # Sample proportional to weights
                 else:
-                    # Sample proportional to weights
-                    chosen_item = rng.choices(
+                    _, t1, t2 = rng.choices(
                         queue,
                         weights=[
                             math.exp(-min((cost - c_min) / temperature, T))
@@ -232,15 +230,13 @@ def get_random_contraction_path(
                         ],
                         k=1)[0]
 
-                _, t1, t2 = chosen_item
-
                 # Contract t1, t2 -> t3
-                inds12 = ts_inds[t1] | ts_inds[t2]
-                shared = ts_inds[t1] & ts_inds[t2]
+                inds1, inds2 = ts_inds[t1], ts_inds[t2]
+                shared = inds1 & inds2
                 t3_inds = [
-                    idx for idx in inds12
-                    if not (hyper_count[idx] == 2 and idx not in output_inds and
-                            idx in shared)
+                    idx for idx in inds1 | inds2
+                    if hyper_count[idx] > 2 or idx in output_inds or
+                    idx not in shared
                 ]
 
                 t3 = len(ts_inds)
@@ -250,7 +246,7 @@ def get_random_contraction_path(
                 active_tensors.add(t3)
 
                 # Update index counts and mapping
-                for t_old, inds_old in ((t1, ts_inds[t1]), (t2, ts_inds[t2])):
+                for t_old, inds_old in ((t1, inds1), (t2, inds2)):
                     for idx in inds_old:
                         hyper_count[idx] -= 1
                         cc_index2tensors[idx].remove(t_old)
@@ -280,6 +276,7 @@ def get_random_contraction_path(
     linear_paths = []
     for i_cc, cc_path in enumerate(paths):
         linear_path = []
+
         # Each path starts with the full range of tensors to stay compatible
         # with merge_contraction_paths logic.
         loc = list(range(n_tensors))
