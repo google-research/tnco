@@ -853,3 +853,109 @@ def test_all_close(random_seed: int, **kwargs):
 
     # Logclose should return always false for negative elements
     assert not all_logclose([1, -1, 1], [1, -1, 1])
+
+
+@repeat(40)
+def test_get_max_width(random_seed, **kwargs):
+
+    # Simple cost model setup
+    cmodel = FW_SimpleCostModel(max_width=100.0, cost_type='float64')
+
+    # Edge Case 1: Empty ts_inds
+    assert cmodel.get_max_width([], dims={}) == 0.0
+
+    # Edge Case 2: Single tensor network / Disconnected tensors
+    ts_inds_1 = [[0, 1], [1, 2]]
+    dims_1 = {0: 2, 1: 4, 2: 8}
+
+    # width of first tensor: log2(2*4) = 3
+    # width of second tensor: log2(4*8) = 5
+    # max width should be 5.0
+    assert abs(cmodel.get_max_width(ts_inds_1, dims=dims_1) - 5.0) < 1e-5
+
+    # Edge Case 3: Dimension mapping with int vs dict
+    assert abs(cmodel.get_max_width(ts_inds_1, dims=4) -
+               4.0) < 1e-5  # max is log2(4*4) = 4.0
+
+    # Edge Case 4: Missing dimensions in dims dictionary
+    with pytest.raises(ValueError, match="Some dimensions are missing."):
+        cmodel.get_max_width(ts_inds_1, dims={0: 2})
+
+    # Edge Case 5: Presence of sparse_inds vs absence
+    sparse_inds = [0]
+    cmodel_sparse = FW_SimpleCostModel(max_width=100.0,
+                                       sparse_inds=sparse_inds,
+                                       n_projs=2,
+                                       cost_type='float64')
+    # If a dimension is missing for sparse_inds, it should raise ValueError
+    with pytest.raises(ValueError, match="Some dimensions are missing."):
+        cmodel_sparse.get_max_width([[1, 2]], dims={1: 2, 2: 4})
+
+    # With correct dimensions
+    dims_sparse = {0: 2, 1: 2, 2: 4}
+
+    # width of [1, 2] is log2(2*4) = 3.0, but cost model width
+    # evaluation includes sparse inds internally
+    # width = log2(2*4) = 3.0 (sparse inds generally affect contraction
+    # cost, but `width` also processes them if present)
+    width_val = cmodel_sparse.get_max_width([[1, 2]], dims=dims_sparse)
+    assert isinstance(width_val, float)
+
+    # Initialize Random generator
+    rng = Random(random_seed)
+
+    # Initialize variables
+    n_tensors = kwargs.get('n_tensors', rng.randint(5, 50))
+    n_inds = kwargs.get('n_inds', rng.randint(10, 100))
+    k = kwargs.get('k', rng.randint(2, 5))
+    n_output_inds = kwargs.get('n_output_inds', rng.randint(0, n_inds // 5))
+    n_cc = kwargs.get('n_cc', rng.randint(1, 5))
+    randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
+
+    try:
+        tensors, output_inds = generate_random_tensors(
+            n_tensors=n_tensors,
+            n_inds=n_inds,
+            k=k,
+            n_output_inds=n_output_inds,
+            n_cc=n_cc,
+            randomize_names=randomize_names,
+            seed=random_seed,
+            verbose=False)
+    except ValueError as e:
+        if str(e) == "Too few indices.":
+            pytest.skip(str(e))
+        raise e
+
+    # Get random dimensions
+    if rng.randrange(2):
+        dims = dict(
+            map(lambda x: (x, rng.randrange(1, 10)),
+                mit.unique_everseen(mit.flatten(tensors))))
+    else:
+        dims = rng.randrange(1, 8)
+
+    # Extract all indices to potentially pick sparse indices
+    all_inds = list(mit.unique_everseen(mit.flatten(tensors)))
+    sparse_inds = rng.sample(all_inds, k=rng.randint(0,
+                                                     len(all_inds) //
+                                                     3)) if all_inds else []
+    n_projs = rng.randint(1, 100) if sparse_inds else None
+
+    # Simple cost model setup
+    cmodel = FW_SimpleCostModel(
+        max_width=rng.random() * 100,
+        sparse_inds=sparse_inds if sparse_inds else None,
+        n_projs=n_projs,
+        cost_type=rng.choice(['float32', 'float64', 'float128', 'float1024']))
+
+    # Compute expected maximum width using width method
+    expected_max_width = 0.0
+    if tensors:
+        expected_max_width = max(cmodel.width(ts, dims) for ts in tensors)
+
+    # Calculate actual max width
+    actual_max_width = cmodel.get_max_width(tensors, dims)
+
+    # Assert correctness
+    assert abs(actual_max_width - expected_max_width) < 1e-5

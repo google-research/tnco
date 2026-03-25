@@ -101,11 +101,9 @@ class Optimizer:
 
         # Check that tensors can fit the max allowed width even if some inds
         # are skipped
-        if any(
-                map(
-                    lambda xs: self.cmodel.width(xs & self.skip_slices, ctree.
-                                                 dims) > self.cmodel.max_width,
-                    ctree.inds)):
+        if self.cmodel.get_max_width(
+            (xs & self.skip_slices for xs in ctree.inds),
+                ctree.dims) > self.cmodel.max_width:
             raise ValueError("Too many indices in 'skip_slices'.")
 
         # Convert slices to bitset

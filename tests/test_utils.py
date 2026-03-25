@@ -1161,14 +1161,19 @@ def test_TNGetEinsumSubscripts(random_seed: int, **kwargs):
     randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
 
     # Get random tensors
-    ts_inds, output_inds = generate_random_tensors(
-        n_tensors=n_tensors,
-        n_inds=n_inds,
-        k=k,
-        n_output_inds=n_output_inds,
-        n_cc=n_cc,
-        randomize_names=randomize_names,
-        seed=random_seed)
+    try:
+        ts_inds, output_inds = generate_random_tensors(
+            n_tensors=n_tensors,
+            n_inds=n_inds,
+            k=k,
+            n_output_inds=n_output_inds,
+            n_cc=n_cc,
+            randomize_names=randomize_names,
+            seed=random_seed)
+    except ValueError as e:
+        if str(e) == "Too few indices.":
+            pytest.skip(str(e))
+        raise e
 
     # Get all inds
     all_inds = frozenset(mit.flatten(ts_inds))
