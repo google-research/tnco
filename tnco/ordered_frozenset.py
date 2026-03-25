@@ -206,7 +206,7 @@ class OrderedFrozenSet:
     def __sub__(self, other: Any) -> 'OrderedFrozenSet':
         if not isinstance(other, (OrderedFrozenSet, set, frozenset)):
             raise TypeError(
-                "unsupported operand type(s) for ^: '{}' and '{}'".format(
+                "unsupported operand type(s) for -: '{}' and '{}'".format(
                     type(self).__name__,
                     type(other).__name__))
         return self.difference(other)
@@ -257,6 +257,6 @@ class OrderedFrozenSet:
         if isinstance(other, (set, frozenset)):
             return self._set == other
         raise TypeError(
-            "unsupported operand type(s) for == '{}' and '{}'".format(
+            "unsupported operand type(s) for ==: '{}' and '{}'".format(
                 type(self).__name__,
                 type(other).__name__))

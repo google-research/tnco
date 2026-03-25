@@ -92,6 +92,9 @@ class ContractionTree(_ContractionTree):
                     "'output_inds' cannot be provided if a contraction "
                     "tree is used instead of a path.")
 
+            if _cache is None:
+                raise RuntimeError("'_cache' must be provided.")
+
             # Get cached positions of relevant tensors
             self._n_tensors = int(_cache[0])
             self._tensors_pos = tuple(_cache[1])
