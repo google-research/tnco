@@ -1132,7 +1132,7 @@ def test_TensorGetEinsumSubscripts(random_seed):
     output_inds = permutation(output_inds)
 
     # Compute tensordot providing the output inds
-    array_c = np.einsum(
+    array_c = oe.contract(
         tensor_utils.get_einsum_subscripts(inds_a, inds_b, output_inds),
         array_a, array_b)
 
@@ -1197,7 +1197,10 @@ def test_TNGetEinsumSubscripts(random_seed: int, **kwargs):
         pytest.skip("Contraction is too large.")
 
     # Contract using einsum
-    merged_array_1 = oe.contract(subscripts, *arrays, optimize=path)
+    merged_array_1 = oe.contract(subscripts,
+                                 *arrays,
+                                 optimize=path,
+                                 use_blas=True)
 
     # Contract using tnco
     [merged_inds], merged_output_inds, [merged_array_2
@@ -1228,7 +1231,7 @@ def test_Fuse(random_seed, **kwargs):
             # Contract
             arrays.append(
                 Tensor(
-                    np.einsum(
+                    oe.contract(
                         tensor_utils.get_einsum_subscripts(
                             tx.inds, ty.inds, iz), tx.data, ty.data), iz))
 
@@ -2008,7 +2011,7 @@ def test_TensorDot(random_seed):
     # Check operation
     np.testing.assert_allclose(
         az,
-        np.einsum(tensor_utils.get_einsum_subscripts(xs, ys, zs), ax, ay),
+        oe.contract(tensor_utils.get_einsum_subscripts(xs, ys, zs), ax, ay),
         atol=1e-5)
 
     # Check if only inds are returned
