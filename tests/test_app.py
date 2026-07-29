@@ -12,27 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from decimal import Decimal
 import functools as fts
 import itertools as its
 import json
 import operator as op
-import pickle
-from decimal import Decimal
 from os import environ
+import pickle
 from random import Random
 from tempfile import NamedTemporaryFile
 
 import cirq
+from cirq.contrib.qasm_import import circuit_from_qasm
 import more_itertools as mit
 import numpy as np
 import pytest
-from cirq.contrib.qasm_import import circuit_from_qasm
-from quimb.tensor import Tensor, TensorNetwork
+from quimb.tensor import Tensor
+from quimb.tensor import TensorNetwork
 
+from tnco.app import load_tn
 from tnco.app import Optimizer
 from tnco.app import Tensor as TS
 from tnco.app import TensorNetwork as TN
-from tnco.app import load_tn
 from tnco.app.circuit import Sampler
 from tnco.testing.utils import generate_random_tensors
 

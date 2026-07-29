@@ -88,27 +88,8 @@ jobs:
         # Install cirq to generate a random circuit
         pip install cirq
 
-        # Create random circuit
-        python -c 'import cirq; cirq.to_json(cirq.testing.random_circuit(8, 16, 1), "circuit.cirq")'
-
-        # Fix seed
-        SEED=${RANDOM}
-
-        # Run tnco twice with the same seed
-        tnco optimize circuit.cirq '(0, 1e5)' --n-steps=1e2 \
-                                              --n-runs=4 \
-                                              --verbose=10 \
-                                              --seed=${SEED} \
-                                              --output-filename=res_${SEED}_1.json
-        tnco optimize circuit.cirq '(0, 1e5)' --n-steps=1e2 \
-                                              --n-runs=4 \
-                                              --verbose=10 \
-                                              --seed=${SEED} \
-                                              --output-filename=res_${SEED}_2.json
-
-        # Check difference
-        diff <(cat res_${SEED}_1.json | jq . | grep -v runtime) \
-             <(cat res_${SEED}_2.json | jq . | grep -v runtime)
+        # Check determinism
+        bash tests/test_determinism.sh
 
     - name: Run Example for ${{ matrix.os }}, with ${{ matrix.compiler }} and python==${{
         matrix.python-version }} (${{ matrix.target }})

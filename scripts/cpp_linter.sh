@@ -19,15 +19,15 @@ usage() {
 }
 
 # Parse options using getopt
-OPTIONS=$(getopt -o h --long help,build:,install -- "$@")
+OPTIONS=$(getopt -o h --long help,build:,config -- "$@")
 if [[ $? -ne 0 ]]; then
     usage
 fi
 
 while [[ $# -ne 0 ]]; do
     case "$1" in
-        --install)
-            INSTALL=true
+        --config)
+            CONFIG=true
             shift
             ;;
         --build)
@@ -48,16 +48,21 @@ while [[ $# -ne 0 ]]; do
 done
 
 # Fix clang-tidy version
-CLANG_TIDY=21.1.1
+CLANG_TIDY=$(grep "clang-tidy==" pyproject.toml | \
+             sed -E "s/.*clang-tidy==([^ \"]+).*/\1/")
 
 # Install
-if [[ -n ${INSTALL} ]]; then
-  pip install clang-tidy==${CLANG_TIDY}
+if [[ -n ${CONFIG} ]]; then
+  echo "clang-tidy==${CLANG_TIDY}"
+  exit 0
 fi
 
 # Check version
-if [[ $(clang-tidy --version | grep -i 'llvm version' | awk '{ print $NF }' 2>/dev/null) != ${CLANG_TIDY} ]]; then
+TIDY_VER=$(clang-tidy --version 2>/dev/null | grep -i 'llvm version' | \
+           awk '{ print $NF }')
+if [[ "${TIDY_VER}" != "${CLANG_TIDY}" ]]; then
   echo "clang-tidy==${CLANG_TIDY} is required" >&2
+  exit 1
 fi
 
 # Get location of build

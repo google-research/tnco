@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import Counter
+from collections import defaultdict
+from decimal import Decimal
 import functools as fts
 import itertools as its
-import operator as op
-import pickle
-from collections import Counter, defaultdict
-from decimal import Decimal
 from math import log2
+import operator as op
 from os import environ
+import pickle
 from random import Random
 
 import more_itertools as mit
 import numpy as np
 import opt_einsum as oe
 import pytest
-from quimb.tensor import Tensor, TensorNetwork
+from quimb.tensor import Tensor
+from quimb.tensor import TensorNetwork
 from tnco_core import ContractionTree as ContractionTree_
 
-import tnco.utils.tensor as tensor_utils
 from tnco.ctree import ContractionTree
 from tnco.optimize.finite_width import Optimizer as FW_Optimizer
 from tnco.optimize.finite_width.cost_model import \
@@ -37,16 +38,23 @@ from tnco.optimize.finite_width.cost_model import \
 from tnco.optimize.infinite_memory import Optimizer as IM_Optimizer
 from tnco.optimize.infinite_memory.cost_model import \
     SimpleCostModel as IM_SimpleCostModel
-from tnco.optimize.prob import BaseProbability, Greedy, MetropolisHastings
+from tnco.optimize.prob import BaseProbability
+from tnco.optimize.prob import Greedy
+from tnco.optimize.prob import MetropolisHastings
 from tnco.ordered_frozenset import OrderedFrozenSet
-from tnco.testing.utils import (generate_random_inds, generate_random_tensors,
-                                get_connected_components,
-                                is_valid_contraction_tree)
+from tnco.testing.utils import generate_random_inds
+from tnco.testing.utils import generate_random_tensors
+from tnco.testing.utils import get_connected_components
+from tnco.testing.utils import is_valid_contraction_tree
+import tnco.utils.tensor as tensor_utils
 from tnco.utils.tn import contract
 from tnco.utils.tn import decompose_hyper_inds as tn_decompose_hyper_inds
-from tnco.utils.tn import (fuse, get_einsum_subscripts,
-                           get_random_contraction_path, merge_contraction_paths,
-                           read_inds, split_contraction_path)
+from tnco.utils.tn import fuse
+from tnco.utils.tn import get_einsum_subscripts
+from tnco.utils.tn import get_random_contraction_path
+from tnco.utils.tn import merge_contraction_paths
+from tnco.utils.tn import read_inds
+from tnco.utils.tn import split_contraction_path
 
 # Initialize RNG
 rng = Random(

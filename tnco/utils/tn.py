@@ -13,23 +13,27 @@
 # limitations under the License.
 """Tensor network utilities."""
 
+from bisect import bisect_left
+from collections import Counter
+from collections import defaultdict
 import functools as fts
 import itertools as its
 import math
 import operator as op
-from bisect import bisect_left
-from collections import Counter, defaultdict
 from random import Random
 from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
 import autoray as ar
 import more_itertools as mit
 from rich.console import Console
-from rich.progress import Progress, track
+from rich.progress import Progress
+from rich.progress import track
 
-import tnco.utils.tensor as tensor_utils
 from tnco.ordered_frozenset import OrderedFrozenSet
-from tnco.typing import Array, Index, TensorName
+from tnco.typing import Array
+from tnco.typing import Index
+from tnco.typing import TensorName
+import tnco.utils.tensor as tensor_utils
 
 __all__ = [
     'get_random_contraction_path', 'get_symbol', 'get_einsum_subscripts',

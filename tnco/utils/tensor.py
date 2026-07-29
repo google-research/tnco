@@ -24,7 +24,8 @@ import autoray as ar
 import more_itertools as mit
 
 from tnco.ordered_frozenset import OrderedFrozenSet
-from tnco.typing import Array, Index
+from tnco.typing import Array
+from tnco.typing import Index
 
 __all__ = ['decompose_hyper_inds', 'get_einsum_subscripts', 'tensordot', 'svd']
 
@@ -52,15 +53,15 @@ def is_diagonal(array: Array, /, *, atol: float = 1e-8) -> bool:
     if array.shape[0] != array.shape[1]:
         return False
 
-    # Remove diagonal
-    array = array - ar.do('asarray', [[
-        array[i_, i_] if i_ == j_ else ar.do('zeros', array.shape[2:])
-        for j_ in range(array.shape[0])
-    ]
-                                      for i_ in range(array.shape[1])])
+    # Get dimension
+    n = array.shape[0]
+
+    # Create mask for diagonal elements, and reshape it to be (n, n, 1, 1, ...)
+    # to match array.ndim
+    mask = ar.do('eye', n, like=array).reshape((n, n) + (1,) * (array.ndim - 2))
 
     # Check if all other elements are zero
-    return ar.do('allclose', array, 0, atol=atol)
+    return ar.do('allclose', array * (1 - mask), 0, atol=atol)
 
 
 def decompose_hyper_inds(

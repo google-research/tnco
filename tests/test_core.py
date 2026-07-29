@@ -12,32 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 import functools as fts
 import itertools as its
+from math import exp
+from math import log2
 import operator as op
-import pickle
-from copy import deepcopy
-from math import exp, log2
 from os import environ
+import pickle
 from random import Random
 
 import more_itertools as mit
 import pytest
 from tnco_core import Bitset as Bitset_
 from tnco_core import ContractionTree as ContractionTree_
+from tnco_core import float1024
 from tnco_core import Node
 from tnco_core import Tree as Tree_
-from tnco_core import float1024
-from tnco_core.utils import all_close, all_logclose
+from tnco_core.utils import all_close
+from tnco_core.utils import all_logclose
 
 from tnco.bitset import Bitset
-from tnco.ctree import ContractionTree, traverse_tree
+from tnco.ctree import ContractionTree
+from tnco.ctree import traverse_tree
 from tnco.optimize.finite_width.cost_model import \
     SimpleCostModel as FW_SimpleCostModel
 from tnco.optimize.infinite_memory.cost_model import \
     SimpleCostModel as IM_SimpleCostModel
-from tnco.optimize.prob import BaseProbability, Greedy, MetropolisHastings
-from tnco.testing.utils import generate_random_inds, generate_random_tensors
+from tnco.optimize.prob import BaseProbability
+from tnco.optimize.prob import Greedy
+from tnco.optimize.prob import MetropolisHastings
+from tnco.testing.utils import generate_random_inds
+from tnco.testing.utils import generate_random_tensors
 from tnco.utils.tn import get_random_contraction_path
 
 # Initialize RNG

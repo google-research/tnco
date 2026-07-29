@@ -13,18 +13,20 @@
 # limitations under the License.
 """Tensor Network definitions for the application."""
 
+from collections import Counter
+from dataclasses import dataclass
 import itertools as its
 import json
 import operator as op
-from collections import Counter
-from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple
 
 import autoray as ar
 import more_itertools as mit
 
-from tnco.typing import Array, Index, Matrix
+from tnco.typing import Array
+from tnco.typing import Index
+from tnco.typing import Matrix
 
 __all__ = ['Tensor', 'TensorNetwork']
 

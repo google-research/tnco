@@ -13,18 +13,18 @@
 # limitations under the License.
 """Simulated Annealing Optimizer for Finite Width."""
 
+from dataclasses import dataclass
 import functools as fts
 import json
 import operator as op
-from dataclasses import dataclass
 from sys import stderr
 from time import perf_counter
 from typing import Any, FrozenSet, Iterable, List, Optional, Tuple, Union
 
 import more_itertools as mit
 
-import tnco.utils.tn as tn_utils
-from tnco.app.app import BaseContractionResults, BaseOptimizer
+from tnco.app.app import BaseContractionResults
+from tnco.app.app import BaseOptimizer
 from tnco.app.app import JSONEncoder as BaseJSONEncoder
 from tnco.ctree import ContractionTree
 from tnco.optimize.finite_width import Optimizer as OptimizerImpl
@@ -32,6 +32,7 @@ from tnco.optimize.finite_width.cost_model import SimpleCostModel
 from tnco.optimize.prob import MetropolisHastings
 from tnco.parallel import Parallel
 from tnco.typing import Index
+import tnco.utils.tn as tn_utils
 
 
 class JSONEncoder(BaseJSONEncoder):

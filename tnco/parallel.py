@@ -15,15 +15,21 @@
 
 import itertools as its
 from multiprocessing.shared_memory import SharedMemory
-from struct import calcsize, pack_into, unpack_from
-from threading import TIMEOUT_MAX, Thread, Timer
+from struct import calcsize
+from struct import pack_into
+from struct import unpack_from
+from threading import Thread
+from threading import TIMEOUT_MAX
+from threading import Timer
 from time import sleep
 from typing import Any, Callable, Iterable, Optional, Tuple, Union
 from warnings import warn
 
 import more_itertools as mit
 from rich.console import Console
-from rich.progress import Progress, TextColumn, TimeElapsedColumn
+from rich.progress import Progress
+from rich.progress import TextColumn
+from rich.progress import TimeElapsedColumn
 
 __all__ = ['Buffer', 'Parallel']
 
@@ -187,7 +193,9 @@ def Parallel(core: Callable[..., Any],
         use_joblib = False
     else:
         try:
-            from joblib import Parallel, delayed, parallel_config
+            from joblib import delayed
+            from joblib import Parallel
+            from joblib import parallel_config
             use_joblib = True
         except ImportError:
             warn("Cannot load 'joblib'. Falling to sequential.")
