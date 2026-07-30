@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import Counter
 from decimal import Decimal
 import itertools as its
 from os import environ
@@ -30,6 +29,7 @@ from tnco.optimize.infinite_memory.cost_model import \
     SimpleCostModel as IM_SimpleCostModel
 from tnco.optimize.prob import MetropolisHastings
 from tnco.testing.utils import generate_random_tensors
+from tnco.utils.tn import get_hyper_count
 from tnco.utils.tn import get_random_contraction_path
 
 # Initialize RNG
@@ -130,9 +130,7 @@ def test_InfiniteMemoryContraction(random_seed, **kwargs):
         opt.update(mh)
 
     # Get hyper-count
-    hyper_count = dict(
-        its.starmap(lambda x, n: (x, n - 1),
-                    Counter(mit.flatten(ts_inds)).items()))
+    hyper_count = get_hyper_count(ts_inds)
 
     # Copy the inds
     ts_inds_ = ts_inds[:]
@@ -294,9 +292,7 @@ def test_FiniteWidthContraction(random_seed, **kwargs):
         assert not opt.min_slices & opt.skip_slices
 
     # Get hyper-count
-    hyper_count = dict(
-        its.starmap(lambda x, n: (x, n - 1),
-                    Counter(mit.flatten(ts_inds)).items()))
+    hyper_count = get_hyper_count(ts_inds)
 
     # Copy the inds
     ts_inds_ = ts_inds[:]

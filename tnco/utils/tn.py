@@ -39,7 +39,7 @@ import tnco.utils.tensor as tensor_utils
 __all__ = [
     'get_random_contraction_path', 'get_symbol', 'get_einsum_subscripts',
     'read_inds', 'fuse', 'decompose_hyper_inds', 'merge_contraction_paths',
-    'split_contraction_path', 'contract'
+    'split_contraction_path', 'contract', 'get_hyper_count'
 ]
 
 
@@ -591,6 +591,32 @@ def read_inds(
                         tensor_map.values()))), dims, output_inds, sparse_inds
 
 
+def get_hyper_count(
+        ts_inds: Iterable[Iterable[Index]],
+        output_inds: Optional[Iterable[Index]] = None) -> Dict[Index, int]:
+    """Computes the hyper-count for each index in a tensor network.
+
+    The hyper-count of an index is defined as the number of times it is
+    contracted (the number of tensors it appears in minus one), plus one
+    if it is also an output index.
+
+    Args:
+        ts_inds: List of indices for each tensor.
+        output_inds: Optional collection of output indices. If provided, the
+            count for each output index is incremented by 1.
+
+    Returns:
+        A dictionary mapping each index to its hyper-count.
+    """
+    hyper_count = dict(
+        its.starmap(lambda x, n: (x, n - 1),
+                    Counter(mit.flatten(ts_inds)).items()))
+    if output_inds is not None:
+        for x_ in output_inds:
+            hyper_count[x_] = hyper_count.get(x_, 0) + 1
+    return hyper_count
+
+
 def fuse(
     ts_inds: Iterable[List[Index]],
     dims: Union[int, Dict[Index, int]],
@@ -662,9 +688,7 @@ def fuse(
         return sum(map(math.log2, map(dims.get, xs)))
 
     # Get hyper-count
-    hyper_count = dict(
-        its.starmap(lambda x, n: (x, n - 1),
-                    Counter(mit.flatten(ts_inds.values())).items()))
+    hyper_count = get_hyper_count(ts_inds.values())
 
     if output_inds is None:
         # Raise an error if there are hyper-inds but output_inds has not been
@@ -988,9 +1012,7 @@ def contract(
                 raise ValueError("'dims' and 'arrays' are not compatible.")
 
     # Get hyper-count
-    hyper_count = dict(
-        its.starmap(lambda x, n: (x, n - 1),
-                    Counter(mit.flatten(ts_inds)).items()))
+    hyper_count = get_hyper_count(ts_inds)
 
     if output_inds is None:
         # Raise an error if there are hyper-inds but output_inds has not been
