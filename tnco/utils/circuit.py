@@ -317,9 +317,7 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
         raise NotImplementedError("State not supported.")
 
     def get_delta(n: int):
-        """
-        Return a Kronecker delta of n-dimensions.
-        """
+        """Return a Kronecker delta of n-dimensions."""
         return ar.do('concatenate', [
             ar.do('ones', 1, dtype=dtype, like=backend),
             ar.do('zeros', 2**n - 2, dtype=dtype, like=backend),

@@ -147,7 +147,6 @@ class SimpleCostModel(BaseCostModel):
         Raises:
             ValueError: The arguments are not consistent with each other.
         """
-
         # Convert to tuple
         inds_in1 = tuple(inds_in1)
         inds_in2 = tuple(inds_in2)

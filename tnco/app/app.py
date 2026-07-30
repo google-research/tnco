@@ -72,6 +72,7 @@ class BaseContractionResults:
         path: A path in linear (einsum) format with an expected cost of
             ``cost``.
     """
+
     cost: float
     runtime_s: float
     path: List[Tuple[int, int]]
@@ -118,10 +119,7 @@ def load_file(filename: str) -> Any:
             "'{}' does not exist or is not a file.".format(filename))
 
     def load(binary):
-        """
-        Process binary recursively.
-        """
-
+        """Process binary recursively."""
         # Is gzip?
         if binary[:2] == b'\x1f\x8b':
             return load(gzip.decompress(binary))
@@ -749,6 +747,7 @@ class BaseOptimizer:
         seed: Seed to use.
         verbose: If ``True``, prints verbose output.
     """
+
     max_width: Optional[float] = None
     n_jobs: int = -1
     width_type: str = 'float32'

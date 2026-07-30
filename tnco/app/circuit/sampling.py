@@ -76,9 +76,8 @@ def is_classical_operation(m: Matrix) -> bool:
 
 @dataclass(init=False, eq=False, repr=False, frozen=True)
 class SamplingIntermediateState:
-    """
-    Store the intermediate state of the sampling routine.
-    """
+    """Store the intermediate state of the sampling routine."""
+
     data = Tuple[Union[Tuple[TensorNetwork, BaseContractionResults, Array,
                              Tuple[Qubit], Tuple[Qubit]],
                        Tuple[None, None, Array, None, Tuple[Qubit]]], ...]
@@ -449,6 +448,7 @@ class Sampler:
         seed: Seed to use.
         verbose: Verbose output.
     """
+
     max_width: Optional[float] = None
     n_jobs: int = -1
     width_type: str = 'float32'
@@ -533,7 +533,6 @@ class Sampler:
             ``normalize=False``, the number of hits is returned instead of its
             fraction.
         """
-
         return sample(
             circuit,
             optimizer=self._optimizer,

@@ -55,6 +55,7 @@ CLANG_FORMAT_VERSION=$(get_version clang-format)
 YAPF_VERSION=$(get_version yapf)
 ISORT_VERSION=$(get_version isort)
 RUFF_VERSION=$(get_version ruff)
+DOCFORMATTER_VERSION=$(get_version docformatter)
 
 FAILED="\033[91m[FAILED]\033[0m"
 OK="\033[92m[  OK  ]\033[0m"
@@ -65,7 +66,8 @@ if [[ -n ${CONFIG} ]]; then
   echo clang-format==${CLANG_FORMAT_VERSION} \
                yapf==${YAPF_VERSION} \
               isort==${ISORT_VERSION} \
-               ruff==${RUFF_VERSION}
+               ruff==${RUFF_VERSION} \
+        docformatter==${DOCFORMATTER_VERSION}
   exit 0
 fi
 
@@ -98,6 +100,14 @@ RUFF_VER_CHK=$(ruff --version 2>/dev/null | \
   awk "{ print (\$2 == \"${RUFF_VERSION}\") }")
 if [[ ${RUFF_VER_CHK} != 1 ]]; then
   echo "ruff==${RUFF_VERSION} is required" >&2
+  exit 1
+fi
+
+# Check docformatter version
+DOCFORMATTER_VER_CHK=$(docformatter --version 2>/dev/null | \
+  awk "{ print (\$2 == \"${DOCFORMATTER_VERSION}\") }")
+if [[ ${DOCFORMATTER_VER_CHK} != 1 ]]; then
+  echo "docformatter==${DOCFORMATTER_VERSION} is required" >&2
   exit 1
 fi
 
@@ -144,12 +154,24 @@ ISORT_CMD='isort'
 ISORT_FAILED=$(echo -n ${PYTHON_FILES} | tr ' ' '\n' | parallel "
   if [[ \$(${ISORT_CMD} -c {} 2>&1 | wc -l) -gt 0 ]];
    then
-     echo -ne \"${WARNING} \" >&2;
+     echo -ne \"${FAILED} \" >&2;
      echo {};
    else
      echo -ne \"${OK} \" >&2;
    fi;
    echo \"(isort)\" {} >&2" | tr '\n' ' ')
+
+# Check docstrings
+DOCFORMATTER_CMD='docformatter'
+DOCFORMATTER_FAILED=$(echo -n ${PYTHON_FILES} | tr ' ' '\n' | grep -v '^tests/' | parallel "
+  if [[ \$(${DOCFORMATTER_CMD} -c {} 2>&1 | wc -l) -gt 0 ]];
+   then
+     echo -ne \"${FAILED} \" >&2;
+     echo {};
+   else
+     echo -ne \"${OK} \" >&2;
+   fi;
+   echo \"(docformatter)\" {} >&2" | tr '\n' ' ')
 
 # Check for files with rows too long
 LONG_ROWS=$(git ls-files | grep -E '\.(cpp|hpp|py)$' | \
@@ -203,8 +225,13 @@ if [[ -n "${YAPF_FAILED}" ]]; then
 fi
 
 if [[ -n "${ISORT_FAILED}" ]]; then
-  echo -e "${WARNING} Imports in some Python files are out of order." \
+  echo -e "${FAILED} Imports in some Python files are out of order." \
           "Run:\n\n          ${ISORT_CMD} --overwrite-in-place ${ISORT_FAILED}\n" >&2
+fi
+
+if [[ -n "${DOCFORMATTER_FAILED}" ]]; then
+  echo -e "${FAILED} Docstrings in some Python files are not properly formatted." \
+          "Run:\n\n          ${DOCFORMATTER_CMD} -i ${DOCFORMATTER_FAILED}\n" >&2
 fi
 
 # Try to fix the errors
@@ -221,6 +248,10 @@ if [[ -n ${FIX} ]]; then
     echo -en "\033[92m[FIXING]\033[0m isort: ${ISORT_FAILED}\n"
     ${ISORT_CMD} ${ISORT_FAILED}
   fi
+  if [[ -n "${DOCFORMATTER_FAILED}" ]]; then
+    echo -en "\033[92m[FIXING]\033[0m docformatter: ${DOCFORMATTER_FAILED}\n"
+    ${DOCFORMATTER_CMD} -i ${DOCFORMATTER_FAILED}
+  fi
   if [[ "${LINTING_FAILED}" -gt 0 ]]; then
     echo -en "\033[92m[FIXING]\033[0m Ruff\n"
     ruff check tnco/ tests/ --fix
@@ -232,6 +263,7 @@ fi
 if [[ -n "${CLANG_FORMAT_FAILED}" || \
       -n "${YAPF_FAILED}" || \
       -n "${ISORT_FAILED}" || \
+      -n "${DOCFORMATTER_FAILED}" || \
       -n "${TRAIL_FAILED}" || \
       "${LINTING_FAILED}" -gt 0 ]]; then
   exit 1
