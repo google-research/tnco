@@ -1285,6 +1285,9 @@ def test_Fuse(random_seed, **kwargs):
     if max(map(len, ts_inds)) > 32:
         pytest.skip("Too many indices")
 
+    if len(set(mit.flatten(ts_inds))) > 52:
+        pytest.skip("Too many total indices for einsum backend")
+
     # Set max weight
     max_width = kwargs.get(
         'max_width',
