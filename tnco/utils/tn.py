@@ -43,6 +43,54 @@ __all__ = [
 ]
 
 
+def get_connected_components(ts_inds: Iterable[List[Index]],
+                             verbose: int = 0) -> List[List[int]]:
+    ts_inds_list = list(ts_inds)
+    num_tensors = len(ts_inds_list)
+
+    parent = list(range(num_tensors))
+    rank = [0] * num_tensors
+
+    def find(i):
+        if parent[i] != i:
+            parent[i] = find(parent[i])
+        return parent[i]
+
+    def union(i, j):
+        root_i = find(i)
+        root_j = find(j)
+        if root_i != root_j:
+            if rank[root_i] < rank[root_j]:
+                parent[root_i] = root_j
+            elif rank[root_i] > rank[root_j]:
+                parent[root_j] = root_i
+            else:
+                parent[root_j] = root_i
+                rank[root_i] += 1
+
+    index_to_tensor = {}
+
+    for tensor_id, inds in track(enumerate(ts_inds_list),
+                                 description="Finding CC...",
+                                 total=num_tensors,
+                                 console=Console(stderr=True),
+                                 disable=(verbose <= 0)):
+        for index_name in inds:
+            if index_name in index_to_tensor:
+                union(tensor_id, index_to_tensor[index_name])
+            else:
+                index_to_tensor[index_name] = tensor_id
+
+    components = {}
+    for tensor_id in range(num_tensors):
+        root = find(tensor_id)
+        if root not in components:
+            components[root] = []
+        components[root].append(tensor_id)
+
+    return list(map(tuple, map(sorted, components.values())))
+
+
 def get_random_contraction_path(
         ts_inds: Iterable[List[Index]],
         output_inds: Optional[Iterable[Index]] = None,
@@ -121,22 +169,22 @@ def get_random_contraction_path(
                 map(lambda xs: len(xs) - 1, index2tensors.values()))))
 
     # Split indices in connected components
-    color2inds = dict(map(lambda x: (x, frozenset([x])), range(len(inds_map))))
-    index2color = dict(enumerate(range(len(inds_map))))
-    for xs in track(ts_inds,
-                    description="Getting connected components ...",
-                    disable=(verbose <= 0),
-                    console=Console(stderr=True)):
-        if len(xs):
-            # Get all colors
-            colors = frozenset(map(index2color.get, xs))
+    with Progress(disable=(verbose <= 0),
+                  transient=True,
+                  console=Console(stderr=True)) as progress:
 
-            # Get all inds
-            xs = fts.reduce(op.or_, map(color2inds.get, colors))
+        num_inds = len(inds_map)
+        index_to_tensors = [[] for _ in range(num_inds)]
 
-            # Update colors
-            color2inds[mit.first(colors)] = xs
-            index2color.update(zip(xs, its.repeat(mit.first(colors))))
+        task = progress.add_task("Getting connected components ...",
+                                 total=len(ts_inds))
+        for t_id, xs in enumerate(ts_inds):
+            for x in xs:
+                index_to_tensors[x].append(t_id)
+            progress.advance(task)
+
+        avail_inds_cc = list(
+            map(list, get_connected_components(index_to_tensors)))
 
     # Initialize paths
     paths = []
@@ -144,10 +192,6 @@ def get_random_contraction_path(
     # Swap location of two elements in an array
     def swap(a, x, y):
         a[x], a[y] = a[y], a[x]
-
-    # Split the available indices in connected components
-    avail_inds_cc = mit.map_reduce(index2color.items(), op.itemgetter(1),
-                                   op.itemgetter(0)).values()
 
     # For each connected components ...
     for i, avail_inds in enumerate(avail_inds_cc):
@@ -416,37 +460,34 @@ def split_contraction_path(
 
     # Initialize tensors
     tensors = list(range(n_tensors))
-    tensor2color = dict(zip(range(n_tensors), range(n_tensors)))
-    color2tensors = dict((i, frozenset([i])) for i in range(n_tensors))
+    connectivity = [[] for _ in range(n_tensors + len(path) + 1)]
 
     # For each contraction ...
     n_intermediate_tensors = n_tensors
-    for x, y in track(map(sorted, path),
-                      total=len(path),
-                      description="Getting connected components...",
-                      disable=verbose <= 0,
-                      console=Console(stderr=True)):
+    for i, (x, y) in enumerate(
+            track(map(sorted, path),
+                  total=len(path),
+                  description="Getting connected components...",
+                  disable=verbose <= 0,
+                  console=Console(stderr=True))):
         # Increase number of intermediate tensors
         n_intermediate_tensors += 1
 
-        # Get colors
-        c_y = tensor2color[tensors.pop(y)]
-        c_x = tensor2color[tensors.pop(x)]
+        t_y = tensors.pop(y)
+        t_x = tensors.pop(x)
 
-        # Select color
-        c_z = min(c_x, c_y)
-
-        # Update exising colors
-        color2tensors[c_z] = color2tensors.pop(c_x) | color2tensors.pop(c_y) | {
-            n_intermediate_tensors
-        }
-        tensor2color.update(zip(color2tensors[c_z], its.repeat(c_z)))
+        connectivity[t_x].append(i)
+        connectivity[t_y].append(i)
+        connectivity[n_intermediate_tensors].append(i)
 
         # Update list of tensors
         tensors.append(n_intermediate_tensors)
 
     # Split all the intermediate tensors in connected components
-    cc = list(color2tensors.values())
+    cc = [
+        c for c in get_connected_components(connectivity)
+        if list(c) != [n_tensors]
+    ]
 
     # Let's create the list of tensors and disconnected paths
     tensors = list(range(n_tensors))

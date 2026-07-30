@@ -44,12 +44,14 @@ from tnco.optimize.prob import MetropolisHastings
 from tnco.ordered_frozenset import OrderedFrozenSet
 from tnco.testing.utils import generate_random_inds
 from tnco.testing.utils import generate_random_tensors
-from tnco.testing.utils import get_connected_components
+from tnco.testing.utils import \
+    get_connected_components as check_get_connected_components
 from tnco.testing.utils import is_valid_contraction_tree
 import tnco.utils.tensor as tensor_utils
 from tnco.utils.tn import contract
 from tnco.utils.tn import decompose_hyper_inds as tn_decompose_hyper_inds
 from tnco.utils.tn import fuse
+from tnco.utils.tn import get_connected_components
 from tnco.utils.tn import get_einsum_subscripts
 from tnco.utils.tn import get_random_contraction_path
 from tnco.utils.tn import merge_contraction_paths
@@ -2024,3 +2026,59 @@ def test_TensorDot(random_seed):
     assert tensor_utils.tensordot((None, xs), (None, ys),
                                   hyper_inds=hyper_inds,
                                   return_inds_only=True) == zs
+
+
+@repeat(20)
+def test_GetConnectedComponents(random_seed: int, **kwargs):
+    # Initialize RNG
+    rng = Random(random_seed)
+
+    # Initialize variables for relatively large tensor networks
+    n_tensors = kwargs.get('n_tensors', rng.randint(100, 200))
+    n_inds = kwargs.get('n_inds', rng.randint(200, 1000))
+    k = kwargs.get('k', rng.randint(2, 5))
+    n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 100))
+    n_cc = kwargs.get('n_cc', rng.randint(1, 5))
+    randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
+    verbose = kwargs.get('verbose', False)
+
+    # Generate random tensors
+    try:
+        ts_inds, _ = generate_random_tensors(n_tensors,
+                                             n_inds,
+                                             k,
+                                             n_output_inds=n_output_inds,
+                                             n_cc=n_cc,
+                                             randomize_names=randomize_names,
+                                             seed=random_seed)
+    except ValueError as e:
+        if str(e) == "Too few indices.":
+            pytest.skip(str(e))
+        raise e
+
+    # Get connected components of indices using tnco.utils.tn
+    cc_actual = get_connected_components(ts_inds, verbose=verbose)
+
+    # Check number of connected components matches generated n_cc
+    assert len(cc_actual) == n_cc
+    assert all(isinstance(c, tuple) and sorted(c) == list(c) for c in cc_actual)
+
+    # No overlap
+    assert all(not frozenset(cc_actual[i]) & frozenset(cc_actual[j])
+               for i in range(n_cc)
+               for j in range(n_cc)
+               if i != j)
+
+    # Get connected components of tensor positions using tnco.testing.utils
+    cc_expected = check_get_connected_components(ts_inds, verbose=verbose)
+    assert len(cc_expected) == n_cc
+
+    # There should be a one-to-one mapping
+    assert all(
+        sum(frozenset(cc_x) == frozenset(cc_y)
+            for cc_y in cc_expected) == 1
+        for cc_x in cc_actual)
+
+    # Verify determinism: calling twice with the same input yields identical
+    # ordering
+    assert cc_actual == get_connected_components(ts_inds, verbose=verbose)
