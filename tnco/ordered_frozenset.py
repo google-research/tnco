@@ -79,7 +79,6 @@ class OrderedFrozenSet:
             A new ``OrderedFrozenSet`` with elements in this set that are not
             in ``other``.
         """
-
         if not isinstance(other, OrderedFrozenSet):
             other = OrderedFrozenSet(other)
         return OrderedFrozenSet(
@@ -97,7 +96,6 @@ class OrderedFrozenSet:
             A new ``OrderedFrozenSet`` with elements common to this set and
             ``other``.
         """
-
         if not isinstance(other, OrderedFrozenSet):
             other = OrderedFrozenSet(other)
         return OrderedFrozenSet(filter(lambda x: x in other._set, self._order))
@@ -113,7 +111,6 @@ class OrderedFrozenSet:
         Returns:
             ``True`` if there are no shared elements, ``False`` otherwise.
         """
-
         return self._set.isdisjoint(other)
 
     def issubset(self, other: Iterable) -> bool:
@@ -127,7 +124,6 @@ class OrderedFrozenSet:
         Returns:
             ``True`` if this set is a subset of ``other``, ``False`` otherwise.
         """
-
         return self._set.issubset(other)
 
     def issuperset(self, other: Iterable) -> bool:
@@ -156,7 +152,6 @@ class OrderedFrozenSet:
             A new ``OrderedFrozenSet`` with elements in either this set or
             ``other`` but not both.
         """
-
         if not isinstance(other, OrderedFrozenSet):
             other = OrderedFrozenSet(other)
         sd = self._set.symmetric_difference(other._set)
@@ -174,7 +169,6 @@ class OrderedFrozenSet:
         Returns:
             A new ``OrderedFrozenSet`` with elements from both sets.
         """
-
         if not isinstance(other, OrderedFrozenSet):
             other = OrderedFrozenSet(other)
         return OrderedFrozenSet(chain(self._order, other._order))

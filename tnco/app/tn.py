@@ -48,7 +48,6 @@ class JSONEncoder(json.JSONEncoder):
         Returns:
             Encoded object in the JSON format.
         """
-
         if isinstance(obj, complex):
             return '{} + {}j'.format(obj.real, obj.imag)
         if isinstance(obj, frozenset):
@@ -171,7 +170,6 @@ class Tensor:
         Returns:
             The tensor in JSON format.
         """
-
         return json.dumps(self, cls=JSONEncoder)
 
 

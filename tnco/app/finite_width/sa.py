@@ -87,6 +87,7 @@ class ContractionResults(BaseContractionResults):
         slices: The set of indices to slice to fit the entire contraction given
             by ``path`` within the given width.
     """
+
     disconnected_costs: List[float]
     disconnected_paths: List[List[Tuple[int, int]]]
     disconnected_slices: List[FrozenSet[Index]]
@@ -106,8 +107,8 @@ class ContractionResults(BaseContractionResults):
 class Optimizer(BaseOptimizer):
     """Optimizes a tensor network using simulated annealing (finite width).
 
-    Optimize the tensor network using simulated annealing and enforcing a
-    finite width for the tensors.
+    Optimize the tensor network using simulated annealing and enforcing
+    a finite width for the tensors.
     """
 
     def optimize(self,

@@ -73,6 +73,7 @@ class ContractionResults(BaseContractionResults):
             is run independently using all the tensors in the original tensor
             network.
     """
+
     disconnected_costs: List[float]
     disconnected_paths: List[List[Tuple[int, int]]]
 
@@ -90,8 +91,8 @@ class ContractionResults(BaseContractionResults):
 class Optimizer(BaseOptimizer):
     """Optimizes a tensor network using simulated annealing (infinite memory).
 
-    Optimize the tensor network using simulated annealing and assuming infinite
-    memory.
+    Optimize the tensor network using simulated annealing and assuming
+    infinite memory.
     """
 
     def optimize(self,

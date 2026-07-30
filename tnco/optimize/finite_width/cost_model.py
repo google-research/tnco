@@ -190,7 +190,6 @@ class SimpleCostModel(BaseCostModel):
         Returns:
             The width of the tensor.
         """
-
         # Convert to tuple
         inds = tuple(inds)
 
@@ -236,7 +235,6 @@ class SimpleCostModel(BaseCostModel):
         Returns:
             The maximum width of the tensor network.
         """
-
         # Convert iterator
         ts_inds = list(ts_inds)
 
@@ -285,7 +283,6 @@ class SimpleCostModel(BaseCostModel):
         Returns:
             The difference in width.
         """
-
         # Convert to tuple
         inds = tuple(inds)
 
@@ -346,7 +343,6 @@ class SimpleCostModel(BaseCostModel):
         Raises:
             ValueError: The arguments are not consistent with each other.
         """
-
         # Convert to tuple
         inds_in1 = tuple(inds_in1)
         inds_in2 = tuple(inds_in2)

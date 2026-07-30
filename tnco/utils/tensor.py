@@ -87,7 +87,6 @@ def decompose_hyper_inds(
     Raises:
         ValueError: If arguments are inconsistent.
     """
-
     # Get cache
     _hyper_inds = kwargs.pop('_hyper_inds', None)
     if kwargs:

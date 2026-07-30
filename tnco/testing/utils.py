@@ -221,7 +221,7 @@ def generate_random_tensors(
     rng = Random(seed)
 
     # Number of hyper/non-hyper output_inds
-    n_hyper_output_inds = 0 if k <= 2 else \
+    n_hyper_output_inds = 0 if k <= 2 else\
                             n_output_inds // 2 + n_output_inds % 2
     n_nhyper_output_inds = n_output_inds if k <= 2 else n_output_inds // 2
     assert (n_hyper_output_inds + n_nhyper_output_inds) == n_output_inds

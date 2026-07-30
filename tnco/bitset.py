@@ -22,8 +22,7 @@ __all__ = ['Bitset']
 
 
 class Bitset(Bitset_):
-    """
-    Compact representation of bits.
+    """Compact representation of bits.
 
     Args:
         bits: Either a string representing the bits or a list of positions of
