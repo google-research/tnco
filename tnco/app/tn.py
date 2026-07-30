@@ -13,7 +13,6 @@
 # limitations under the License.
 """Tensor Network definitions for the application."""
 
-from collections import Counter
 from dataclasses import dataclass
 import itertools as its
 import json
@@ -27,6 +26,7 @@ import more_itertools as mit
 from tnco.typing import Array
 from tnco.typing import Index
 from tnco.typing import Matrix
+from tnco.utils.tn import get_hyper_count
 
 __all__ = ['Tensor', 'TensorNetwork']
 
@@ -235,9 +235,7 @@ class TensorNetwork:
             raise ValueError("Dimensions of 'tensors' are not consistent.")
 
         # Get hyper-count
-        hyper_count = dict(
-            its.starmap(lambda x, n: (x, n - 1),
-                        Counter(mit.flatten(self.ts_inds)).items()))
+        hyper_count = get_hyper_count(self.ts_inds)
 
         if self.output_inds is None:
             # Raise an error if there are hyper-inds but output_inds has not

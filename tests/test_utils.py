@@ -53,6 +53,7 @@ from tnco.utils.tn import decompose_hyper_inds as tn_decompose_hyper_inds
 from tnco.utils.tn import fuse
 from tnco.utils.tn import get_connected_components
 from tnco.utils.tn import get_einsum_subscripts
+from tnco.utils.tn import get_hyper_count
 from tnco.utils.tn import get_random_contraction_path
 from tnco.utils.tn import merge_contraction_paths
 from tnco.utils.tn import read_inds
@@ -119,9 +120,7 @@ def test_GenerateRandomTensors(random_seed: int, **kwargs):
     assert isinstance(output_inds, frozenset)
 
     # Get hyper-count
-    hyper_count = dict(
-        its.starmap(lambda x, n: (x, n - 1),
-                    Counter(mit.flatten(ts_inds)).items()))
+    hyper_count = get_hyper_count(ts_inds)
 
     # All inds with a zero counter must be an output index
     assert frozenset(
@@ -242,13 +241,7 @@ def test_GetRandomContractionPath(random_seed: int, **kwargs):
     cc = get_connected_components(ts_inds)
 
     # Get hyper-count
-    hyper_count = dict(
-        its.starmap(lambda x, n: (x, n - 1),
-                    Counter(mit.flatten(ts_inds)).items()))
-
-    # Increment hyper-count for hyper-inds
-    for x_ in output_inds:
-        hyper_count[x_] += 1
+    hyper_count = get_hyper_count(ts_inds, output_inds=output_inds)
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
@@ -395,13 +388,7 @@ def test_GetRandomContractionTree(random_seed: int, **kwargs):
     all_inds = frozenset(mit.flatten(ts_inds))
 
     # Get hyper-count
-    hyper_count = dict(
-        its.starmap(lambda x, n: (x, n - 1),
-                    Counter(mit.flatten(ts_inds)).items()))
-
-    # Add one count for output inds
-    for x_ in output_inds:
-        hyper_count[x_] += 1
+    hyper_count = get_hyper_count(ts_inds, output_inds=output_inds)
 
     # Get contraction
     paths = get_random_contraction_path(ts_inds,
@@ -2082,3 +2069,80 @@ def test_GetConnectedComponents(random_seed: int, **kwargs):
     # Verify determinism: calling twice with the same input yields identical
     # ordering
     assert cc_actual == get_connected_components(ts_inds, verbose=verbose)
+
+
+@repeat(20)
+def test_get_hyper_count(random_seed: int, **kwargs):
+    # Initialize RNG
+    rng = Random(random_seed)
+
+    # Initialize variables
+    n_tensors = kwargs.get('n_tensors', rng.randint(10, 100))
+    n_inds = kwargs.get('n_inds', rng.randint(20, 200))
+    k = kwargs.get('k', rng.randint(2, 6))
+    n_output_inds = kwargs.get('n_output_inds', rng.randint(0, 30))
+    n_cc = kwargs.get('n_cc', rng.randint(1, 4))
+    randomize_names = kwargs.get('randomize_names', rng.choice([True, False]))
+
+    # Get random tensors
+    try:
+        ts_inds, output_inds = generate_random_tensors(
+            n_tensors,
+            n_inds,
+            k,
+            n_output_inds=n_output_inds,
+            n_cc=n_cc,
+            randomize_names=randomize_names,
+            seed=random_seed)
+    except ValueError as e:
+        if str(e) == "Too few indices.":
+            pytest.skip(str(e))
+        raise e
+
+    # Compute contraction-only hyper count
+    hc_no_out = get_hyper_count(ts_inds)
+
+    # All indices in ts_inds must be present in hc_no_out
+    all_inds = frozenset(mit.flatten(ts_inds))
+    assert frozenset(hc_no_out.keys()) == all_inds
+
+    # Verify non-negativity and domain
+    assert all(c >= 0 for c in hc_no_out.values())
+
+    # Verify maximum contraction count is bounded by k minus 1
+    assert all(c <= k - 1 for c in hc_no_out.values())
+
+    # Verify contraction count formula
+    tensor_counts = Counter(mit.flatten(ts_inds))
+    for idx, count in hc_no_out.items():
+        assert count == tensor_counts[idx] - 1
+
+    # Verify edge and degree sum invariant
+    assert sum(hc_no_out.values()) == sum(map(len, ts_inds)) - len(all_inds)
+
+    # Verify hyper-index and uncontracted index identification
+    for idx, count in hc_no_out.items():
+        if tensor_counts[idx] == 1:
+            assert count == 0
+        if tensor_counts[idx] > 2:
+            assert count > 1
+
+    # Verify effect of output_inds increment
+    hc_with_out = get_hyper_count(ts_inds, output_inds=output_inds)
+    assert frozenset(hc_with_out.keys()) == all_inds | frozenset(output_inds)
+    for idx, count in hc_with_out.items():
+        expected_count = hc_no_out.get(idx,
+                                       0) + (1 if idx in output_inds else 0)
+        assert count == expected_count
+
+    # Verify each hyper-count cannot be larger than k
+    assert all(c <= k for c in hc_with_out.values())
+
+    # Verify index with count k is an output index in k tensors
+    for idx, count in hc_with_out.items():
+        if count == k and k > 0:
+            assert idx in output_inds
+            assert hc_no_out.get(idx, 0) == k - 1
+
+    # Verify determinism
+    assert hc_with_out == get_hyper_count(ts_inds, output_inds=output_inds)

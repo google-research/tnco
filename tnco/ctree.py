@@ -13,7 +13,6 @@
 # limitations under the License.
 """Contraction Tree."""
 
-from collections import Counter
 import functools as fts
 import itertools as its
 import math
@@ -32,6 +31,7 @@ from tnco_core.utils import get_contraction
 from tnco_core.utils import traverse
 
 from tnco.typing import Index
+from tnco.utils.tn import get_hyper_count
 
 __all__ = ['ContractionTree', 'traverse_tree']
 
@@ -134,12 +134,8 @@ class ContractionTree(_ContractionTree):
                     mit.flatten(map(lambda x: ts_inds[x], self._tensors_pos))))
 
             # Get hyper-count
-            hyper_count = dict(
-                its.starmap(
-                    lambda x, n: (x, n - 1),
-                    Counter(
-                        mit.flatten(map(lambda x: ts_inds[x],
-                                        self._tensors_pos))).items()))
+            hyper_count = get_hyper_count(
+                map(lambda x: ts_inds[x], self._tensors_pos))
 
             # Get output inds
             if output_inds is None:
