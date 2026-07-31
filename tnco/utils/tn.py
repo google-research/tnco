@@ -22,10 +22,10 @@ import math
 import operator as op
 from random import Random
 from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
-from warnings import warn
 
 import autoray as ar
 import more_itertools as mit
+import opt_einsum as oe
 from rich.console import Console
 from rich.progress import Progress
 from rich.progress import track
@@ -41,6 +41,21 @@ __all__ = [
     'read_inds', 'fuse', 'decompose_hyper_inds', 'merge_contraction_paths',
     'split_contraction_path', 'contract', 'get_hyper_count'
 ]
+
+
+class GreedyProgress(oe.paths.PathOptimizer):
+    """PathOptimizer wrapper supporting a candidate chooser progress
+    callback."""
+
+    def __init__(self, choose_fn):
+        self.choose_fn = choose_fn
+
+    def __call__(self, inputs, output, size_dict, memory_limit=None):
+        return oe.paths.greedy(inputs,
+                               output,
+                               size_dict,
+                               memory_limit=memory_limit,
+                               choose_fn=self.choose_fn)
 
 
 def get_connected_components(ts_inds: Iterable[List[Index]],
@@ -93,7 +108,7 @@ def get_connected_components(ts_inds: Iterable[List[Index]],
 
 def get_random_contraction_path(
         ts_inds: Iterable[List[Index]],
-        output_inds: Optional[Iterable[Index]] = None,
+        output_inds: Iterable[Index],
         *,
         merge_paths: bool = True,
         autocomplete: bool = True,
@@ -106,7 +121,7 @@ def get_random_contraction_path(
 
     Args:
         ts_inds: List of indices for each tensor.
-        output_inds: (Deprecated) List of output indices.
+        output_inds: List of output indices.
         merge_paths: If ``True``, merges all paths even if tensors are
             disconnected. If ``False``, returns separate paths for each
             connected component.
@@ -121,168 +136,127 @@ def get_random_contraction_path(
         component. It is guaranteed that only tensors that share at least one
         index are contracted in connected paths.
 
+    Notes:
+        Hyper-indices that are also output indices are removed from
+        ``output_inds`` before contraction to guarantee that only tensors
+        that share an index are contracted. In ``opt_einsum``'s greedy
+        algorithm, indices listed in ``output_inds`` are ignored as
+        structural contraction edges during its primary inner-product phase
+        (Phase 2). If a connecting hyper-index is left in ``output_inds``,
+        ``opt_einsum`` treats the connected tensors as fragmented and may
+        combine them via arbitrary size-based outer products in Phase 3.
+        Removing hyper-indices from ``output_inds`` ensures ``opt_einsum``
+        treats them as summed-over internal edges, guaranteeing that only
+        tensors sharing at least one index are paired.
+
     Examples:
         >>> from tnco.utils.tn import get_random_contraction_path
         >>> ts_inds = [['i', 'j'], ['j', 'k'], ['k', 'l']]
-        >>> get_random_contraction_path(ts_inds, seed=42)
+        >>> get_random_contraction_path(ts_inds, ['i', 'l'], seed=42)
         [(0, 1), (0, 1)]
     """
-    if output_inds is not None:
-        warn(
-            "'output_inds' is deprecated, "
-            "and it will be removed in version '0.2'.",
-            DeprecationWarning,
-            stacklevel=2)
-
-    # Extra args
     _return_contraction = kwargs.pop('_return_contraction', False)
     if kwargs:
         raise TypeError("Got an expected keyword argument(s).")
 
-    # Initialize random number generator
+    # Initialize random generator and tensor count
     rng = Random(seed)
-
-    # Convert to list
     ts_inds = list(ts_inds)
-
-    # Store the initial number of tensors
     n_tensors = len(ts_inds)
 
-    # First, let's map all indices to ints
-    inds_map = dict(zip(mit.unique_everseen(mit.flatten(ts_inds)), its.count()))
+    # Process output indices
+    output_inds_set = OrderedFrozenSet(output_inds)
 
-    # Remap inds
-    ts_inds = list(map(lambda xs: frozenset(map(inds_map.get, xs)), ts_inds))
+    # Filter connecting hyper-indices from output indices
+    hyper_count = get_hyper_count(ts_inds, output_inds=output_inds_set)
+    filtered_output_inds = OrderedFrozenSet(
+        x for x in output_inds_set if hyper_count.get(x, 0) <= 1)
 
-    # Get map index->tensors
-    index2tensors = mit.map_reduce(
-        mit.flatten(
-            its.starmap(lambda t, xs: zip(its.repeat(t), xs),
-                        enumerate(ts_inds))), op.itemgetter(1),
-        op.itemgetter(0))
+    # Partition tensors into connected components
+    avail_inds_cc = get_connected_components(ts_inds, verbose=verbose)
 
-    # Count how many times an index is contracted
-    hyper_count = dict(
-        filter(
-            op.itemgetter(1),
-            zip(index2tensors,
-                map(lambda xs: len(xs) - 1, index2tensors.values()))))
-
-    # Split indices in connected components
-    with Progress(disable=(verbose <= 0),
-                  transient=True,
-                  console=Console(stderr=True)) as progress:
-
-        num_inds = len(inds_map)
-        index_to_tensors = [[] for _ in range(num_inds)]
-
-        task = progress.add_task("Getting connected components ...",
-                                 total=len(ts_inds))
-        for t_id, xs in enumerate(ts_inds):
-            for x in xs:
-                index_to_tensors[x].append(t_id)
-            progress.advance(task)
-
-        avail_inds_cc = list(
-            map(list, get_connected_components(index_to_tensors)))
-
-    # Initialize paths
     paths = []
+    next_id = n_tensors
 
-    # Swap location of two elements in an array
-    def swap(a, x, y):
-        a[x], a[y] = a[y], a[x]
+    # Compute contraction paths for each connected component
+    for i, cc in track(
+            enumerate(avail_inds_cc),
+            description="Getting contraction paths ...",
+            total=len(avail_inds_cc),
+            disable=(verbose != 1),
+            console=Console(stderr=True),
+    ):
+        if len(cc) <= 1:
+            paths.append([])
+            continue
 
-    # For each connected components ...
-    for i, avail_inds in enumerate(avail_inds_cc):
-        # Initialize contracted tensors
-        contracted_tensors = set()
+        # Shuffle tensor ordering within component for randomized path finding
+        cc_list = list(cc)
+        rng.shuffle(cc_list)
 
-        # Initialize path
-        path = []
+        ts_inds_cc = [ts_inds[idx] for idx in cc_list]
+        output_inds_cc = filtered_output_inds.intersection(
+            mit.flatten(ts_inds_cc))
 
-        with Progress(disable=(verbose <= 0),
-                      console=Console(stderr=True)) as pbar:
+        subscripts = get_einsum_subscripts(ts_inds_cc, output_inds_cc)
+        shapes = [(2,) * len(xs) for xs in ts_inds_cc]
 
-            # Size of the progress bar
-            total_pbar = len(avail_inds)
+        # Optimize contraction path with optional progress bar tracking
+        with Progress(
+                console=Console(stderr=True),
+                disable=(verbose < 2 or len(ts_inds_cc) <= 1),
+        ) as progress:
+            if verbose >= 2 and len(ts_inds_cc) > 1:
+                task = progress.add_task(
+                    f"Greedy optimization ({i + 1}/{len(avail_inds_cc)}) ...",
+                    total=len(ts_inds_cc) - 1,
+                )
 
-            # Add progress bar
-            task = pbar.add_task("Getting contraction path ({}/{}) ...".format(
-                i + 1, len(avail_inds_cc)),
-                                 total=total_pbar)
+                def choose_fn_with_progress(queue, remaining):
+                    con = oe.paths._simple_chooser(queue, remaining)
+                    if con is not None:
+                        progress.advance(task, 1)
+                    return con
 
-            # While there are available indices
-            while avail_inds:
-                # Select a random index
-                swap(avail_inds, rng.randrange(len(avail_inds)), -1)
-                index = avail_inds[-1]
+                optimize = GreedyProgress(choose_fn_with_progress)
+            else:
+                optimize = 'greedy'
 
-                # If index has been already fully contracted, skip
-                if index not in hyper_count or len(index2tensors[index]) <= 1:
-                    avail_inds.pop()
-                    continue
+            linear_path_cc, _ = oe.contract_path(
+                subscripts,
+                *shapes,
+                shapes=True,
+                optimize=optimize,
+            )
 
-                # Get two random tensors
-                tx, ty = rng.sample(list(
-                    filter(lambda t: t not in contracted_tensors,
-                           index2tensors[index])),
-                                    k=2)
+        # Map local contraction steps to intermediate node identifiers
+        loc = list(cc_list)
+        path_cc = []
+        for px, py in linear_path_cc:
+            px, py = sorted((px, py))
+            ty = loc.pop(py)
+            tx = loc.pop(px)
+            tz = next_id
+            next_id += 1
+            loc.append(tz)
+            path_cc.append((tx, ty, tz))
+        paths.append(path_cc)
 
-                # Get indices
-                xs, ys = ts_inds[tx], ts_inds[ty]
-
-                # Get shared inds
-                shared = xs & ys
-
-                # They should always share an index
-                assert len(shared)
-
-                # Update hyper-count for each shared index
-                for x in shared:
-                    hyper_count[x] -= 1
-                    if hyper_count[x] == 0:
-                        del hyper_count[x]
-
-                # Get new set of indices
-                tz = len(ts_inds)
-                zs = (xs ^ ys).union(filter(lambda x: x in hyper_count, shared))
-
-                # Update inds
-                for x in zs:
-                    index2tensors[x].append(tz)
-
-                # Update tensors
-                contracted_tensors |= {tx, ty}
-                ts_inds.append(zs)
-
-                # Update path
-                path.append((tx, ty, tz))
-
-                # Update pbar
-                pbar.update(task, completed=total_pbar - len(avail_inds))
-
-            # Final update
-            pbar.update(task, completed=total_pbar, refresh=True)
-
-            # Append to all paths
-            paths.append(path)
-
-    # For testing only
     if _return_contraction:
         return paths
 
-    # Normalize paths
+    # Convert component contraction paths back to global linear einsum order
     linear_paths = []
     for i, path in enumerate(paths):
         linear_path = []
         loc = list(range(n_tensors))
         for x, y, z in track(
                 path,
-                description="Convert to linear (einsum) path ({}/{}) ...".
-                format(i + 1, len(paths)),
+                description=
+                f"Mapping to original tensor order ({i + 1}/{len(paths)}) ...",
                 disable=(verbose <= 1),
-                console=Console(stderr=True)):
+                console=Console(stderr=True),
+        ):
             px, py = sorted(map(lambda x: bisect_left(loc, x), (x, y)))
             loc.pop(py)
             loc.pop(px)
@@ -290,10 +264,13 @@ def get_random_contraction_path(
             linear_path.append((px, py))
         linear_paths.append(linear_path)
 
-    # Merge paths if needed
-    return merge_contraction_paths(
-        n_tensors, linear_paths, autocomplete=autocomplete, verbose=verbose -
-        1) if merge_paths else linear_paths
+    # Merge paths across components if requested
+    return (merge_contraction_paths(
+        n_tensors,
+        linear_paths,
+        autocomplete=autocomplete,
+        verbose=verbose - 1,
+    ) if merge_paths else linear_paths)
 
 
 def get_symbol(i: int) -> str:

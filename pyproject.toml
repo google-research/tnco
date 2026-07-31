@@ -22,7 +22,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "tnco"
 description = "Tensor Network Contraction Optimizer (TNCO)"
-version = "0.2.0"
+version = "0.3.2"
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [
@@ -48,6 +48,7 @@ dependencies = [
   "autoray",
   "fire",
   "more_itertools",
+  "opt_einsum",
   "pathvalidate",
   "rich"
 ]
@@ -67,7 +68,6 @@ formatting = [
 testing = [
   "cirq",
   "numpy",
-  "opt_einsum",
   "ply",
   "pytest",
   "pytest-repeat",
