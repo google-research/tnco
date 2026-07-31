@@ -24,7 +24,7 @@ name = "tnco"
 description = "Tensor Network Contraction Optimizer (TNCO)"
 version = "0.3.2"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
   { name = "Salvatore Mandra", email = "smandra@google.com" }
 ]
@@ -42,6 +42,10 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Mathematics",
   "Topic :: Scientific/Engineering :: Physics",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Operating System :: Unix",
 ]
 dependencies = [
@@ -97,3 +101,6 @@ style = "sphinx"
 
 [tool.ruff]
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "UP006", "UP007", "UP035", "UP045"]

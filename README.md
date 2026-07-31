@@ -7,8 +7,8 @@ A High-performance tensor network contraction path optimizer for C++ and Python.
 [![Licensed under the Apache 2.0
 license](https://img.shields.io/badge/License-Apache%202.0-3c60b1.svg?logo=opensourceinitiative&logoColor=white&style=flat-square)](https://github.com/quantumlib/qsim/blob/main/LICENSE)
 ![Compatible with C++17 and higher](https://img.shields.io/badge/C%2B%2B17-fcbc2c.svg?logo=c%2B%2B&logoColor=white&style=flat-square&label=C%2B%2B)
-[![Compatible with Python versions 3.8 and
-higher](https://img.shields.io/badge/Python-3.8+-fcbc2c.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)<br>
+[![Compatible with Python versions 3.10 and
+higher](https://img.shields.io/badge/Python-3.10+-fcbc2c.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)<br>
 [![run_tests](https://github.com/google-research/tnco/actions/workflows/run_tests.yml/badge.svg)](https://github.com/google-research/tnco/actions/workflows/run_tests.yml)
 [![cpp_linter](https://github.com/google-research/tnco/actions/workflows/cpp_linter.yml/badge.svg)](https://github.com/google-research/tnco/actions/workflows/cpp_linter.yml)
 [![codeql](https://github.com/google-research/tnco/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/google-research/tnco/actions/workflows/github-code-scanning/codeql)<br>
@@ -37,7 +37,7 @@ Before installing `TNCO`, you must have the following system-level dependencies:
 
 * C++17 compiler (`gcc >= 11`, `clang >= 13`)
 * CMake (`cmake >= 3.5`)
-* Python >= 3.8
+* Python >= 3.10
 * [boost::dynamic_bitset](https://github.com/boostorg/dynamic_bitset)
 * GMP and MPFR (optional, for `float1024`)
 
