@@ -30,7 +30,7 @@ namespace py = pybind11;
 using namespace py::literals;
 
 template <typename CostType>
-auto core(py::module &m) -> void {
+auto core(py::module& m) -> void {
   // Get suffix
   const std::string sfx = "_" + type_to_str<CostType>();
 
@@ -40,6 +40,6 @@ auto core(py::module &m) -> void {
   mh::init<CostType>(m, "MetropolisHastings" + sfx);
 }
 
-auto init(py::module &m) -> void { EXPAND_COST_TYPE(core, m); }
+auto init(py::module& m) -> void { EXPAND_COST_TYPE(core, m); }
 
 }  // namespace tnco::optimize::prob

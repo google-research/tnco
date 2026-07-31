@@ -51,9 +51,9 @@ struct Bitset : boost::dynamic_bitset<T...> {
             std::enable_if_t<
                 std::is_integral_v<typename std::decay_t<Vector>::value_type>,
                 bool> = true>
-  Bitset(const Vector &pos, size_t size) : base_type(size) {
+  Bitset(const Vector& pos, size_t size) : base_type(size) {
     std::for_each(std::begin(pos), std::end(pos),
-                  [this, n = std::size(*this)](auto &&x) -> auto {
+                  [this, n = std::size(*this)](auto&& x) -> auto {
                     if (x >= n) {
                       throw std::invalid_argument("'size' is too small.");
                     }
@@ -66,7 +66,7 @@ struct Bitset : boost::dynamic_bitset<T...> {
                               std::make_move_iterator(std::rend(bits))}} {}
 
   template <typename Callback>
-  auto visit(const Callback &callback) const {
+  auto visit(const Callback& callback) const {
     for (size_t p_ = this->find_first(); p_ != Bitset<T...>::npos;
          p_ = this->find_next(p_)) {
       callback(p_);
@@ -75,32 +75,32 @@ struct Bitset : boost::dynamic_bitset<T...> {
 
   auto positions() const {
     std::vector<size_t> pos;
-    visit([&pos](auto &&p) -> auto { pos.push_back(p); });
+    visit([&pos](auto&& p) -> auto { pos.push_back(p); });
     return pos;
   }
 
-  auto operator&(const Bitset &other) const {
+  auto operator&(const Bitset& other) const {
     auto new_{*this};
     new_ &= other;
     return new_;
   }
-  auto operator|(const Bitset &other) const {
+  auto operator|(const Bitset& other) const {
     auto new_{*this};
     new_ |= other;
     return new_;
   }
-  auto operator^(const Bitset &other) const {
+  auto operator^(const Bitset& other) const {
     auto new_{*this};
     new_ ^= other;
     return new_;
   }
-  auto operator-(const Bitset &other) const {
+  auto operator-(const Bitset& other) const {
     auto new_{*this};
     new_ -= other;
     return new_;
   }
   auto operator~() const -> Bitset {
-    return ~(*static_cast<const base_type *>(this));
+    return ~(*static_cast<const base_type*>(this));
   }
 
   template <
@@ -110,78 +110,78 @@ struct Bitset : boost::dynamic_bitset<T...> {
                                                typename Stream::traits_type>,
                             Stream>,
           bool> = true>
-  friend auto operator<<(Stream &os, const Bitset &bs) -> Stream & {
+  friend auto operator<<(Stream& os, const Bitset& bs) -> Stream& {
     os << std::string(bs);
     return os;
   }
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = Bitset<T...>;
   py::class_<self_type>(m, name.c_str())
       .def(py::init<>())
-      .def(py::init<const std::vector<size_t> &, size_t>(), "positions"_a,
+      .def(py::init<const std::vector<size_t>&, size_t>(), "positions"_a,
            "size"_a)
-      .def(py::init<const std::string &>())
+      .def(py::init<const std::string&>())
       .def("__and__", &self_type::operator&)
       .def("__or__", &self_type::operator|)
       .def("__xor__", &self_type::operator^)
       .def("__sub__", &self_type::operator-)
       .def("__eq__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return self == other;
            })
       .def("isdisjoint",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return !self.intersects(other);
            })
       .def("issubset",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return self.is_subset_of(other);
            })
       .def("issuperset",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return other.is_subset_of(self);
            })
       .def("__le__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return self.is_subset_of(other);
            })
       .def("__ge__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return other.is_subset_of(self);
            })
       .def("__lt__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return self.is_proper_subset_of(other);
            })
       .def("__gt__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return other.is_proper_subset_of(self);
            })
-      .def("__invert__", [](const self_type &self) -> auto { return ~self; })
+      .def("__invert__", [](const self_type& self) -> auto { return ~self; })
       .def("__len__",
-           [](const self_type &self) -> auto { return std::size(self); })
+           [](const self_type& self) -> auto { return std::size(self); })
       .def("__getitem__",
-           [](const self_type &self, const size_t pos) -> auto {
+           [](const self_type& self, const size_t pos) -> auto {
              if (pos >= std::size(self)) {
                throw std::out_of_range("Index out of range.");
              }
              return self.test(pos);
            })
       .def("__str__",
-           [](const self_type &self) -> auto { return std::string(self); })
+           [](const self_type& self) -> auto { return std::string(self); })
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              return "Bitset(" + std::string(self) + ")";
            })
-      .def("count", [](const self_type &self) -> auto { return self.count(); })
+      .def("count", [](const self_type& self) -> auto { return self.count(); })
       .def("visit", &self_type::template visit<std::function<void(size_t)>>)
       .def("positions", &self_type::positions)
       .def(py::pickle(
-          [](const self_type &self) -> auto { return std::string(self); },
-          [](const std::string &state) -> auto { return self_type{state}; }));
+          [](const self_type& self) -> auto { return std::string(self); },
+          [](const std::string& state) -> auto { return self_type{state}; }));
 }
 
 }  // namespace tnco::bitset

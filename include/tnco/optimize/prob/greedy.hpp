@@ -35,8 +35,8 @@ struct Probability final : prob::base::Probability<T...> {
   using clone_ptr_type = typename base_type::clone_ptr_type;
   using cost_type = typename base_type::cost_type;
 
-  [[nodiscard]] auto operator()(const cost_type &delta_cost,
-                                const cost_type &old_cost) const noexcept
+  [[nodiscard]] auto operator()(const cost_type& delta_cost,
+                                const cost_type& old_cost) const noexcept
       -> cost_type override {
     return delta_cost <= 0 ? 1 : 0;
   }
@@ -47,7 +47,7 @@ struct Probability final : prob::base::Probability<T...> {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = Probability<T...>;
   using base_type = typename self_type::base_type;
   using cost_type = typename self_type::cost_type;
@@ -55,16 +55,16 @@ void init(py::module &m, const std::string &name) {
       .def(py::init<>())
       .def(py::init<self_type>())
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              return "Greedy(cost_type=" + type_to_str<cost_type>() + ")";
            })
       .def("__eq__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return true;
            })
       .def(
-          py::pickle([](const self_type &self) -> auto { return std::tuple{}; },
-                     [](const std::tuple<> &) -> auto { return self_type{}; }));
+          py::pickle([](const self_type& self) -> auto { return std::tuple{}; },
+                     [](const std::tuple<>&) -> auto { return self_type{}; }));
 }
 
 }  // namespace tnco::optimize::prob::greedy

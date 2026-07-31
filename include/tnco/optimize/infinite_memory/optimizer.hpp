@@ -58,9 +58,9 @@ struct Optimizer : optimize::optimizer::Optimizer {
   mutable hyper_cache_type hyper_cache;
   cost_type min_total_cost{};
 
-  Optimizer(ctree_type ctree, const cmodel_type &cmodel,
+  Optimizer(ctree_type ctree, const cmodel_type& cmodel,
             std::optional<std::variant<size_t, std::string>> seed,
-            const bool disable_shared_inds, const atol_type &atol,
+            const bool disable_shared_inds, const atol_type& atol,
             std::optional<ctree_type> min_ctree = std::nullopt)
       : base_type{std::move(ctree), std::move(seed), disable_shared_inds,
                   std::move(min_ctree)},
@@ -87,16 +87,16 @@ struct Optimizer : optimize::optimizer::Optimizer {
     }
   }
 
-  auto update(const prob_fn_type &prob)
+  auto update(const prob_fn_type& prob)
 #ifdef NDEBUG
       noexcept
 #endif
       -> void {
     static constexpr auto null = ctree_type::node_type::null;
-    const auto &cmodel = *p_cmodel;
-    auto &nodes = this->ctree.nodes;
-    auto &inds = this->ctree.inds;
-    const auto &dims = this->ctree.dims;
+    const auto& cmodel = *p_cmodel;
+    auto& nodes = this->ctree.nodes;
+    auto& inds = this->ctree.inds;
+    const auto& dims = this->ctree.dims;
     auto uniform = std::uniform_real_distribution<prob_type>{};
 
     // Start by selecting a random leaf
@@ -133,22 +133,22 @@ struct Optimizer : optimize::optimizer::Optimizer {
       }
 
       // Get inds
-      const auto &inds_A = inds[pos_A];
-      auto &inds_B = inds[pos_B];
-      const auto &inds_C = inds[pos_C];
-      const auto &inds_D = inds[pos_D];
-      const auto &inds_E = inds[pos_E];
+      const auto& inds_A = inds[pos_A];
+      auto& inds_B = inds[pos_B];
+      const auto& inds_C = inds[pos_C];
+      const auto& inds_D = inds[pos_D];
+      const auto& inds_E = inds[pos_E];
       ASSERT(this->disable_shared_inds || inds_D.intersects(inds_C),
              "Problem with shared inds.");
 
       // Get new inds for B
-      auto &hyper_inds_A = hyper_cache.hyper_inds[pos_A];
-      auto &hyper_inds_B = hyper_cache.hyper_inds[pos_B];
+      auto& hyper_inds_A = hyper_cache.hyper_inds[pos_A];
+      auto& hyper_inds_B = hyper_cache.hyper_inds[pos_B];
       const auto new_inds_B = (inds_D ^ inds_C) | hyper_inds_A | hyper_inds_B;
 
       // Get new cost for B and A
-      auto &ccost_A = cost_cache.contraction_cost[pos_A];
-      auto &ccost_B = cost_cache.contraction_cost[pos_B];
+      auto& ccost_A = cost_cache.contraction_cost[pos_A];
+      auto& ccost_B = cost_cache.contraction_cost[pos_B];
       const auto new_ccost_A =
           cmodel.contraction_cost(new_inds_B, inds_E, inds_A, dims);
       const auto new_ccost_B =
@@ -220,7 +220,7 @@ struct Optimizer : optimize::optimizer::Optimizer {
 #endif
   }
 
-  [[nodiscard]] auto is_valid(const atol_type &atol) const
+  [[nodiscard]] auto is_valid(const atol_type& atol) const
       -> std::pair<bool, std::string> {
     if (const auto [valid_, msg_] = base_type::is_valid(); !valid_) {
       return {valid_, msg_};
@@ -256,20 +256,20 @@ struct Optimizer : optimize::optimizer::Optimizer {
 
   [[nodiscard]] auto get_min_total_cost() const { return min_total_cost; }
 
-  [[nodiscard]] auto cmodel() const -> const cmodel_type & { return *p_cmodel; }
+  [[nodiscard]] auto cmodel() const -> const cmodel_type& { return *p_cmodel; }
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = Optimizer<T...>;
   using base_type = typename self_type::base_type;
   using ctree_type = typename self_type::ctree_type;
   using cmodel_type = typename self_type::cmodel_type;
   using atol_type = typename self_type::atol_type;
   py::class_<self_type, base_type>(m, name.c_str())
-      .def(py::init<ctree_type, const cmodel_type &,
+      .def(py::init<ctree_type, const cmodel_type&,
                     std::optional<std::variant<size_t, std::string>>,
-                    const bool, const atol_type &, std::optional<ctree_type>>(),
+                    const bool, const atol_type&, std::optional<ctree_type>>(),
            "ctree"_a, "cmodel"_a, py::kw_only(), "seed"_a = std::nullopt,
            "disable_shared_inds"_a = false, "atol"_a = 1e-5,
            "min_ctree"_a = std::nullopt)
@@ -277,27 +277,27 @@ void init(py::module &m, const std::string &name) {
       .def_property_readonly("cmodel", &self_type::cmodel)
       .def_property_readonly(
           "total_cost",
-          [](const self_type &self) -> auto {
+          [](const self_type& self) -> auto {
             auto Decimal = py::module_::import("decimal").attr("Decimal");
             return Decimal(tnco::to_string(self.get_total_cost()));
           })
       .def_property_readonly(
           "min_total_cost",
-          [](const self_type &self) -> auto {
+          [](const self_type& self) -> auto {
             auto Decimal = py::module_::import("decimal").attr("Decimal");
             return Decimal(tnco::to_string(self.get_min_total_cost()));
           })
       .def_property_readonly("log2_total_cost",
-                             [](const self_type &self) -> auto {
+                             [](const self_type& self) -> auto {
                                return log2(self.get_total_cost());
                              })
       .def_property_readonly("log2_min_total_cost",
-                             [](const self_type &self) -> auto {
+                             [](const self_type& self) -> auto {
                                return log2(self.get_min_total_cost());
                              })
       .def(
           "is_valid",
-          [](const self_type &self, const atol_type &atol,
+          [](const self_type& self, const atol_type& atol,
              const bool return_message)
               -> std::variant<bool, std::pair<bool, std::string>> {
             const auto [valid, msg] = self.is_valid(atol);

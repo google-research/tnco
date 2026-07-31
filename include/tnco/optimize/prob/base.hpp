@@ -34,14 +34,14 @@ struct Probability {
   using cost_type = CostType;
 
   Probability() = default;
-  Probability(const Probability &) = default;
-  Probability(Probability &&) = default;
-  auto operator=(const Probability &) -> Probability & = delete;
-  auto operator=(Probability &&) -> Probability & = delete;
+  Probability(const Probability&) = default;
+  Probability(Probability&&) = default;
+  auto operator=(const Probability&) -> Probability& = delete;
+  auto operator=(Probability&&) -> Probability& = delete;
   virtual ~Probability() = default;
 
-  [[nodiscard]] virtual auto operator()(const cost_type &delta_cost,
-                                        const cost_type &old_cost) const
+  [[nodiscard]] virtual auto operator()(const cost_type& delta_cost,
+                                        const cost_type& old_cost) const
       -> cost_type {
     return 1;
   }
@@ -52,7 +52,7 @@ struct Probability {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = Probability<T...>;
   using cost_type = typename self_type::cost_type;
   py::class_<self_type>(m, name.c_str())
@@ -60,24 +60,24 @@ void init(py::module &m, const std::string &name) {
       .def(py::init<self_type>())
       .def(
           "__deepcopy__",
-          [](const self_type &self, const py::dict &) -> auto {
+          [](const self_type& self, const py::dict&) -> auto {
             return self.clone();
           },
           "memo"_a)
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              return "BaseProbability(cost_type=" + type_to_str<cost_type>() +
                     ")";
            })
       .def("__eq__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return true;
            })
       .def("__call__", &self_type::operator(), "delta_cost"_a, "old_cost"_a)
       .def(
-          py::pickle([](const self_type &self) -> auto { return std::tuple{}; },
-                     [](const std::tuple<> &) -> auto { return self_type{}; }))
-      .def_property_readonly("cost_type", [](const self_type &self) -> auto {
+          py::pickle([](const self_type& self) -> auto { return std::tuple{}; },
+                     [](const std::tuple<>&) -> auto { return self_type{}; }))
+      .def_property_readonly("cost_type", [](const self_type& self) -> auto {
         return type_to_str<cost_type>();
       });
 }

@@ -36,7 +36,7 @@ namespace py = pybind11;
 using namespace py::literals;
 
 template <typename WidthType, typename Bitset, typename DimsType>
-[[nodiscard]] auto get_width(const Bitset &inds, const DimsType &dims)
+[[nodiscard]] auto get_width(const Bitset& inds, const DimsType& dims)
 #ifdef NDEBUG
     noexcept
 #endif
@@ -47,18 +47,18 @@ template <typename WidthType, typename Bitset, typename DimsType>
   } else {
     ASSERT(std::size(inds) <= std::size(dims), "'Too few dimensions.'");
     ASSERT(std::none_of(std::begin(dims), std::end(dims),
-                        [](auto &&d) -> auto { return d == 0; }),
+                        [](auto&& d) -> auto { return d == 0; }),
            "Each dimension must be a positive number.");
     WidthType width_{0};
     inds.visit(
-        [&width_, &dims](auto &&pos) -> auto { width_ += log2(dims[pos]); });
+        [&width_, &dims](auto&& pos) -> auto { width_ += log2(dims[pos]); });
     return width_;
   }
 }
 
 template <typename WidthType, typename Bitset, typename DimsType>
-[[nodiscard]] auto get_delta_width(const Bitset &inds, const DimsType &dims,
-                                   const size_t &pos)
+[[nodiscard]] auto get_delta_width(const Bitset& inds, const DimsType& dims,
+                                   const size_t& pos)
 #ifdef NDEBUG
     noexcept
 #endif
@@ -69,7 +69,7 @@ template <typename WidthType, typename Bitset, typename DimsType>
   } else {
     ASSERT(std::size(inds) <= std::size(dims), "'Too few dimensions.'");
     ASSERT(std::none_of(std::begin(dims), std::end(dims),
-                        [](auto &&d) -> auto { return d == 0; }),
+                        [](auto&& d) -> auto { return d == 0; }),
            "Each dimension must be a positive number.");
     return (1 - 2 * inds.test(pos)) * log2(dims[pos]);
   }
@@ -90,7 +90,7 @@ struct CostModel : cost_model::base::CostModel<T...> {
     }
   }
 
-  [[nodiscard]] auto width(const bitset_type &inds, const dims_type &dims) const
+  [[nodiscard]] auto width(const bitset_type& inds, const dims_type& dims) const
 #ifdef NDEBUG
       noexcept
 #endif
@@ -99,14 +99,14 @@ struct CostModel : cost_model::base::CostModel<T...> {
      * Return width.
      */
     return std::visit(
-        [&inds](auto &&dims) -> auto {
+        [&inds](auto&& dims) -> auto {
           return get_width<width_type>(inds, dims);
         },
         dims);
   }
 
-  [[nodiscard]] auto delta_width(const bitset_type &inds, const dims_type &dims,
-                                 const size_t &pos) const
+  [[nodiscard]] auto delta_width(const bitset_type& inds, const dims_type& dims,
+                                 const size_t& pos) const
 #ifdef NDEBUG
       noexcept
 #endif
@@ -115,17 +115,17 @@ struct CostModel : cost_model::base::CostModel<T...> {
      * Return the delta width as to add / remove index in position 'pos'.
      */
     return std::visit(
-        [&inds, &pos](auto &&dims) -> auto {
+        [&inds, &pos](auto&& dims) -> auto {
           return get_delta_width<width_type>(inds, dims, pos);
         },
         dims);
   }
 
-  [[nodiscard]] auto contraction_cost(const bitset_type &inds_in1,
-                                      const bitset_type &inds_in2,
-                                      const bitset_type &inds_out,
-                                      const dims_type &dims,
-                                      const bitset_type &slices) const
+  [[nodiscard]] auto contraction_cost(const bitset_type& inds_in1,
+                                      const bitset_type& inds_in2,
+                                      const bitset_type& inds_out,
+                                      const dims_type& dims,
+                                      const bitset_type& slices) const
 #ifdef NDEBUG
       noexcept
 #endif
@@ -137,7 +137,7 @@ struct CostModel : cost_model::base::CostModel<T...> {
     ASSERT(inds_out.is_subset_of(inds_in1 | inds_in2),
            "'inds_out' must be a subset of 'inds_in1 | inds_in2'.");
     return std::visit(
-        [inds = inds_in1 | inds_in2 | slices](auto &&dims) -> auto {
+        [inds = inds_in1 | inds_in2 | slices](auto&& dims) -> auto {
           return infinite_memory::cost_model::simple::get_cost<cost_type>(inds,
                                                                           dims);
         },
@@ -150,7 +150,7 @@ struct CostModel : cost_model::base::CostModel<T...> {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = CostModel<T...>;
   using base_type = typename self_type::base_type;
   using cost_type = typename self_type::cost_type;
@@ -159,19 +159,19 @@ void init(py::module &m, const std::string &name) {
       .def(py::init<width_type>())
       .def(py::init<self_type>())
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              return "SimpleCostModel(max_width=" +
                     tnco::to_string(self.max_width) +
                     ", width_type=" + type_to_str<width_type>() +
                     ", cost_type=" + type_to_str<cost_type>() + ")";
            })
       .def("__eq__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return self.max_width == other.max_width;
            })
-      .def(py::pickle([](const self_type &self)
+      .def(py::pickle([](const self_type& self)
                           -> auto { return std::tuple{self.max_width}; },
-                      [](const std::tuple<width_type> &data) -> auto {
+                      [](const std::tuple<width_type>& data) -> auto {
                         return self_type{std::get<0>(data)};
                       }));
 }

@@ -49,13 +49,13 @@ struct Optimizer {
   ctree_type min_ctree;
 
   // Cannot be copied or moved
-  Optimizer(const Optimizer &) = delete;
-  Optimizer(Optimizer &&) = delete;
-  auto operator=(const Optimizer &) -> Optimizer & = delete;
-  auto operator=(Optimizer &&) -> Optimizer & = delete;
+  Optimizer(const Optimizer&) = delete;
+  Optimizer(Optimizer&&) = delete;
+  auto operator=(const Optimizer&) -> Optimizer& = delete;
+  auto operator=(Optimizer&&) -> Optimizer& = delete;
 
   Optimizer(ctree_type ctree,
-            const std::optional<std::variant<size_t, std::string>> &seed,
+            const std::optional<std::variant<size_t, std::string>>& seed,
             const bool disable_shared_inds,
             std::optional<ctree_type> min_ctree = std::nullopt)
       : ctree{std::move(ctree)},
@@ -66,7 +66,7 @@ struct Optimizer {
                                         : this->ctree} {
     // Initialize PRNG
     if (seed.has_value()) {
-      if (const auto *const p_ = std::get_if<std::string>(&seed.value())) {
+      if (const auto* const p_ = std::get_if<std::string>(&seed.value())) {
         std::istringstream iss{*p_};
         iss >> prng;
       } else {
@@ -105,8 +105,8 @@ struct Optimizer {
      */
     static constexpr auto null = ctree_type::node_type::null;
 
-    const auto &nodes = ctree.nodes;
-    const auto &inds = ctree.inds;
+    const auto& nodes = ctree.nodes;
+    const auto& inds = ctree.inds;
 
     // If null, just return
     if (pos_B == null) {
@@ -114,15 +114,15 @@ struct Optimizer {
     }
 
     // Collect A, B, C
-    const auto &node_B = nodes[pos_B];
+    const auto& node_B = nodes[pos_B];
     if (node_B.is_root() || node_B.is_leaf()) {
       return {null, null, null, null};
     }
-    const auto &pos_A = node_B.parent;
-    const auto &node_A = nodes[pos_A];
-    const auto &pos_C =
+    const auto& pos_A = node_B.parent;
+    const auto& node_A = nodes[pos_A];
+    const auto& pos_C =
         node_A.children[0] == pos_B ? node_A.children[1] : node_A.children[0];
-    const auto &inds_C = inds[pos_C];
+    const auto& inds_C = inds[pos_C];
 
     // Collect D and E
     const auto [pos_D, pos_E] =
@@ -144,11 +144,11 @@ struct Optimizer {
     }();
 
 #ifndef NDEBUG
-    const auto &node_C = nodes[pos_C];
-    const auto &node_D = nodes[pos_D];
-    const auto &node_E = nodes[pos_E];
-    static constexpr auto is_valid = [](auto &&node, auto &&c0, auto &&c1,
-                                        auto &&p) -> auto {
+    const auto& node_C = nodes[pos_C];
+    const auto& node_D = nodes[pos_D];
+    const auto& node_E = nodes[pos_E];
+    static constexpr auto is_valid = [](auto&& node, auto&& c0, auto&& c1,
+                                        auto&& p) -> auto {
       using c_type = std::array<index_type, 2>;
       if ((c0 != null || c1 != null) && !(node.children == c_type{c0, c1} ||
                                           node.children == c_type{c1, c0})) {
@@ -195,12 +195,12 @@ struct Optimizer {
   }
 };
 
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = Optimizer;
   using ctree_type = typename self_type::ctree_type;
   py::class_<self_type>(m, name.c_str())
       .def(py::init<ctree_type,
-                    const std::optional<std::variant<size_t, std::string>> &,
+                    const std::optional<std::variant<size_t, std::string>>&,
                     const bool, std::optional<ctree_type>>(),
            "ctree"_a, py::kw_only(), "seed"_a = std::nullopt,
            "disable_shared_inds"_a = false, "min_ctree"_a = std::nullopt)
@@ -210,7 +210,7 @@ void init(py::module &m, const std::string &name) {
       .def_property_readonly("prng_state", &self_type::get_prng_state)
       .def(
           "is_valid",
-          [](const self_type &self, const bool return_message)
+          [](const self_type& self, const bool return_message)
               -> std::variant<bool, std::pair<bool, std::string>> {
             const auto [valid, msg] = self.is_valid();
             if (return_message) {

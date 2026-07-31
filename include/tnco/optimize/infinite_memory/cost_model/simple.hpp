@@ -35,7 +35,7 @@ namespace py = pybind11;
 using namespace py::literals;
 
 template <typename CostType, typename Bitset, typename DimsType>
-[[nodiscard]] auto get_cost(const Bitset &inds, const DimsType &dims)
+[[nodiscard]] auto get_cost(const Bitset& inds, const DimsType& dims)
 #ifdef NDEBUG
     noexcept
 #endif
@@ -46,10 +46,10 @@ template <typename CostType, typename Bitset, typename DimsType>
   } else {
     ASSERT(std::size(inds) <= std::size(dims), "'Too few dimensions.'");
     ASSERT(std::none_of(std::begin(dims), std::end(dims),
-                        [](auto &&d) -> auto { return d == 0; }),
+                        [](auto&& d) -> auto { return d == 0; }),
            "Each dimension must be a positive number.");
     CostType cost_{1};
-    inds.visit([&cost_, &dims](auto &&pos) -> auto { cost_ *= dims[pos]; });
+    inds.visit([&cost_, &dims](auto&& pos) -> auto { cost_ *= dims[pos]; });
     return cost_;
   }
 }
@@ -62,10 +62,10 @@ struct CostModel : cost_model::base::CostModel<T...> {
   using bitset_type = typename base_type::bitset_type;
   using dims_type = typename base_type::dims_type;
 
-  [[nodiscard]] auto contraction_cost(const bitset_type &inds_in1,
-                                      const bitset_type &inds_in2,
-                                      const bitset_type &inds_out,
-                                      const dims_type &dims) const
+  [[nodiscard]] auto contraction_cost(const bitset_type& inds_in1,
+                                      const bitset_type& inds_in2,
+                                      const bitset_type& inds_out,
+                                      const dims_type& dims) const
 #ifdef NDEBUG
       noexcept
 #endif
@@ -76,7 +76,7 @@ struct CostModel : cost_model::base::CostModel<T...> {
     ASSERT(inds_out.is_subset_of(inds_in1 | inds_in2),
            "'inds_out' must be a subset of 'inds_in1 | inds_in2'.");
     return std::visit(
-        [inds = inds_in1 | inds_in2](auto &&dims) -> auto {
+        [inds = inds_in1 | inds_in2](auto&& dims) -> auto {
           return get_cost<cost_type>(inds, dims);
         },
         dims);
@@ -88,7 +88,7 @@ struct CostModel : cost_model::base::CostModel<T...> {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = CostModel<T...>;
   using base_type = typename self_type::base_type;
   using cost_type = typename self_type::cost_type;
@@ -96,17 +96,17 @@ void init(py::module &m, const std::string &name) {
       .def(py::init<>())
       .def(py::init<self_type>())
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              return "SimpleCostModel(cost_type=" + type_to_str<cost_type>() +
                     ")";
            })
       .def("__eq__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return true;
            })
       .def(
-          py::pickle([](const self_type &self) -> auto { return std::tuple{}; },
-                     [](const std::tuple<> &) -> auto { return self_type{}; }));
+          py::pickle([](const self_type& self) -> auto { return std::tuple{}; },
+                     [](const std::tuple<>&) -> auto { return self_type{}; }));
 }
 
 }  // namespace tnco::optimize::infinite_memory::cost_model::simple

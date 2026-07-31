@@ -42,8 +42,8 @@ struct Probability final : prob::base::Probability<T...> {
 
   beta_type beta{};
 
-  [[nodiscard]] auto operator()(const cost_type &delta_cost,
-                                const cost_type &old_cost) const
+  [[nodiscard]] auto operator()(const cost_type& delta_cost,
+                                const cost_type& old_cost) const
 #ifdef NDEBUG
       noexcept
 #endif
@@ -64,7 +64,7 @@ struct Probability final : prob::base::Probability<T...> {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = Probability<T...>;
   using base_type = typename self_type::base_type;
   using cost_type = typename self_type::cost_type;
@@ -75,17 +75,17 @@ void init(py::module &m, const std::string &name) {
       .def(py::init<self_type>())
       .def_readwrite("beta", &self_type::beta)
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              return "MetropolisHastings(beta=" + tnco::to_string(self.beta) +
                     ", cost_type=" + type_to_str<cost_type>() + ")";
            })
       .def("__eq__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return self.beta == other.beta;
            })
       .def(py::pickle(
-          [](const self_type &self) -> auto { return std::tuple{self.beta}; },
-          [](const std::tuple<decltype(self_type::beta)> &state) -> auto {
+          [](const self_type& self) -> auto { return std::tuple{self.beta}; },
+          [](const std::tuple<decltype(self_type::beta)>& state) -> auto {
             return self_type{std::get<0>(state)};
           }));
 }

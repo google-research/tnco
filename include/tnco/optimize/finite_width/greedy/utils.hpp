@@ -21,13 +21,13 @@ namespace tnco::optimize::finite_width::greedy::utils {
 template <typename Bitset, typename CTree, typename GetWidth,
           typename GetDeltaWidth, typename MaxWidth, typename PRNG,
           typename Width, typename Log2Dims>
-[[nodiscard]] auto get_slices_impl(const CTree &ctree,
-                                   const GetWidth &get_width,
-                                   const GetDeltaWidth &get_delta_width,
-                                   const MaxWidth &max_width,
-                                   const std::optional<Bitset> &skip_slices,
-                                   PRNG &prng, const Width &width,
-                                   const Log2Dims &log2_dims)
+[[nodiscard]] auto get_slices_impl(const CTree& ctree,
+                                   const GetWidth& get_width,
+                                   const GetDeltaWidth& get_delta_width,
+                                   const MaxWidth& max_width,
+                                   const std::optional<Bitset>& skip_slices,
+                                   PRNG& prng, const Width& width,
+                                   const Log2Dims& log2_dims)
 #ifdef NDEBUG
     noexcept
 #endif
@@ -42,7 +42,7 @@ template <typename Bitset, typename CTree, typename GetWidth,
   for (size_t tpos = 0, end_ = std::size(ctree); tpos < end_; ++tpos) {
     if (width[tpos] > max_width) {
       ctree.inds[tpos].visit(
-          [&n_big_tensors](auto &&pos) -> auto { ++n_big_tensors[pos]; });
+          [&n_big_tensors](auto&& pos) -> auto { ++n_big_tensors[pos]; });
     }
   }
 
@@ -50,8 +50,8 @@ template <typename Bitset, typename CTree, typename GetWidth,
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunused-lambda-capture"
-  const auto greater = [&n_big_tensors, &log2_dims](auto &&x,
-                                                    auto &&y) -> auto {
+  const auto greater = [&n_big_tensors, &log2_dims](auto&& x,
+                                                    auto&& y) -> auto {
     if constexpr (std::is_arithmetic_v<Log2Dims>) {
       return n_big_tensors[x] > n_big_tensors[y];
     } else {
@@ -62,7 +62,7 @@ template <typename Bitset, typename CTree, typename GetWidth,
   };
 #pragma GCC diagnostic pop
 
-  tnco::utils::traverse(ctree, [&](auto &&tpos) -> auto {
+  tnco::utils::traverse(ctree, [&](auto&& tpos) -> auto {
     if (width[tpos] > max_width) {
       // Get sliced inds
       auto sliced_xs = ctree.inds[tpos] - slices;
@@ -85,7 +85,7 @@ template <typename Bitset, typename CTree, typename GetWidth,
         std::stable_sort(std::begin(positions), std::end(positions), greater);
 
         // Get new slices
-        for (const auto &xpos : positions) {
+        for (const auto& xpos : positions) {
           ASSERT(!slices.test(xpos), "This index shouldn't be already sliced.");
 
           // Update slices
@@ -112,7 +112,7 @@ template <typename Bitset, typename CTree, typename GetWidth,
   std::for_each(
       std::begin(ctree.inds), std::end(ctree.inds),
       [&err_msg, &get_width, &slices, &dims = ctree.dims,
-       &max_width](auto &&xs) -> auto {
+       &max_width](auto&& xs) -> auto {
         if (const auto w = get_width(xs - slices, dims); w > max_width) {
           err_msg += tnco::to_string("Failed to reduce width (expected: '",
                                      max_width, "', got: '", w, "')");
@@ -127,18 +127,18 @@ template <typename Bitset, typename CTree, typename GetWidth,
 template <typename Bitset, typename CTree, typename GetWidth,
           typename GetDeltaWidth, typename MaxWidth, typename PRNG,
           typename Width, typename Log2Dims>
-[[nodiscard]] auto get_slices(const CTree &ctree, const GetWidth &get_width,
-                              const GetDeltaWidth &get_delta_width,
-                              const MaxWidth &max_width,
-                              const std::optional<Bitset> &skip_slices,
-                              PRNG &&prng, const Width &width,
-                              const Log2Dims &log2_dims)
+[[nodiscard]] auto get_slices(const CTree& ctree, const GetWidth& get_width,
+                              const GetDeltaWidth& get_delta_width,
+                              const MaxWidth& max_width,
+                              const std::optional<Bitset>& skip_slices,
+                              PRNG&& prng, const Width& width,
+                              const Log2Dims& log2_dims)
 #ifdef NDEBUG
     noexcept
 #endif
     -> Bitset {
   return std::visit(
-      [&](auto &&dims) -> auto {
+      [&](auto&& dims) -> auto {
         return get_slices_impl<Bitset>(ctree, get_width, get_delta_width,
                                        max_width, skip_slices,
                                        std::forward<PRNG>(prng), width, dims);

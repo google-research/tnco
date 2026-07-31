@@ -13,8 +13,7 @@
 # limitations under the License.
 """Ordered Frozen Set."""
 
-from collections.abc import Iterable
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from itertools import chain
 from typing import Any
 

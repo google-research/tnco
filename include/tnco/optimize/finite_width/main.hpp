@@ -26,7 +26,7 @@ namespace py = pybind11;
 // Use _a literal for py::arg
 using namespace py::literals;
 
-void init(py::module &m) {
+void init(py::module& m) {
   // Initialize contraction costs
   {
     auto sm = m.def_submodule("cost_model");

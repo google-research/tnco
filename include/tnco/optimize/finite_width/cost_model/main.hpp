@@ -31,7 +31,7 @@ namespace py = pybind11;
 using namespace py::literals;
 
 template <typename CostType, typename WidthType>
-auto core(py::module &m) -> void {
+auto core(py::module& m) -> void {
   // Get suffix
   const std::string sfx =
       "_" + type_to_str<CostType>() + "_" + type_to_str<WidthType>();
@@ -43,6 +43,6 @@ auto core(py::module &m) -> void {
       m, "SimpleCostModelSparseInds" + sfx);
 }
 
-auto init(py::module &m) -> void { EXPAND_COST_WIDTH_TYPE(core, m); }
+auto init(py::module& m) -> void { EXPAND_COST_WIDTH_TYPE(core, m); }
 
 }  // namespace tnco::optimize::finite_width::cost_model

@@ -13,8 +13,7 @@
 # limitations under the License.
 """Parallelization utilities."""
 
-from collections.abc import Callable
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 import itertools as its
 from multiprocessing.shared_memory import SharedMemory
 from struct import calcsize
