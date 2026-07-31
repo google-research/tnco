@@ -13,8 +13,9 @@
 # limitations under the License.
 """Cost model for finite width optimization."""
 
+from collections.abc import Iterable
 from importlib import import_module
-from typing import Dict, FrozenSet, Iterable, List, Literal, Optional, Union
+from typing import Literal
 
 import more_itertools as mit
 
@@ -80,8 +81,8 @@ class SimpleCostModel(BaseCostModel):
                                      'float128'] = 'float32',
                  cost_type: Literal['float32', 'float64', 'float128',
                                     'float1024'] = 'float64',
-                 sparse_inds: Optional[Iterable[Index]] = None,
-                 n_projs: Optional[int] = None):
+                 sparse_inds: Iterable[Index] | None = None,
+                 n_projs: int | None = None):
 
         # Check max_width
         max_width = float(max_width)
@@ -154,7 +155,7 @@ class SimpleCostModel(BaseCostModel):
         return self._cost_type
 
     @property
-    def sparse_inds(self) -> FrozenSet[Index]:
+    def sparse_inds(self) -> frozenset[Index]:
         """Sparse indices.
 
         Return a set of the sparse indices.
@@ -175,8 +176,8 @@ class SimpleCostModel(BaseCostModel):
         """
         return self._n_projs
 
-    def width(self, inds: Iterable[Index], dims: Union[Dict[Index, int],
-                                                       int]) -> float:
+    def width(self, inds: Iterable[Index],
+              dims: dict[Index, int] | int) -> float:
         """Return the width of a tensor.
 
         It returns the width of a tensors given its indices and the dimension
@@ -220,8 +221,8 @@ class SimpleCostModel(BaseCostModel):
         # Get result
         return core.width(inds, dims)
 
-    def get_max_width(self, ts_inds: Iterable[List[Index]],
-                      dims: Union[Dict[Index, int], int]) -> float:
+    def get_max_width(self, ts_inds: Iterable[list[Index]],
+                      dims: dict[Index, int] | int) -> float:
         """Return the maximum width of a tensor network.
 
         It returns the maximum width of a tensors network given its indices and
@@ -257,7 +258,7 @@ class SimpleCostModel(BaseCostModel):
         except (ValueError, TypeError):
             dims = tuple(map(dims.get, all_inds))
             if any(d is None for d in dims):
-                raise ValueError("Some dimensions are missing.")
+                raise ValueError("Some dimensions are missing.") from None
 
         # Get core
         core = self.__get_core__(all_inds)
@@ -267,8 +268,8 @@ class SimpleCostModel(BaseCostModel):
             core.width(xs, dims) for xs in (
                 Bitset(map(inds_map.get, xs), len(all_inds)) for xs in ts_inds))
 
-    def delta_width(self, inds: Iterable[Index],
-                    dims: Union[Dict[Index, int], int], index: Index) -> float:
+    def delta_width(self, inds: Iterable[Index], dims: dict[Index, int] | int,
+                    index: Index) -> float:
         """Difference of width.
 
         Return the difference of the width for a given tensor if 'index' were
@@ -322,8 +323,8 @@ class SimpleCostModel(BaseCostModel):
 
     def contraction_cost(self, inds_in1: Iterable[Index],
                          inds_in2: Iterable[Index], inds_out: Iterable[Index],
-                         dims: Union[Dict[Index, int],
-                                     int], slices: Iterable[Index]) -> float:
+                         dims: dict[Index, int] | int,
+                         slices: Iterable[Index]) -> float:
         """Contraction cost.
 
         Return the cost of contracting 'inds_in1' with 'inds_in2', to return

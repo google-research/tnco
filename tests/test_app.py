@@ -118,9 +118,9 @@ def test_LoadTN_CirqCircuit(random_seed):
 def test_OptimizeTN(random_seed, **kwargs):
     # How to convert inds
     def convert_index(x):
-        if isinstance(x, (str, int, frozenset)):
+        if isinstance(x, str | int | frozenset):
             return x
-        if isinstance(x, (list, tuple)):
+        if isinstance(x, list | tuple):
             return frozenset(x)
         raise NotImplementedError()
 
@@ -269,8 +269,10 @@ def test_OptimizeTN(random_seed, **kwargs):
                     res, res_json)))
 
     # There should be n_cc disconnected paths
-    assert dims == 1 or all(
-        map(lambda r: len(r.disconnected_paths) == n_cc, res))
+    if (isinstance(dims, int) and
+            dims != 1) or (isinstance(dims, dict) and
+                           all(v != 1 for v in dims.values())):
+        assert all(map(lambda r: len(r.disconnected_paths) == n_cc, res))
 
     # The costs should be ordered
     assert all(

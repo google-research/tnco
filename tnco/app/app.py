@@ -17,9 +17,9 @@ import bz2
 from collections.abc import Iterator
 from dataclasses import dataclass
 from decimal import Decimal
-from importlib import import_module
 import functools as fts
 import gzip
+from importlib import import_module
 import io
 import itertools as its
 import json
@@ -28,7 +28,7 @@ import pickle
 from random import Random
 import re
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 from warnings import warn
 
 import autoray as ar
@@ -48,14 +48,17 @@ __all__ = ['Optimizer']
 class JSONEncoder(json.JSONEncoder):
 
     def default(self, obj) -> Any:
-        if isinstance(obj, Decimal):
-            return str(obj)
-        if isinstance(obj, BaseContractionResults):
-            return dict(cost=obj.cost, runtime_s=obj.runtime_s, path=obj.path)
-        if hasattr(obj, 'to_json'):
-            return obj.to_json()
-
-        return super().default(obj)
+        match obj:
+            case Decimal():
+                return str(obj)
+            case BaseContractionResults():
+                return dict(cost=obj.cost,
+                            runtime_s=obj.runtime_s,
+                            path=obj.path)
+            case _ if hasattr(obj, 'to_json'):
+                return obj.to_json()
+            case _:
+                return super().default(obj)
 
 
 @dataclass(repr=False, frozen=True, eq=False)
@@ -75,7 +78,7 @@ class BaseContractionResults:
 
     cost: float
     runtime_s: float
-    path: List[Tuple[int, int]]
+    path: list[tuple[int, int]]
 
     def __lt__(self, other):
         if not isinstance(other, BaseContractionResults):
@@ -110,7 +113,7 @@ def load_file(filename: str) -> Any:
     try:
         validate_filepath(filename, platform='auto')
     except ValidationError as e:
-        raise ValueError("'filename' is not valid ({})".format(e))
+        raise ValueError("'filename' is not valid ({})".format(e)) from e
 
     # Check that file exists and it's a file.
     filename = Path(filename).expanduser()
@@ -153,14 +156,14 @@ def load_tn(obj: Any,
             fuse: float = 4,
             decompose_hyper_inds: bool = True,
             simplify_circuit: bool = True,
-            initial_state: Union[str, Dict[Qubit, Matrix], None] = '0',
-            final_state: Union[str, Dict[Qubit, Matrix], None] = '0',
+            initial_state: str | dict[Qubit, Matrix] | None = '0',
+            final_state: str | dict[Qubit, Matrix] | None = '0',
             output_index_token: str = '*',
             sparse_index_token: str = '/',
             atol: float = 1e-5,
-            dtype: Optional[Any] = None,
-            backend: Optional[str] = None,
-            seed: Optional[int] = None,
+            dtype: Any | None = None,
+            backend: str | None = None,
+            seed: int | None = None,
             verbose: int = False) -> TensorNetwork:
     """Loads a tensor network from various object types.
 
@@ -568,10 +571,10 @@ def load_tn(obj: Any,
 
 
 def dump_results(tn: TensorNetwork,
-                 res: List[BaseContractionResults],
+                 res: list[BaseContractionResults],
                  *,
-                 output_format: Optional[str] = None,
-                 output_filename: Optional[str] = None,
+                 output_format: str | None = None,
+                 output_filename: str | None = None,
                  output_compression: str = 'auto',
                  overwrite_output_file: bool = False,
                  **kwargs) -> Any:
@@ -638,7 +641,8 @@ def dump_results(tn: TensorNetwork,
         try:
             validate_filepath(output_filename, platform='auto')
         except ValidationError as e:
-            raise ValueError("'output_filename' is not valid ({})".format(e))
+            raise ValueError(
+                "'output_filename' is not valid ({})".format(e)) from e
 
     # Check if filename already exists
     output_filename = (None if output_filename is None else
@@ -748,18 +752,18 @@ class BaseOptimizer:
         verbose: If ``True``, prints verbose output.
     """
 
-    max_width: Optional[float] = None
+    max_width: float | None = None
     n_jobs: int = -1
     width_type: str = 'float32'
     cost_type: str = 'float64'
-    output_format: Optional[str] = None
-    output_filename: Optional[str] = None
+    output_format: str | None = None
+    output_filename: str | None = None
     output_compression: str = 'auto'
     overwrite_output_file: bool = False
     atol: float = 1e-5
-    dtype: Optional[Any] = None
-    backend: Optional[str] = None
-    seed: Optional[int] = None
+    dtype: Any | None = None
+    backend: str | None = None
+    seed: int | None = None
     verbose: int = False
 
     def optimize(self, *args: Any, **kwargs: Any) -> Any:
@@ -792,18 +796,18 @@ class BaseOptimizer:
 
 
 def Optimizer(method: str = 'sa',
-              max_width: Optional[float] = None,
+              max_width: float | None = None,
               n_jobs: int = -1,
               width_type: str = 'float32',
               cost_type: str = 'float64',
-              output_format: Optional[str] = None,
-              output_filename: Optional[str] = None,
+              output_format: str | None = None,
+              output_filename: str | None = None,
               output_compression: str = 'auto',
               overwrite_output_file: bool = False,
               atol: float = 1e-5,
-              dtype: Optional[Any] = None,
-              backend: Optional[str] = None,
-              seed: Optional[int] = None,
+              dtype: Any | None = None,
+              backend: str | None = None,
+              seed: int | None = None,
               verbose: int = False) -> BaseOptimizer:
     """Factory function to create an optimizer.
 

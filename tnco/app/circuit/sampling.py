@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 import functools as fts
 import itertools as its
 import math
 import operator as op
 from random import Random
-from typing import Any, Dict, FrozenSet, Iterable, Optional, Tuple, Union
+from typing import Any
 
 import autoray as ar
 import more_itertools as mit
@@ -78,10 +79,10 @@ def is_classical_operation(m: Matrix) -> bool:
 class SamplingIntermediateState:
     """Store the intermediate state of the sampling routine."""
 
-    data = Tuple[Union[Tuple[TensorNetwork, BaseContractionResults, Array,
-                             Tuple[Qubit], Tuple[Qubit]],
-                       Tuple[None, None, Array, None, Tuple[Qubit]]], ...]
-    qubits = FrozenSet[Qubit]
+    data = tuple[tuple[TensorNetwork, BaseContractionResults, Array,
+                       tuple[Qubit], tuple[Qubit]] |
+                 tuple[None, None, Array, None, tuple[Qubit]], ...]
+    qubits = frozenset[Qubit]
 
     def __init__(self, data, qubits):
         object.__setattr__(self, 'data', tuple(data))
@@ -99,8 +100,7 @@ class SamplingIntermediateState:
 
 @fts.singledispatch
 def sample(
-    circuit: Union[Iterable[Tuple[Matrix, Tuple[Qubit]]],
-                   SamplingIntermediateState],
+    circuit: Iterable[tuple[Matrix, tuple[Qubit]]] | SamplingIntermediateState,
     optimizer: Optimizer,
     n_samples: int = 1,
     *,
@@ -108,16 +108,16 @@ def sample(
     use_matrix_commutation: bool = True,
     decompose_hyper_inds: bool = True,
     fuse: float = 4,
-    qubit_order: Optional[Iterable[Qubit]] = None,
+    qubit_order: Iterable[Qubit] | None = None,
     normalize: bool = True,
     return_intermediate_state_only: bool = False,
-    dtype: Optional[Any] = None,
-    optimization_backend: Optional[str] = None,
-    contraction_backend: Optional[str] = None,
-    seed: Optional[int] = None,
+    dtype: Any | None = None,
+    optimization_backend: str | None = None,
+    contraction_backend: str | None = None,
+    seed: int | None = None,
     verbose: int = False,
     **optimize_params
-) -> Union[Tuple[Dict[str, int], Tuple[Qubit]], SamplingIntermediateState]:
+) -> tuple[dict[str, int], tuple[Qubit]] | SamplingIntermediateState:
     """Sample bitstrings from a circuit.
 
     Sample bitstrings from a circuit using the Bravyi-Gosset-Liu algorithm
@@ -449,14 +449,14 @@ class Sampler:
         verbose: Verbose output.
     """
 
-    max_width: Optional[float] = None
+    max_width: float | None = None
     n_jobs: int = -1
     width_type: str = 'float32'
     cost_type: str = 'float64'
     atol: float = 1e-5
-    dtype: Optional[Any] = None
-    optimization_backend: Optional[str] = None
-    seed: Optional[int] = None
+    dtype: Any | None = None
+    optimization_backend: str | None = None
+    seed: int | None = None
     verbose: int = False
 
     def __post_init__(self):
@@ -482,19 +482,19 @@ class Sampler:
 
     def sample(
         self,
-        circuit: Union[Circuit, SamplingIntermediateState],
+        circuit: Circuit | SamplingIntermediateState,
         n_samples: int = 1,
         *,
         simplify: bool = True,
         use_matrix_commutation: bool = True,
         decompose_hyper_inds: bool = True,
         fuse: float = 4,
-        qubit_order: Optional[Iterable[Qubit]] = None,
+        qubit_order: Iterable[Qubit] | None = None,
         normalize: bool = True,
         return_intermediate_state_only: bool = False,
-        contraction_backend: Optional[str] = None,
+        contraction_backend: str | None = None,
         **optimize_params
-    ) -> Union[Tuple[Dict[str, int], Tuple[Qubit]], SamplingIntermediateState]:
+    ) -> tuple[dict[str, int], tuple[Qubit]] | SamplingIntermediateState:
         """Sample bitstrings from a circuit.
 
         Sample bitstrings from a circuit using the Bravyi-Gosset-Liu algorithm

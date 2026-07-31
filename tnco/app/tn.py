@@ -13,12 +13,13 @@
 # limitations under the License.
 """Tensor Network definitions for the application."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 import itertools as its
 import json
 import operator as op
 from types import MappingProxyType
-from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple
+from typing import Any
 
 import autoray as ar
 import more_itertools as mit
@@ -48,26 +49,28 @@ class JSONEncoder(json.JSONEncoder):
         Returns:
             Encoded object in the JSON format.
         """
-        if isinstance(obj, complex):
-            return '{} + {}j'.format(obj.real, obj.imag)
-        if isinstance(obj, frozenset):
-            return tuple(obj)
-        if isinstance(obj, Tensor):
-            return dict(inds=obj.inds,
-                        dims=obj.dims,
-                        array=None if obj.array is None else obj.array.tolist(),
-                        tags=obj.tags)
-        if isinstance(obj, TensorNetwork):
-            return dict(tensors=obj.tensors,
-                        output_inds=obj.output_inds,
-                        sparse_inds=obj.sparse_inds)
-        if type(obj).__module__.startswith('cirq.') and type(
-                obj).__name__.endswith('Qubit'):
-            return repr(obj)
-        if hasattr(obj, 'to_json'):
-            return obj.to_json()
-
-        return super().default(obj)
+        match obj:
+            case complex():
+                return '{} + {}j'.format(obj.real, obj.imag)
+            case frozenset():
+                return tuple(obj)
+            case Tensor():
+                return dict(
+                    inds=obj.inds,
+                    dims=obj.dims,
+                    array=None if obj.array is None else obj.array.tolist(),
+                    tags=obj.tags)
+            case TensorNetwork():
+                return dict(tensors=obj.tensors,
+                            output_inds=obj.output_inds,
+                            sparse_inds=obj.sparse_inds)
+            case _ if (type(obj).__module__.startswith('cirq.') and
+                       type(obj).__name__.endswith('Qubit')):
+                return repr(obj)
+            case _ if hasattr(obj, 'to_json'):
+                return obj.to_json()
+            case _:
+                return super().default(obj)
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -91,10 +94,10 @@ class Tensor:
         >>> t.ndim
         2
     """
-    inds: Tuple[Index]
-    dims: Optional[Tuple[int]] = None
-    array: Optional[Matrix] = None
-    tags: Optional[Dict[Any, Any]] = None
+    inds: tuple[Index]
+    dims: tuple[int] | None = None
+    array: Matrix | None = None
+    tags: dict[Any, Any] | None = None
 
     def __post_init__(self) -> None:
 
@@ -195,10 +198,10 @@ class TensorNetwork:
         >>> tn.n_tensors
         2
     """
-    tensors: Tuple[Tensor]
-    output_inds: Optional[FrozenSet[Index]] = None
-    sparse_inds: Optional[FrozenSet[Index]] = None
-    tags: Optional[Dict[Any, Any]] = None
+    tensors: tuple[Tensor]
+    output_inds: frozenset[Index] | None = None
+    sparse_inds: frozenset[Index] | None = None
+    tags: dict[Any, Any] | None = None
 
     def __post_init__(self) -> None:
         # Convert
@@ -292,7 +295,7 @@ class TensorNetwork:
         return len(self.inds)
 
     @property
-    def ts_inds(self) -> List[List[Index]]:
+    def ts_inds(self) -> list[list[Index]]:
         """List of indices for each tensor.
 
         Returns the indices associated with each tensor.
@@ -303,7 +306,7 @@ class TensorNetwork:
         return tuple(map(lambda t: t.inds, self.tensors))
 
     @property
-    def arrays(self) -> List[Array]:
+    def arrays(self) -> list[Array]:
         """List of arrays for each tensor.
 
         Returns the array associated with each tensor.
@@ -314,7 +317,7 @@ class TensorNetwork:
         return tuple(map(lambda t: t.array, self.tensors))
 
     @property
-    def ts_tags(self) -> List[Dict[Any, Any]]:
+    def ts_tags(self) -> list[dict[Any, Any]]:
         """List of tags for each tensor.
 
         Returns the tags associated with each tensor.
@@ -325,7 +328,7 @@ class TensorNetwork:
         return tuple(map(lambda t: t.tags, self.tensors))
 
     @property
-    def inds(self) -> FrozenSet[Index]:
+    def inds(self) -> frozenset[Index]:
         """Set of indices.
 
         Returns all indices associated with the tensor network.
@@ -336,7 +339,7 @@ class TensorNetwork:
         return self._inds
 
     @property
-    def dims(self) -> Dict[Any, int]:
+    def dims(self) -> dict[Any, int]:
         """Map of dimensions.
 
         Returns the dimensions of each index.

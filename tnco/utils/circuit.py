@@ -14,12 +14,13 @@
 """Circuit utilities."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 import functools as fts
 import itertools as its
 import math
 import operator as op
 from random import Random
-from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
+from typing import Any
 
 import autoray as ar
 import more_itertools as mit
@@ -37,8 +38,8 @@ import tnco.utils.tn as tn_utils
 __all__ = ['load']
 
 
-def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
-            gate_B: Tuple[Matrix, Iterable[Qubit]],
+def commute(gate_A: tuple[Matrix, Iterable[Qubit]],
+            gate_B: tuple[Matrix, Iterable[Qubit]],
             *,
             use_matrix_commutation: bool = True,
             atol: float = 1e-8) -> bool:
@@ -133,8 +134,8 @@ def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
     return ar.do('allclose', array_AB, array_BA, atol=atol)
 
 
-def same(gate_A: Tuple[Matrix, Iterable[Qubit]],
-         gate_B: Tuple[Matrix, Iterable[Qubit]],
+def same(gate_A: tuple[Matrix, Iterable[Qubit]],
+         gate_B: tuple[Matrix, Iterable[Qubit]],
          *,
          atol: float = 1e-8) -> bool:
     """Checks if two gates are equivalent (up to a global phase).
@@ -203,20 +204,20 @@ def same(gate_A: Tuple[Matrix, Iterable[Qubit]],
 
 
 @fts.singledispatch
-def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
+def load(circuit: Iterable[tuple[Matrix, tuple[Qubit]]],
          *,
-         initial_state: Union[str, Dict[Qubit, Matrix], None] = '0',
-         final_state: Union[str, Dict[Qubit, Matrix], None] = '0',
+         initial_state: str | dict[Qubit, Matrix] | None = '0',
+         final_state: str | dict[Qubit, Matrix] | None = '0',
          simplify: bool = True,
          use_matrix_commutation: bool = True,
          decompose_hyper_inds: bool = True,
          fuse: float = 4,
-         dtype: Optional[Any] = None,
+         dtype: Any | None = None,
          atol: float = 1e-8,
-         backend: Optional[str] = None,
-         seed: Optional[int] = None,
+         backend: str | None = None,
+         seed: int | None = None,
          verbose: int = False,
-         **kwargs) -> Tuple[List[Array], List[Tuple[Index]], FrozenSet[Index]]:
+         **kwargs) -> tuple[list[Array], list[tuple[Index]], frozenset[Index]]:
     """Loads a quantum circuit and converts it to a tensor network.
 
     Args:
@@ -283,38 +284,37 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
 
     # Convert initial/final state
     def get_state(state, tag):
-        if state is None:
-            return {}
+        match state:
+            case None:
+                return {}
+            case str() if state in valid_token:
+                return dict(
+                    zip(zip(qubits, its.repeat(tag)),
+                        its.repeat(valid_token[state])))
+            case dict():
 
-        if isinstance(state, str) and state in valid_token:
-            return dict(
-                zip(zip(qubits, its.repeat(tag)),
-                    its.repeat(valid_token[state])))
+                # Check valid tokens
+                if not all(x in valid_token
+                           for x in state.values()
+                           if isinstance(x, str)):
+                    raise ValueError("State has not supported tokens.")
 
-        if isinstance(state, dict):
+                # Convert state
+                state = dict(
+                    ((q, tag), valid_token[x] if isinstance(x, str) else ar.
+                     do('asarray', x, dtype=dtype, like=backend))
+                    for q, x in state.items()
+                    if q in qubits)
 
-            # Check valid tokens
-            if not all(x in valid_token
-                       for x in state.values()
-                       if isinstance(x, str)):
-                raise ValueError("State has not supported tokens.")
+                # Check states
+                if not all(x.shape == (2,) and abs(ar.do('linalg.norm', x) -
+                                                   1) < atol
+                           for x in state.values()):
+                    raise ValueError("State is not properly normalized.")
 
-            # Convert state
-            state = dict(
-                ((q, tag), valid_token[x] if isinstance(x, str) else ar.
-                 do('asarray', x, dtype=dtype, like=backend))
-                for q, x in state.items()
-                if q in qubits)
-
-            # Check states
-            if not all(
-                    x.shape == (2,) and abs(ar.do('linalg.norm', x) - 1) < atol
-                    for x in state.values()):
-                raise ValueError("State is not properly normalized.")
-
-            return state
-
-        raise NotImplementedError("State not supported.")
+                return state
+            case _:
+                raise NotImplementedError("State not supported.")
 
     def get_delta(n: int):
         """Return a Kronecker delta of n-dimensions."""
@@ -522,8 +522,8 @@ try:
 
     def cirq_to_arrays(
             circuit: Iterable[cirq.Operation],
-            dtype: Optional[Any] = None,
-            backend: Optional[str] = None) -> List[Tuple[Array, Tuple[Qubit]]]:
+            dtype: Any | None = None,
+            backend: str | None = None) -> list[tuple[Array, tuple[Qubit]]]:
         """Convert a 'cirq' circuit to arrays.
 
         Args:
@@ -575,8 +575,8 @@ try:
 
     def qiskit_to_arrays(
             circuit: Iterable[qiskit.circuit.CircuitInstruction],
-            dtype: Optional[Any] = None,
-            backend: Optional[str] = None) -> List[Tuple[Array, Tuple[Qubit]]]:
+            dtype: Any | None = None,
+            backend: str | None = None) -> list[tuple[Array, tuple[Qubit]]]:
         """Convert a 'qiskit' circuit to arrays.
 
         Args:

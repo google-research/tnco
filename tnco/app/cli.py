@@ -13,10 +13,10 @@
 # limitations under the License.
 """Command-line interface utilities."""
 
+from collections.abc import Callable
 from inspect import Parameter
 from inspect import Signature
 from inspect import signature
-from typing import Callable
 
 from fire import Fire
 from more_itertools import value_chain

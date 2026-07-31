@@ -39,16 +39,16 @@ struct CostModel {
   using dims_type = tnco::ctree_type::dims_type;
 
   CostModel() = default;
-  CostModel(const CostModel &) = default;
-  CostModel(CostModel &&) = default;
-  auto operator=(const CostModel &) -> CostModel & = delete;
-  auto operator=(CostModel &&) -> CostModel & = delete;
+  CostModel(const CostModel&) = default;
+  CostModel(CostModel&&) = default;
+  auto operator=(const CostModel&) -> CostModel& = delete;
+  auto operator=(CostModel&&) -> CostModel& = delete;
   virtual ~CostModel() = default;
 
-  [[nodiscard]] virtual auto contraction_cost(const bitset_type &inds_in1,
-                                              const bitset_type &inds_in2,
-                                              const bitset_type &inds_out,
-                                              const dims_type &dims) const
+  [[nodiscard]] virtual auto contraction_cost(const bitset_type& inds_in1,
+                                              const bitset_type& inds_in2,
+                                              const bitset_type& inds_out,
+                                              const dims_type& dims) const
       -> cost_type {
     /*
      * Compute the contraction cost of:
@@ -67,7 +67,7 @@ struct CostModel {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = CostModel<T...>;
   using cost_type = typename self_type::cost_type;
   py::class_<self_type>(m, name.c_str())
@@ -75,21 +75,21 @@ void init(py::module &m, const std::string &name) {
       .def(py::init<self_type>())
       .def(
           "__deepcopy__",
-          [](const self_type &self, const py::dict &) -> auto {
+          [](const self_type& self, const py::dict&) -> auto {
             return self.clone();
           },
           "memo"_a)
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              return "BaseCostModel(cost_type=" + type_to_str<cost_type>() + ")";
            })
       .def("__eq__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return true;
            })
       .def("contraction_cost", &self_type::contraction_cost, "inds_in1"_a,
            "inds_in2"_a, "inds_out"_a, "dims"_a)
-      .def_property_readonly("cost_type", [](const self_type &self) -> auto {
+      .def_property_readonly("cost_type", [](const self_type& self) -> auto {
         return type_to_str<cost_type>();
       });
 }

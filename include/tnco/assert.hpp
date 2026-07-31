@@ -20,8 +20,8 @@
 namespace tnco {
 
 template <typename MessageType, typename FileType, typename LineType>
-void assert_(const bool check, const MessageType &msg, const FileType &file,
-             const LineType &line) {
+void assert_(const bool check, const MessageType& msg, const FileType& file,
+             const LineType& line) {
   if (!check) {
     std::ostringstream ss;
     ss << msg << " (at " << file << ":" << line << ")";

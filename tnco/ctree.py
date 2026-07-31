@@ -13,13 +13,13 @@
 # limitations under the License.
 """Contraction Tree."""
 
+from collections.abc import Callable, Iterable
 import functools as fts
 import itertools as its
 import math
 import operator as op
 from types import MappingProxyType
-from typing import (Any, Callable, Dict, FrozenSet, Iterable, List, NoReturn,
-                    Optional, Tuple, Union)
+from typing import Any, NoReturn
 
 import more_itertools as mit
 from rich.console import Console
@@ -67,11 +67,11 @@ class ContractionTree(_ContractionTree):
     """
 
     def __init__(self,
-                 path: Iterable[Tuple[int, int]],
-                 ts_inds: Iterable[List[Index]],
-                 dims: Union[Dict[Index, int], int],
+                 path: Iterable[tuple[int, int]],
+                 ts_inds: Iterable[list[Index]],
+                 dims: dict[Index, int] | int,
                  *,
-                 output_inds: Optional[Iterable[Index]] = None,
+                 output_inds: Iterable[Index] | None = None,
                  check_shared_inds: bool = False,
                  verbose: bool = False,
                  **kwargs) -> None:
@@ -215,9 +215,9 @@ class ContractionTree(_ContractionTree):
                 dims = dict(
                     map(lambda x: (x, dims[x]),
                         mit.unique_everseen(mit.flatten(ts_inds))))
-            except TypeError:
+            except TypeError as e:
                 if int(dims) != dims:
-                    raise ValueError("'dims' is not valid.")
+                    raise ValueError("'dims' is not valid.") from e
                 dims = dict(
                     zip(mit.unique_everseen(mit.flatten(ts_inds)),
                         its.repeat(int(dims))))
@@ -226,13 +226,12 @@ class ContractionTree(_ContractionTree):
             self._inds_order = tuple(mit.unique_everseen(mit.flatten(ts_inds)))
 
         def get_node(node):
-            # If Node, just return
-            if isinstance(node, Node):
-                return node
-
-            # Otherwise, convert to Node
-            x, y, z = map(lambda x: -1 if x is None else x, node)
-            return Node((x, y), z)
+            match node:
+                case Node():
+                    return node
+                case _:
+                    x, y, z = map(lambda x: -1 if x is None else x, node)
+                    return Node((x, y), z)
 
         # Get inds map
         inds_map_ = dict(zip(self._inds_order, range(len(self._inds_order))))
@@ -256,7 +255,7 @@ class ContractionTree(_ContractionTree):
         nodes, ts_inds, dims, _cache = args
         return ContractionTree(nodes, ts_inds, dims, _cache=_cache)
 
-    def __reduce__(self) -> Tuple[Any, ...]:
+    def __reduce__(self) -> tuple[Any, ...]:
         return self.__build__, (self.nodes, self.inds[:], dict(self.dims),
                                 (self._n_tensors, self._tensors_pos,
                                  self._inds_order))
@@ -267,7 +266,7 @@ class ContractionTree(_ContractionTree):
     def __repr__(self) -> str:
         return f'ContractionTree(n_nodes={len(self)}, n_inds={self.n_inds})'
 
-    def all_inds(self) -> FrozenSet[Index]:
+    def all_inds(self) -> frozenset[Index]:
         """Returns all indices.
 
         Returns all indices included in this contraction tree.
@@ -277,7 +276,7 @@ class ContractionTree(_ContractionTree):
         """
         return frozenset(self._inds_order)
 
-    def output_inds(self) -> FrozenSet[Index]:
+    def output_inds(self) -> frozenset[Index]:
         """Returns output indices.
 
         Returns the output indices of the contraction tree.
@@ -288,7 +287,7 @@ class ContractionTree(_ContractionTree):
         return self.inds[-1]
 
     @property
-    def nodes(self) -> List[Node]:
+    def nodes(self) -> list[Node]:
         """Returns nodes.
 
         Returns a list of nodes in the contraction tree.
@@ -299,7 +298,7 @@ class ContractionTree(_ContractionTree):
         return super().nodes
 
     @property
-    def inds(self) -> List[FrozenSet[Index]]:
+    def inds(self) -> list[frozenset[Index]]:
         """Returns indices.
 
         Returns a list of indices for each node.
@@ -315,8 +314,8 @@ class ContractionTree(_ContractionTree):
                 self._inds_map = inds_map
 
             def __getitem__(
-                self, key: Union[int, slice]
-            ) -> Union[FrozenSet[Index], Tuple[FrozenSet[Index], ...]]:
+                self, key: int | slice
+            ) -> frozenset[Index] | tuple[frozenset[Index], ...]:
 
                 def get_inds(xs):
                     return frozenset(
@@ -331,7 +330,7 @@ class ContractionTree(_ContractionTree):
         return IndsProxy(super().inds, self._inds_order)
 
     @property
-    def dims(self) -> Dict[Any, int]:
+    def dims(self) -> dict[Any, int]:
         """Map of dimensions.
 
         Returns a map of dimensions for each index.
@@ -348,7 +347,7 @@ class ContractionTree(_ContractionTree):
                 zip(self._inds_order,
                     its.repeat(dims) if isinstance(dims, int) else dims)))
 
-    def path(self) -> List[Tuple[int, int]]:
+    def path(self) -> list[tuple[int, int]]:
         """Returns contraction path in linear (einsum) format.
 
         Returns the contraction path in linear (einsum) format.

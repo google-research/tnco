@@ -32,14 +32,14 @@ namespace py = pybind11;
 using namespace py::literals;
 
 template <typename Tree, typename Callback>
-auto traverse(const Tree &tree, const Callback &callback) -> void {
+auto traverse(const Tree& tree, const Callback& callback) -> void {
   std::stack<size_t> stack;
   std::vector<bool> visited(std::size(tree), false);
 
   stack.push(std::size(tree) - 1);
   while (std::size(stack)) {
     const auto pos = stack.top();
-    if (const auto &node = tree.nodes[pos]; visited[pos] || node.is_leaf()) {
+    if (const auto& node = tree.nodes[pos]; visited[pos] || node.is_leaf()) {
       stack.pop();
       callback(pos);
     } else {
@@ -51,7 +51,7 @@ auto traverse(const Tree &tree, const Callback &callback) -> void {
 }
 
 template <typename Tree>
-auto get_contraction(const Tree &tree)
+auto get_contraction(const Tree& tree)
     -> std::vector<std::array<index_type, 3>> {
   using index_type = typename std::decay_t<Tree>::node_type::index_type;
 
@@ -59,8 +59,8 @@ auto get_contraction(const Tree &tree)
   std::vector<std::array<index_type, 3>> contraction;
 
   // Get contraction
-  traverse(tree, [&nodes = tree.nodes, &contraction](auto &&pos) -> auto {
-    if (const auto &node = nodes[pos]; !node.is_leaf()) {
+  traverse(tree, [&nodes = tree.nodes, &contraction](auto&& pos) -> auto {
+    if (const auto& node = nodes[pos]; !node.is_leaf()) {
       contraction.push_back(
           {node.children[0], node.children[1], static_cast<index_type>(pos)});
     }
@@ -71,12 +71,12 @@ auto get_contraction(const Tree &tree)
 }
 
 template <typename ValX, typename ValY, typename Atol>
-auto is_close(const ValX &x, const ValY &y, const Atol &atol) -> bool {
+auto is_close(const ValX& x, const ValY& y, const Atol& atol) -> bool {
   return abs(x - y) <= atol;
 }
 
 template <typename ValX, typename ValY, typename Atol>
-auto is_logclose(const ValX &x, const ValY &y, const Atol &atol) -> bool {
+auto is_logclose(const ValX& x, const ValY& y, const Atol& atol) -> bool {
   if (x < 0 || y < 0) {
     return false;
   }
@@ -87,55 +87,55 @@ auto is_logclose(const ValX &x, const ValY &y, const Atol &atol) -> bool {
 }
 
 template <typename ArrayX, typename ArrayY, typename Compare>
-auto compare(const ArrayX &ax, const ArrayY &ay, const Compare &cmp) -> bool {
+auto compare(const ArrayX& ax, const ArrayY& ay, const Compare& cmp) -> bool {
   if (std::size(ax) != std::size(ay)) {
     return false;
   }
   return std::transform_reduce(
       std::begin(ax), std::end(ax), std::begin(ay), true,
-      [](auto &&x, auto &&y) -> auto { return x & y; }, cmp);
+      [](auto&& x, auto&& y) -> auto { return x & y; }, cmp);
 }
 
 template <typename ArrayX, typename ArrayY, typename Atol>
-auto all_close(const ArrayX &ax, const ArrayY &ay, const Atol &atol) -> bool {
-  return compare(ax, ay, [atol](auto &&x, auto &&y) -> auto {
+auto all_close(const ArrayX& ax, const ArrayY& ay, const Atol& atol) -> bool {
+  return compare(ax, ay, [atol](auto&& x, auto&& y) -> auto {
     return is_close(x, y, atol);
   });
 }
 
 template <typename ArrayX, typename ArrayY, typename Atol>
-auto all_logclose(const ArrayX &ax, const ArrayY &ay, const Atol &atol)
+auto all_logclose(const ArrayX& ax, const ArrayY& ay, const Atol& atol)
     -> bool {
-  return compare(ax, ay, [atol](auto &&x, auto &&y) -> auto {
+  return compare(ax, ay, [atol](auto&& x, auto&& y) -> auto {
     return is_logclose(x, y, atol);
   });
 }
 
-auto init(py::module &m) -> void {
+auto init(py::module& m) -> void {
   m.def("traverse",
-        &traverse<const tnco::tree_type &, const std::function<void(size_t)> &>,
+        &traverse<const tnco::tree_type&, const std::function<void(size_t)>&>,
         "tree"_a, "callback"_a, py::pos_only());
-  m.def("get_contraction", &get_contraction<const tnco::tree_type &>, "tree"_a,
+  m.def("get_contraction", &get_contraction<const tnco::tree_type&>, "tree"_a,
         py::pos_only());
   m.def(
       "is_close",
-      [](const long double &x, const long double &y,
-         const long double &atol) -> auto { return is_close(x, y, atol); },
+      [](const long double& x, const long double& y,
+         const long double& atol) -> auto { return is_close(x, y, atol); },
       "x"_a, "y"_a, py::pos_only(), py::kw_only(), "atol"_a = 1e-8);
   m.def(
       "is_logclose",
-      [](const long double &x, const long double &y,
-         const long double &atol) -> auto { return is_logclose(x, y, atol); },
+      [](const long double& x, const long double& y,
+         const long double& atol) -> auto { return is_logclose(x, y, atol); },
       "x"_a, "y"_a, py::pos_only(), py::kw_only(), "atol"_a = 1e-8);
   m.def(
       "all_close",
-      [](const std::vector<long double> &x, const std::vector<long double> &y,
-         const long double &atol) -> auto { return all_close(x, y, atol); },
+      [](const std::vector<long double>& x, const std::vector<long double>& y,
+         const long double& atol) -> auto { return all_close(x, y, atol); },
       "x"_a, "y"_a, py::pos_only(), py::kw_only(), "atol"_a = 1e-8);
   m.def(
       "all_logclose",
-      [](const std::vector<long double> &x, const std::vector<long double> &y,
-         const long double &atol) -> auto { return all_logclose(x, y, atol); },
+      [](const std::vector<long double>& x, const std::vector<long double>& y,
+         const long double& atol) -> auto { return all_logclose(x, y, atol); },
       "x"_a, "y"_a, py::pos_only(), py::kw_only(), "atol"_a = 1e-8);
 }
 

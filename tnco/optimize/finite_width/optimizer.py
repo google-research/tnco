@@ -13,9 +13,9 @@
 # limitations under the License.
 """Optimizer for finite width."""
 
+from collections.abc import Iterable
 from importlib import import_module
-from typing import (Any, FrozenSet, Iterable, Literal, NoReturn, Optional,
-                    TypeVar, Union)
+from typing import Any, Literal, NoReturn, TypeVar
 
 from tnco.bitset import Bitset
 from tnco.ctree import ContractionTree
@@ -57,8 +57,8 @@ class Optimizer:
                  *,
                  slice_update: Literal['greedy'] = 'greedy',
                  max_number_new_slices: int = 0,
-                 skip_slices: Optional[Iterable[Index]] = None,
-                 seed: Optional[Union[int, str]] = None,
+                 skip_slices: Iterable[Index] | None = None,
+                 seed: int | str | None = None,
                  disable_shared_inds: bool = False,
                  atol: float = 1e-5,
                  **kwargs) -> None:
@@ -175,7 +175,7 @@ class Optimizer:
         return self._cmodel
 
     @property
-    def skip_slices(self) -> FrozenSet[Index]:
+    def skip_slices(self) -> frozenset[Index]:
         """Indices to skip while slicing.
 
         Returns the set of indices which are not sliced to fit within the given
@@ -260,7 +260,7 @@ class Optimizer:
         return self._optimizer.log2_min_total_cost
 
     @property
-    def slices(self) -> FrozenSet[Index]:
+    def slices(self) -> frozenset[Index]:
         """Slices used by ``Optimizer.ctree``.
 
         Returns the sliced indices used in ``Optimizer.ctree`` to keep every
@@ -274,7 +274,7 @@ class Optimizer:
                 self._optimizer.slices.positions()))
 
     @property
-    def min_slices(self) -> FrozenSet[Index]:
+    def min_slices(self) -> frozenset[Index]:
         """Slices used by ``Optimizer.min_ctree``.
 
         Returns the sliced indices used in ``Optimizer.min_ctree`` to keep every

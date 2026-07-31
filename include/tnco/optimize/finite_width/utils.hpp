@@ -22,10 +22,10 @@
 namespace tnco::optimize::finite_width::utils {
 
 template <typename CostType, typename CTree, typename CCost, typename Slices>
-[[nodiscard]] auto get_cost(const CTree &ctree, const CCost &ccost,
-                            const Slices &slices) -> CostType {
+[[nodiscard]] auto get_cost(const CTree& ctree, const CCost& ccost,
+                            const Slices& slices) -> CostType {
   return infinite_memory::utils::get_cost<CostType>(
-      ctree, [&ccost, &slices](auto &&...xs) -> auto {
+      ctree, [&ccost, &slices](auto&&... xs) -> auto {
         return ccost(std::forward<decltype(xs)>(xs)..., slices);
       });
 }
@@ -38,8 +38,8 @@ struct CostCache : infinite_memory::utils::CostCache<CostType> {
   CostCache() = default;
 
   template <typename CTree, typename CCost, typename Slices>
-  CostCache(const CTree &ctree, const CCost &ccost, const Slices &slices)
-      : base_type{ctree, [&ccost, &slices](auto &&...x) -> auto {
+  CostCache(const CTree& ctree, const CCost& ccost, const Slices& slices)
+      : base_type{ctree, [&ccost, &slices](auto&&... x) -> auto {
                     return ccost(std::forward<decltype(x)>(x)..., slices);
                   }} {}
 };
@@ -54,19 +54,19 @@ struct WidthCache {
   WidthCache() = default;
 
   template <typename CTree, typename GetWidth>
-  WidthCache(const CTree &ctree, const GetWidth &get_width)
+  WidthCache(const CTree& ctree, const GetWidth& get_width)
       : width(std::size(ctree)) {
     // Initialize width
     std::transform(std::begin(ctree.inds), std::end(ctree.inds),
                    std::begin(width),
-                   [&get_width, &dims = ctree.dims](auto &&xs) -> auto {
+                   [&get_width, &dims = ctree.dims](auto&& xs) -> auto {
                      return get_width(xs, dims);
                    });
   }
 
   template <typename FloatType>
-  auto is_close_to(const WidthCache &cache, const FloatType &atol) const
-      -> bool {
+  [[nodiscard]] auto is_close_to(const WidthCache& cache,
+                                 const FloatType& atol) const -> bool {
     return tnco::utils::all_close(width, cache.width, atol);
   }
 };
@@ -81,17 +81,17 @@ struct DimsCache {
   DimsCache() = default;
 
   template <typename CTree>
-  DimsCache(const CTree &ctree) {
+  DimsCache(const CTree& ctree) {
     // Initialize log2(dims)
     std::visit(
-        [&log2_dims = this->log2_dims](auto &&dims) -> auto {
+        [&log2_dims = this->log2_dims](auto&& dims) -> auto {
           if constexpr (std::is_arithmetic_v<std::decay_t<decltype(dims)>>) {
             log2_dims = static_cast<float_type>(log2(dims));
           } else {
             std::vector<float_type> log2_dims_(std::size(dims));
             std::transform(std::begin(dims), std::end(dims),
                            std::begin(log2_dims_),
-                           [](auto &&d) -> auto { return log2(d); });
+                           [](auto&& d) -> auto { return log2(d); });
             log2_dims = std::move(log2_dims_);
           }
         },
@@ -99,10 +99,11 @@ struct DimsCache {
   }
 
   template <typename FType>
-  auto is_close_to(const DimsCache &cache, const FType &atol) const -> bool {
+  [[nodiscard]] auto is_close_to(const DimsCache& cache,
+                                 const FType& atol) const -> bool {
     // Get pointers to vectors
-    const auto *const px_ = std::get_if<std::vector<float_type>>(&log2_dims);
-    const auto *const py_ =
+    const auto* const px_ = std::get_if<std::vector<float_type>>(&log2_dims);
+    const auto* const py_ =
         std::get_if<std::vector<float_type>>(&cache.log2_dims);
 
     // If both are vectors

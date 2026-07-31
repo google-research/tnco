@@ -13,11 +13,12 @@
 # limitations under the License.
 """Simulated Annealing Optimizer for Infinite Memory."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 import json
 from sys import stderr
 from time import perf_counter
-from typing import Any, Iterable, List, Optional, Tuple, Union
+from typing import Any
 
 import more_itertools as mit
 
@@ -49,13 +50,14 @@ class JSONEncoder(BaseJSONEncoder):
         Returns:
             Encoded object in the JSON format.
         """
-        if isinstance(obj, ContractionResults):
-            return dict(**BaseJSONEncoder().default(obj),
-                        disconnected_paths=obj.disconnected_paths)
-        if hasattr(obj, 'to_json'):
-            return obj.to_json()
-
-        return super().default(obj)
+        match obj:
+            case ContractionResults():
+                return dict(**BaseJSONEncoder().default(obj),
+                            disconnected_paths=obj.disconnected_paths)
+            case _ if hasattr(obj, 'to_json'):
+                return obj.to_json()
+            case _:
+                return super().default(obj)
 
 
 @dataclass(repr=False, frozen=True, eq=False)
@@ -74,8 +76,8 @@ class ContractionResults(BaseContractionResults):
             network.
     """
 
-    disconnected_costs: List[float]
-    disconnected_paths: List[List[Tuple[int, int]]]
+    disconnected_costs: list[float]
+    disconnected_paths: list[list[tuple[int, int]]]
 
     def to_json(self) -> Any:
         """Return JSON.
@@ -97,11 +99,11 @@ class Optimizer(BaseOptimizer):
 
     def optimize(self,
                  tn: Any,
-                 betas: Union[Tuple[float, float], Iterable[float]],
-                 n_steps: Optional[int] = None,
+                 betas: tuple[float, float] | Iterable[float],
+                 n_steps: int | None = None,
                  n_runs: int = 1,
-                 n_projs: Optional[int] = None,
-                 timeout: Optional[float] = None,
+                 n_projs: int | None = None,
+                 timeout: float | None = None,
                  **load_tn_options) -> Any:
         """Optimizes the tensor network ``tn``.
 

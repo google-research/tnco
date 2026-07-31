@@ -59,7 +59,7 @@ struct Node {
   Node(index_type parent) : Node{{null, null}, parent} {}
   Node(std::array<index_type, 2> children) : Node{std::move(children), null} {}
 
-  auto operator==(const Node &other) const -> bool {
+  auto operator==(const Node& other) const -> bool {
     return parent == other.parent && children == other.children;
   }
 
@@ -74,7 +74,7 @@ struct Node {
     }
 
     // If negative, it must be 'null'
-    for (const auto &x : {children[0], children[1], parent}) {
+    for (const auto& x : {children[0], children[1], parent}) {
       if (x < 0 && x != null) {
         return {false, "Node is incosistent."};
       }
@@ -107,11 +107,11 @@ struct Node {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = Node<T...>;
   using index_type = typename self_type::index_type;
 
-  static constexpr auto int_to_obj = [](const index_type &x) -> py::object {
+  static constexpr auto int_to_obj = [](const index_type& x) -> py::object {
     if (x == self_type::null) {
       return py::none();
     }
@@ -128,7 +128,7 @@ void init(py::module &m, const std::string &name) {
       .def(py::init<self_type>())
       .def("__eq__", &self_type::operator==)
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              py::str repr;
              repr += py::str("Node(parent=");
              repr += py::str(int_to_obj(self.parent));
@@ -140,9 +140,9 @@ void init(py::module &m, const std::string &name) {
            })
       .def_property_readonly(
           "parent",
-          [](const self_type &self) -> auto { return int_to_obj(self.parent); })
+          [](const self_type& self) -> auto { return int_to_obj(self.parent); })
       .def_property_readonly("children",
-                             [](const self_type &self) -> auto {
+                             [](const self_type& self) -> auto {
                                return py::make_tuple(
                                    int_to_obj(self.children[0]),
                                    int_to_obj(self.children[1]));
@@ -151,7 +151,7 @@ void init(py::module &m, const std::string &name) {
       .def("is_root", &self_type::is_root)
       .def(
           "is_valid",
-          [](const self_type &self, const bool return_message)
+          [](const self_type& self, const bool return_message)
               -> std::variant<bool, std::pair<bool, std::string>> {
             const auto [valid, msg] = self.is_valid();
             if (return_message) {
@@ -161,11 +161,11 @@ void init(py::module &m, const std::string &name) {
           },
           "return_message"_a = false)
       .def(py::pickle(
-          [](const self_type &self) -> auto {
+          [](const self_type& self) -> auto {
             return std::tuple{self.children, self.parent};
           },
           [](const std::tuple<decltype(self_type::children),
-                              decltype(self_type::parent)> &state) -> auto {
+                              decltype(self_type::parent)>& state) -> auto {
             return self_type{std::get<0>(state), std::get<1>(state)};
           }));
 }

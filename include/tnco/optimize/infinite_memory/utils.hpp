@@ -29,27 +29,27 @@ struct CostCache {
   CostCache() = default;
 
   template <typename CTree, typename CCost>
-  CostCache(const CTree &ctree, const CCost &ccost)
+  CostCache(const CTree& ctree, const CCost& ccost)
       : partial_cost(std::size(ctree)), contraction_cost(std::size(ctree)) {
     tnco::utils::traverse(
         ctree,
         [&ctree, n_inds = ctree.n_inds(), &ccost,
-         &cache = *this](auto &&pos) -> auto {
+         &cache = *this](auto&& pos) -> auto {
           /*
            *   A <--- This node
            *  / \
            * B   C
            */
-          if (const auto &node = ctree.nodes[pos]; node.is_leaf()) {
+          if (const auto& node = ctree.nodes[pos]; node.is_leaf()) {
             cache.contraction_cost[pos] = 0;
             cache.partial_cost[pos] = 0;
           } else {
-            const auto &inds_out = ctree.inds[pos];
-            const auto &inds_in1 = ctree.inds[node.children[0]];
-            const auto &inds_in2 = ctree.inds[node.children[1]];
+            const auto& inds_out = ctree.inds[pos];
+            const auto& inds_in1 = ctree.inds[node.children[0]];
+            const auto& inds_in2 = ctree.inds[node.children[1]];
             const auto cost_A = ccost(inds_in1, inds_in2, inds_out, ctree.dims);
-            const auto &pcost_B = cache.partial_cost[node.children[0]];
-            const auto &pcost_C = cache.partial_cost[node.children[1]];
+            const auto& pcost_B = cache.partial_cost[node.children[0]];
+            const auto& pcost_C = cache.partial_cost[node.children[1]];
             cache.contraction_cost[pos] = cost_A;
             cache.partial_cost[pos] = cost_A + pcost_B + pcost_C;
           }
@@ -57,8 +57,8 @@ struct CostCache {
   }
 
   template <typename FloatType>
-  auto is_close_to(const CostCache &cache, const FloatType &atol) const
-      -> bool {
+  [[nodiscard]] auto is_close_to(const CostCache& cache,
+                                 const FloatType& atol) const -> bool {
     return tnco::utils::all_logclose(partial_cost, cache.partial_cost, atol) &&
            tnco::utils::all_logclose(contraction_cost, cache.contraction_cost,
                                      atol);
@@ -74,41 +74,41 @@ struct HyperCache {
   HyperCache() = default;
 
   template <typename CTree>
-  HyperCache(const CTree &ctree) {
+  HyperCache(const CTree& ctree) {
     const auto n_inds = ctree.n_inds();
     const auto n_tensors = std::size(ctree);
     hyper_inds.resize(n_tensors);
 
     for (size_t pos = 0; pos < n_tensors; ++pos) {
-      if (const auto &node = ctree.nodes[pos]; node.is_leaf()) {
+      if (const auto& node = ctree.nodes[pos]; node.is_leaf()) {
         hyper_inds[pos] = bitset_type(n_inds);
       } else {
-        const auto &inds_out = ctree.inds[pos];
-        const auto &inds_in1 = ctree.inds[node.children[0]];
-        const auto &inds_in2 = ctree.inds[node.children[1]];
+        const auto& inds_out = ctree.inds[pos];
+        const auto& inds_in1 = ctree.inds[node.children[0]];
+        const auto& inds_in2 = ctree.inds[node.children[1]];
         hyper_inds[pos] = inds_out & inds_in1 & inds_in2;
       }
     }
   }
 
   template <typename FloatType>
-  auto is_close_to(const HyperCache &cache, const FloatType &atol) const
-      -> bool {
+  [[nodiscard]] auto is_close_to(const HyperCache& cache,
+                                 const FloatType& atol) const -> bool {
     // Check if hyper_inds is close
     return hyper_inds == cache.hyper_inds;
   }
 };
 
 template <typename CostType, typename CTree, typename CCost>
-[[nodiscard]] auto get_cost(const CTree &ctree, const CCost &ccost)
+[[nodiscard]] auto get_cost(const CTree& ctree, const CCost& ccost)
     -> CostType {
   CostType total_cost{0};
   tnco::utils::traverse(
-      ctree, [&ctree, &ccost, &total_cost = total_cost](auto &&pos) -> auto {
-        if (const auto &node = ctree.nodes[pos]; !node.is_leaf()) {
-          const auto &inds_out = ctree.inds[pos];
-          const auto &inds_in1 = ctree.inds[node.children[0]];
-          const auto &inds_in2 = ctree.inds[node.children[1]];
+      ctree, [&ctree, &ccost, &total_cost = total_cost](auto&& pos) -> auto {
+        if (const auto& node = ctree.nodes[pos]; !node.is_leaf()) {
+          const auto& inds_out = ctree.inds[pos];
+          const auto& inds_in1 = ctree.inds[node.children[0]];
+          const auto& inds_in2 = ctree.inds[node.children[1]];
           total_cost += ccost(inds_in1, inds_in2, inds_out, ctree.dims);
         }
       });

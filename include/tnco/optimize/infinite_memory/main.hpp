@@ -31,7 +31,7 @@ namespace py = pybind11;
 using namespace py::literals;
 
 template <typename CostType>
-auto core(py::module &m) -> void {
+auto core(py::module& m) -> void {
   // Get suffix
   const std::string sfx = "_" + type_to_str<CostType>();
 
@@ -40,7 +40,7 @@ auto core(py::module &m) -> void {
   optimizer::init<cmodel_type, prob_type>(m, "Optimizer" + sfx);
 }
 
-auto init(py::module &m) -> void {
+auto init(py::module& m) -> void {
   // Initialize contraction costs
   {
     auto sm = m.def_submodule("cost_model");

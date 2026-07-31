@@ -13,7 +13,7 @@
 # limitations under the License.
 """Bitset implementation."""
 
-from typing import Iterable, Optional, Union
+from collections.abc import Iterable
 
 import more_itertools as mit
 from tnco_core import Bitset as Bitset_
@@ -42,18 +42,18 @@ class Bitset(Bitset_):
     """
 
     def __init__(self,
-                 bits: Optional[Union[str, Iterable[int]]] = None,
-                 n: Optional[int] = None) -> None:
-        if bits is None:
-            # If 'bits' is not provided, 'n' must be None or 0
-            if n is not None and n != 0:
-                raise ValueError("'bits' must be provided.")
+                 bits: str | Iterable[int] | None = None,
+                 n: int | None = None) -> None:
+        match bits:
+            case None:
+                # If 'bits' is not provided, 'n' must be None or 0
+                if n is not None and n != 0:
+                    raise ValueError("'bits' must be provided.")
 
-            # Get empty Bitset
-            super().__init__()
+                # Get empty Bitset
+                super().__init__()
 
-        else:
-            if isinstance(bits, str):
+            case str():
                 # Bits can only be 0 or 1
                 if any(map(lambda x: x not in '01', bits)):
                     raise ValueError("'bits' can only have '0' or '1'.")
@@ -65,7 +65,7 @@ class Bitset(Bitset_):
                 # Get Bitset from string
                 super().__init__(bits)
 
-            else:
+            case _:
                 # Convert to list
                 bits = list(bits)
 

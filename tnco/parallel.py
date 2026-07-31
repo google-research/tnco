@@ -13,6 +13,7 @@
 # limitations under the License.
 """Parallelization utilities."""
 
+from collections.abc import Callable, Iterable
 import itertools as its
 from multiprocessing.shared_memory import SharedMemory
 from struct import calcsize
@@ -22,7 +23,7 @@ from threading import Thread
 from threading import TIMEOUT_MAX
 from threading import Timer
 from time import sleep
-from typing import Any, Callable, Iterable, Optional, Tuple, Union
+from typing import Any
 from warnings import warn
 
 import more_itertools as mit
@@ -55,7 +56,7 @@ class Buffer:
     """
 
     def __init__(self,
-                 sequence_or_size: Union[Iterable[Any], int],
+                 sequence_or_size: Iterable[Any] | int,
                  dtype: str = 'q') -> None:
 
         # Check dtype
@@ -64,8 +65,8 @@ class Buffer:
 
         try:
             calcsize(dtype)
-        except Exception:
-            raise ValueError("'dtype' is not valid.")
+        except Exception as e:
+            raise ValueError("'dtype' is not valid.") from e
 
         # Get sequence and size
         try:
@@ -112,10 +113,10 @@ def Parallel(core: Callable[..., Any],
              description: str = "Processing...",
              text: str = "",
              n_jobs: int = -1,
-             timeout: Optional[float] = None,
+             timeout: float | None = None,
              verbose: int = False,
-             buffers: Iterable[Tuple[str, str]] = (),
-             refresh_per_second: Optional[float] = None,
+             buffers: Iterable[tuple[str, str]] = (),
+             refresh_per_second: float | None = None,
              leave: bool = False,
              **kwargs: Any) -> Any:
     """Parallelize ``core``.

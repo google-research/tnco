@@ -40,7 +40,7 @@ struct ContractionTree : TreeType {
   dims_type dims;
 
   template <typename VectorNodes>
-  ContractionTree(VectorNodes &&nodes, std::vector<bitset_type> inds,
+  ContractionTree(VectorNodes&& nodes, std::vector<bitset_type> inds,
                   dims_type dims, const bool check_shared_inds = false)
       : tree_type{std::forward<VectorNodes>(nodes)},
         inds{std::move(inds)},
@@ -57,15 +57,15 @@ struct ContractionTree : TreeType {
                         false} {}
 
   template <typename VectorNodes>
-  ContractionTree(VectorNodes &&nodes,
-                  const std::vector<std::vector<size_t>> &inds, dims_type dims,
+  ContractionTree(VectorNodes&& nodes,
+                  const std::vector<std::vector<size_t>>& inds, dims_type dims,
                   const bool check_shared_inds = false)
       : tree_type{std::forward<VectorNodes>(nodes)}, dims{std::move(dims)} {
     // Get number of indices
     const auto n_inds = std::transform_reduce(
         std::begin(inds), std::end(inds), size_t{0},
-        [](auto &&x, auto &&y) -> auto { return std::max(x, y); },
-        [](auto &&xs) -> auto {
+        [](auto&& x, auto&& y) -> auto { return std::max(x, y); },
+        [](auto&& xs) -> auto {
           return std::empty(xs)
                      ? 0
                      : *std::max_element(std::begin(xs), std::end(xs)) + 1;
@@ -74,13 +74,13 @@ struct ContractionTree : TreeType {
     // Build inds
     std::transform(
         std::begin(inds), std::end(inds), std::back_inserter(this->inds),
-        [n_inds](auto &&xs) -> auto { return bitset_type{xs, n_inds}; });
+        [n_inds](auto&& xs) -> auto { return bitset_type{xs, n_inds}; });
 
     // Convert to int if possible
-    if (const auto *const p_ = std::get_if<dims_vec_type>(&this->dims)) {
-      if (const auto &dims_ = *p_;
+    if (const auto* const p_ = std::get_if<dims_vec_type>(&this->dims)) {
+      if (const auto& dims_ = *p_;
           std::size(dims_) && std::all_of(std::begin(dims_), std::end(dims_),
-                                          [d = dims_[0]](auto &&dim) -> auto {
+                                          [d = dims_[0]](auto&& dim) -> auto {
                                             return dim == d;
                                           })) {
         const auto dim_ = dims_[0];
@@ -93,7 +93,7 @@ struct ContractionTree : TreeType {
     }
   }
 
-  auto operator==(const ContractionTree &other) const -> bool {
+  auto operator==(const ContractionTree& other) const -> bool {
     return tree_type::operator==(other) && inds == other.inds &&
            dims == other.dims;
   }
@@ -112,20 +112,20 @@ struct ContractionTree : TreeType {
 
     // Check number of inds for each tensor
     if (!std::all_of(std::begin(inds), std::end(inds),
-                     [n_inds = n_inds()](auto &&xs) -> auto {
+                     [n_inds = n_inds()](auto&& xs) -> auto {
                        return std::size(xs) == n_inds;
                      })) {
       return {false, "Number of indices is not consistent among the tensors."};
     }
 
     // Check dimensions
-    if (const auto *const p_ = std::get_if<dims_vec_type>(&dims)) {
-      const auto &dims_ = *p_;
+    if (const auto* const p_ = std::get_if<dims_vec_type>(&dims)) {
+      const auto& dims_ = *p_;
       if (std::size(dims_) != n_inds()) {
         return {false, "Wrong number of dimensions."};
       }
       if (std::any_of(std::begin(dims_), std::end(dims_),
-                      [](auto &&d) -> auto { return d == 0; })) {
+                      [](auto&& d) -> auto { return d == 0; })) {
         return {false, "Dimensions must be positive numbers"};
       }
     } else {
@@ -136,7 +136,7 @@ struct ContractionTree : TreeType {
 
     // Check contraction
     for (std::size_t i_ = 0; i_ < this->size(); ++i_) {
-      if (const auto &node_ = this->nodes[i_]; !node_.is_leaf()) {
+      if (const auto& node_ = this->nodes[i_]; !node_.is_leaf()) {
         if (const auto &xs_c0_ = inds[node_.children[0]],
             &xs_c1_ = inds[node_.children[1]], &xs_ = inds[i_];
             (check_shared_inds && !xs_c0_.intersects(xs_c1_)) ||
@@ -155,7 +155,7 @@ struct ContractionTree : TreeType {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = ContractionTree<T...>;
   using tree_type = typename self_type::tree_type;
   py::class_<self_type, tree_type>(m, name.c_str())
@@ -165,7 +165,7 @@ void init(py::module &m, const std::string &name) {
            "nodes"_a, "inds"_a, "dims"_a, py::kw_only(),
            "check_shared_inds"_a = false)
       .def(py::init<decltype(self_type::nodes),
-                    const std::vector<std::vector<size_t>> &,
+                    const std::vector<std::vector<size_t>>&,
                     decltype(self_type::dims), bool>(),
            "nodes"_a, "inds"_a, "dims"_a, py::kw_only(),
            "check_shared_inds"_a = false)
@@ -176,7 +176,7 @@ void init(py::module &m, const std::string &name) {
       .def_property_readonly("n_inds", &self_type::n_inds)
       .def(
           "is_valid",
-          [](const self_type &self, const bool check_shared_inds,
+          [](const self_type& self, const bool check_shared_inds,
              const bool return_message)
               -> std::variant<bool, std::pair<bool, std::string>> {
             const auto [valid, msg] = self.is_valid(check_shared_inds);

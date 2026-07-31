@@ -46,11 +46,11 @@ struct Optimizer : optimize::optimizer::Optimizer {
   using ctree_type = tnco::ctree_type;
   using cmodel_type = CostModel;
   using prob_fn_type = Probability;
-  using index_type = typename ctree_type::node_type::index_type;
+  using index_type = ctree_type::node_type::index_type;
   using prob_type = tnco::prob_type;
   using cost_type = typename cmodel_type::cost_type;
   using width_type = typename cmodel_type::width_type;
-  using bitset_type = typename ctree_type::bitset_type;
+  using bitset_type = ctree_type::bitset_type;
   using prng_type = tnco::prng_type;
   using cost_cache_type = finite_width::utils::CostCache<cost_type>;
   using hyper_cache_type = infinite_memory::utils::HyperCache<bitset_type>;
@@ -69,10 +69,10 @@ struct Optimizer : optimize::optimizer::Optimizer {
   mutable hyper_cache_type hyper_cache;
   cost_type min_total_cost{};
 
-  Optimizer(ctree_type ctree, const cmodel_type &cmodel,
-            const size_t &max_number_new_slices,
-            std::optional<std::variant<size_t, std::string>> seed,
-            const bool disable_shared_inds, const atol_type &atol,
+  Optimizer(ctree_type ctree, const cmodel_type& cmodel,
+            const size_t& max_number_new_slices,
+            const std::optional<std::variant<size_t, std::string>>& seed,
+            const bool disable_shared_inds, const atol_type& atol,
             std::optional<bitset_type> skip_slices = std::nullopt,
             std::optional<ctree_type> min_ctree = std::nullopt,
             std::optional<bitset_type> slices = std::nullopt,
@@ -114,16 +114,16 @@ struct Optimizer : optimize::optimizer::Optimizer {
     }
   }
 
-  auto update(const prob_fn_type &prob, const bool update_slices = true)
+  auto update(const prob_fn_type& prob, const bool update_slices = true)
 #ifdef NDEBUG
       noexcept
 #endif
       -> void {
     static constexpr auto null = ctree_type::node_type::null;
-    const auto &cmodel = *p_cmodel;
-    auto &nodes = this->ctree.nodes;
-    auto &inds = this->ctree.inds;
-    const auto &dims = this->ctree.dims;
+    const auto& cmodel = *p_cmodel;
+    auto& nodes = this->ctree.nodes;
+    auto& inds = this->ctree.inds;
+    const auto& dims = this->ctree.dims;
     auto uniform = std::uniform_real_distribution<prob_type>{};
 
     // Start by selecting a random leaf
@@ -160,27 +160,27 @@ struct Optimizer : optimize::optimizer::Optimizer {
       }
 
       // Get inds
-      const auto &inds_A = inds[pos_A];
-      auto &inds_B = inds[pos_B];
-      const auto &inds_C = inds[pos_C];
-      const auto &inds_D = inds[pos_D];
-      const auto &inds_E = inds[pos_E];
+      const auto& inds_A = inds[pos_A];
+      auto& inds_B = inds[pos_B];
+      const auto& inds_C = inds[pos_C];
+      const auto& inds_D = inds[pos_D];
+      const auto& inds_E = inds[pos_E];
       ASSERT(this->disable_shared_inds || inds_D.intersects(inds_C),
              "Problem with shared inds.");
 
       // Get new inds for B
-      auto &hyper_inds_A = hyper_cache.hyper_inds[pos_A];
-      auto &hyper_inds_B = hyper_cache.hyper_inds[pos_B];
+      auto& hyper_inds_A = hyper_cache.hyper_inds[pos_A];
+      auto& hyper_inds_B = hyper_cache.hyper_inds[pos_B];
       auto new_inds_B = (inds_D ^ inds_C) | hyper_inds_A | hyper_inds_B;
-      auto &width_B = width_cache.width[pos_B];
+      auto& width_B = width_cache.width[pos_B];
       const auto new_width_B = p_cmodel->width(new_inds_B, dims);
       //
       const auto new_sliced_inds_B = new_inds_B - slices;
       auto new_sliced_width_B = p_cmodel->width(new_sliced_inds_B, dims);
 
       // Get old costs for B and A
-      auto &ccost_A = cost_cache.contraction_cost[pos_A];
-      auto &ccost_B = cost_cache.contraction_cost[pos_B];
+      auto& ccost_A = cost_cache.contraction_cost[pos_A];
+      auto& ccost_B = cost_cache.contraction_cost[pos_B];
 
       // If cost propagation must be skipped or not
       bool skip_cost_propagation = false;
@@ -253,7 +253,7 @@ struct Optimizer : optimize::optimizer::Optimizer {
 
             // Update sliced width
             std::visit(
-                [&new_sliced_width_B, &pos, &n_pos](auto &&log2_dims) -> auto {
+                [&new_sliced_width_B, &pos, &n_pos](auto&& log2_dims) -> auto {
                   if constexpr (std::is_arithmetic_v<
                                     std::decay_t<decltype(log2_dims)>>) {
                     new_sliced_width_B -= log2_dims;
@@ -389,7 +389,7 @@ struct Optimizer : optimize::optimizer::Optimizer {
     }
   }
 
-  [[nodiscard]] auto is_valid(const atol_type &atol) const
+  [[nodiscard]] auto is_valid(const atol_type& atol) const
       -> std::pair<bool, std::string> {
     if (const auto [valid_, msg_] = base_type::is_valid(); !valid_) {
       return {valid_, msg_};
@@ -407,7 +407,7 @@ struct Optimizer : optimize::optimizer::Optimizer {
     if (!std::all_of(std::begin(this->ctree.inds), std::end(this->ctree.inds),
                      [&cmodel = *this->p_cmodel,
                       &max_width = p_cmodel->max_width, &slices = this->slices,
-                      &dims = this->ctree.dims](auto &&xs) -> auto {
+                      &dims = this->ctree.dims](auto&& xs) -> auto {
                        return cmodel.width(xs - slices, dims) <= max_width;
                      })) {
       return {false, "Width larger than allowed width after slicing."};
@@ -416,7 +416,7 @@ struct Optimizer : optimize::optimizer::Optimizer {
             std::begin(this->min_ctree.inds), std::end(this->min_ctree.inds),
             [&cmodel = *this->p_cmodel, &max_width = p_cmodel->max_width,
              &slices = this->min_slices,
-             &dims = this->ctree.dims](auto &&xs) -> auto {
+             &dims = this->ctree.dims](auto&& xs) -> auto {
               return cmodel.width(xs - slices, dims) <= max_width;
             })) {
       return {false, "Width larger than allowed width after slicing."};
@@ -456,11 +456,11 @@ struct Optimizer : optimize::optimizer::Optimizer {
 
   [[nodiscard]] auto get_min_total_cost() const { return min_total_cost; }
 
-  [[nodiscard]] auto cmodel() const -> const cmodel_type & { return *p_cmodel; }
+  [[nodiscard]] auto cmodel() const -> const cmodel_type& { return *p_cmodel; }
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = Optimizer<T...>;
   using base_type = typename self_type::base_type;
   using bitset_type = typename self_type::bitset_type;
@@ -468,9 +468,9 @@ void init(py::module &m, const std::string &name) {
   using cmodel_type = typename self_type::cmodel_type;
   using atol_type = typename self_type::atol_type;
   py::class_<self_type, base_type>(m, name.c_str())
-      .def(py::init<ctree_type, const cmodel_type &, const size_t &,
+      .def(py::init<ctree_type, const cmodel_type&, const size_t&,
                     std::optional<std::variant<size_t, std::string>>,
-                    const bool, const atol_type &, std::optional<bitset_type>,
+                    const bool, const atol_type&, std::optional<bitset_type>,
                     std::optional<ctree_type>, std::optional<bitset_type>,
                     std::optional<bitset_type>>(),
            "ctree"_a, "cmodel"_a, py::kw_only(), "max_number_new_slices"_a = 0,
@@ -483,29 +483,29 @@ void init(py::module &m, const std::string &name) {
       .def_property_readonly("cmodel", &self_type::cmodel)
       .def_property_readonly(
           "total_cost",
-          [](const self_type &self) -> auto {
+          [](const self_type& self) -> auto {
             auto Decimal = py::module_::import("decimal").attr("Decimal");
             return Decimal(tnco::to_string(self.get_total_cost()));
           })
       .def_property_readonly(
           "min_total_cost",
-          [](const self_type &self) -> auto {
+          [](const self_type& self) -> auto {
             auto Decimal = py::module_::import("decimal").attr("Decimal");
             return Decimal(tnco::to_string(self.get_min_total_cost()));
           })
       .def_property_readonly("log2_total_cost",
-                             [](const self_type &self) -> auto {
+                             [](const self_type& self) -> auto {
                                return log2(self.get_total_cost());
                              })
       .def_property_readonly("log2_min_total_cost",
-                             [](const self_type &self) -> auto {
+                             [](const self_type& self) -> auto {
                                return log2(self.get_min_total_cost());
                              })
       .def_readonly("slices", &self_type::slices)
       .def_readonly("min_slices", &self_type::min_slices)
       .def(
           "is_valid",
-          [](const self_type &self, const atol_type &atol,
+          [](const self_type& self, const atol_type& atol,
              const bool return_message)
               -> std::variant<bool, std::pair<bool, std::string>> {
             const auto [valid, msg] = self.is_valid(atol);

@@ -35,13 +35,13 @@ namespace py = pybind11;
 using namespace py::literals;
 
 template <typename CostType, typename Bitset, typename DimsType>
-[[nodiscard]] auto get_cost(const Bitset &inds, const Bitset &sparse_inds,
-                            const size_t n_projs, const DimsType &dims)
+[[nodiscard]] auto get_cost(const Bitset& inds, const Bitset& sparse_inds,
+                            const size_t n_projs, const DimsType& dims)
 #ifdef NDEBUG
     noexcept
 #endif
     -> CostType {
-  static constexpr auto min = [](auto &&x, auto &&y) -> CostType {
+  static constexpr auto min = [](auto&& x, auto&& y) -> CostType {
     return x < y ? static_cast<CostType>(x) : static_cast<CostType>(y);
   };
   return simple::get_cost<CostType>(inds - sparse_inds, dims) *
@@ -66,10 +66,10 @@ struct CostModel : simple::CostModel<T...> {
     }
   }
 
-  [[nodiscard]] auto contraction_cost(const bitset_type &inds_in1,
-                                      const bitset_type &inds_in2,
-                                      const bitset_type &inds_out,
-                                      const dims_type &dims) const
+  [[nodiscard]] auto contraction_cost(const bitset_type& inds_in1,
+                                      const bitset_type& inds_in2,
+                                      const bitset_type& inds_out,
+                                      const dims_type& dims) const
 #ifdef NDEBUG
       noexcept
 #endif
@@ -81,7 +81,7 @@ struct CostModel : simple::CostModel<T...> {
            "'inds_out' must be a subset of 'inds_in1 | inds_in2'.");
     return std::visit(
         [inds = inds_in1 | inds_in2, &sparse_inds = this->sparse_inds,
-         &n_projs = this->n_projs](auto &&dims) -> auto {
+         &n_projs = this->n_projs](auto&& dims) -> auto {
           return get_cost<cost_type>(inds, sparse_inds, n_projs, dims);
         },
         dims);
@@ -93,7 +93,7 @@ struct CostModel : simple::CostModel<T...> {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = CostModel<T...>;
   using base_type = typename self_type::base_type;
   using bitset_type = typename self_type::bitset_type;
@@ -102,24 +102,24 @@ void init(py::module &m, const std::string &name) {
       .def(py::init<bitset_type, size_t>())
       .def(py::init<self_type>())
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              return "SimpleCostModelSparseInds(" +
                     std::string(self.sparse_inds) +
                     ", n_projs=" + tnco::to_string(self.n_projs) +
                     ", cost_type=" + type_to_str<cost_type>() + ")";
            })
       .def("__eq__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return self.n_projs == other.n_projs &&
                     self.sparse_inds == other.sparse_inds;
            })
       .def_readonly("sparse_inds", &self_type::sparse_inds)
       .def_readonly("n_projs", &self_type::n_projs)
       .def(py::pickle(
-          [](const self_type &self) -> auto {
+          [](const self_type& self) -> auto {
             return std::tuple{self.sparse_inds, self.n_projs};
           },
-          [](const std::tuple<bitset_type, size_t> &data) -> auto {
+          [](const std::tuple<bitset_type, size_t>& data) -> auto {
             return self_type{std::get<0>(data), std::get<1>(data)};
           }));
 }

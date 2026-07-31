@@ -30,7 +30,7 @@ message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 add_compile_options(-Wall -Wpedantic -Wfatal-errors)
 
 # Use FindPython or FindPython3 module
-find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development)
+find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development)
 
 # Include boost library
 include(${CMAKE_SOURCE_DIR}/scripts/boost.cmake)

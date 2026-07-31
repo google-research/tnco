@@ -48,23 +48,23 @@ struct CostModel {
           "'max_width' must always be a non-negative number");
     }
   }
-  CostModel(const CostModel &) = default;
-  CostModel(CostModel &&) = default;
-  auto operator=(const CostModel &) -> CostModel & = delete;
-  auto operator=(CostModel &&) -> CostModel & = delete;
+  CostModel(const CostModel&) = default;
+  CostModel(CostModel&&) = default;
+  auto operator=(const CostModel&) -> CostModel& = delete;
+  auto operator=(CostModel&&) -> CostModel& = delete;
   virtual ~CostModel() = default;
 
-  [[nodiscard]] virtual auto width(const bitset_type &inds,
-                                   const dims_type &dims) const -> width_type {
+  [[nodiscard]] virtual auto width(const bitset_type& inds,
+                                   const dims_type& dims) const -> width_type {
     /*
      * Return width.
      */
     return std::numeric_limits<width_type>::signaling_NaN();
   }
 
-  [[nodiscard]] virtual auto delta_width(const bitset_type &inds,
-                                         const dims_type &dims,
-                                         const size_t &pos) const
+  [[nodiscard]] virtual auto delta_width(const bitset_type& inds,
+                                         const dims_type& dims,
+                                         const size_t& pos) const
       -> width_type {
     /*
      * Return the delta width as to add (if the index in position 'pos' is
@@ -73,11 +73,11 @@ struct CostModel {
     return std::numeric_limits<width_type>::signaling_NaN();
   }
 
-  [[nodiscard]] virtual auto contraction_cost(const bitset_type &inds_in1,
-                                              const bitset_type &inds_in2,
-                                              const bitset_type &inds_out,
-                                              const dims_type &dims,
-                                              const bitset_type &slices) const
+  [[nodiscard]] virtual auto contraction_cost(const bitset_type& inds_in1,
+                                              const bitset_type& inds_in2,
+                                              const bitset_type& inds_out,
+                                              const dims_type& dims,
+                                              const bitset_type& slices) const
       -> cost_type {
     /*
      * Compute the contraction cost of:
@@ -96,7 +96,7 @@ struct CostModel {
 };
 
 template <typename... T>
-void init(py::module &m, const std::string &name) {
+void init(py::module& m, const std::string& name) {
   using self_type = CostModel<T...>;
   using cost_type = typename self_type::cost_type;
   using width_type = typename self_type::width_type;
@@ -105,19 +105,19 @@ void init(py::module &m, const std::string &name) {
       .def(py::init<self_type>())
       .def(
           "__deepcopy__",
-          [](const self_type &self, const py::dict &) -> auto {
+          [](const self_type& self, const py::dict&) -> auto {
             return self.clone();
           },
           "memo"_a)
       .def("__repr__",
-           [](const self_type &self) -> auto {
+           [](const self_type& self) -> auto {
              return "BaseCostModel(max_width=" +
                     tnco::to_string(self.max_width) +
                     ", width_type=" + type_to_str<width_type>() +
                     ", cost_type=" + type_to_str<cost_type>() + ")";
            })
       .def("__eq__",
-           [](const self_type &self, const self_type &other) -> auto {
+           [](const self_type& self, const self_type& other) -> auto {
              return self.max_width == other.max_width;
            })
       .def_readonly("max_width", &self_type::max_width)
@@ -126,10 +126,10 @@ void init(py::module &m, const std::string &name) {
       .def("contraction_cost", &self_type::contraction_cost, "inds_in1"_a,
            "inds_in2"_a, "inds_out"_a, "dims"_a, "slices"_a)
       .def_property_readonly("width_type",
-                             [](const self_type &self) -> auto {
+                             [](const self_type& self) -> auto {
                                return type_to_str<width_type>();
                              })
-      .def_property_readonly("cost_type", [](const self_type &self) -> auto {
+      .def_property_readonly("cost_type", [](const self_type& self) -> auto {
         return type_to_str<cost_type>();
       });
 }

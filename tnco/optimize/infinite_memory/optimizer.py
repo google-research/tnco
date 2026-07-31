@@ -14,7 +14,7 @@
 """Optimizer for infinite memory."""
 
 from importlib import import_module
-from typing import Any, NoReturn, Optional, TypeVar, Union
+from typing import Any, NoReturn, TypeVar
 
 from tnco.ctree import ContractionTree
 
@@ -48,7 +48,7 @@ class Optimizer:
                  ctree: ContractionTree,
                  cmodel: BaseCostModel,
                  *,
-                 seed: Optional[Union[int, str]] = None,
+                 seed: int | str | None = None,
                  disable_shared_inds: bool = False,
                  atol: float = 1e-5,
                  **kwargs) -> None:
