@@ -13,12 +13,13 @@
 # limitations under the License.
 """Tensor Network definitions for the application."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 import itertools as its
 import json
 import operator as op
 from types import MappingProxyType
-from typing import Any, Iterator
+from typing import Any
 
 import autoray as ar
 import more_itertools as mit

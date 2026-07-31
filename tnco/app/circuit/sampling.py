@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 import functools as fts
 import itertools as its
 import math
 import operator as op
 from random import Random
-from typing import Any, Iterable
+from typing import Any
 
 import autoray as ar
 import more_itertools as mit

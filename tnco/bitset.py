@@ -13,7 +13,7 @@
 # limitations under the License.
 """Bitset implementation."""
 
-from typing import Iterable
+from collections.abc import Iterable
 
 import more_itertools as mit
 from tnco_core import Bitset as Bitset_

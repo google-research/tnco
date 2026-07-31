@@ -16,12 +16,12 @@
 from bisect import bisect_left
 from collections import Counter
 from collections import defaultdict
+from collections.abc import Iterable
 import functools as fts
 import itertools as its
 import math
 import operator as op
 from random import Random
-from typing import Iterable
 
 import autoray as ar
 import more_itertools as mit

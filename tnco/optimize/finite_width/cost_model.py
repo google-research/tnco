@@ -13,8 +13,9 @@
 # limitations under the License.
 """Cost model for finite width optimization."""
 
+from collections.abc import Iterable
 from importlib import import_module
-from typing import Iterable, Literal
+from typing import Literal
 
 import more_itertools as mit
 

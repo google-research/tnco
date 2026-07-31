@@ -13,13 +13,14 @@
 # limitations under the License.
 """Simulated Annealing Optimizer for Finite Width."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 import functools as fts
 import json
 import operator as op
 from sys import stderr
 from time import perf_counter
-from typing import Any, Iterable
+from typing import Any
 
 import more_itertools as mit
 

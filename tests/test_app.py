@@ -118,9 +118,9 @@ def test_LoadTN_CirqCircuit(random_seed):
 def test_OptimizeTN(random_seed, **kwargs):
     # How to convert inds
     def convert_index(x):
-        if isinstance(x, (str, int, frozenset)):
+        if isinstance(x, str | int | frozenset):
             return x
-        if isinstance(x, (list, tuple)):
+        if isinstance(x, list | tuple):
             return frozenset(x)
         raise NotImplementedError()
 

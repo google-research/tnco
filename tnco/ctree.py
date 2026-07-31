@@ -13,12 +13,14 @@
 # limitations under the License.
 """Contraction Tree."""
 
+from collections.abc import Callable
+from collections.abc import Iterable
 import functools as fts
 import itertools as its
 import math
 import operator as op
 from types import MappingProxyType
-from typing import Any, Callable, Iterable, NoReturn
+from typing import Any, NoReturn
 
 import more_itertools as mit
 from rich.console import Console

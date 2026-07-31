@@ -14,13 +14,13 @@
 """Utilities for testing."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 import functools as fts
 import itertools as its
 import operator as op
 import pickle
 from random import Random
 from string import ascii_letters
-from typing import Iterable
 
 import more_itertools as mit
 from rich.console import Console

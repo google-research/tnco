@@ -13,8 +13,9 @@
 # limitations under the License.
 """Optimizer for finite width."""
 
+from collections.abc import Iterable
 from importlib import import_module
-from typing import Any, Iterable, Literal, NoReturn, TypeVar
+from typing import Any, Literal, NoReturn, TypeVar
 
 from tnco.bitset import Bitset
 from tnco.ctree import ContractionTree

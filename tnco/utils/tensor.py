@@ -13,12 +13,13 @@
 # limitations under the License.
 """Tensor utilities."""
 
+from collections.abc import Iterable
 import functools as fts
 import itertools as its
 import operator as op
 from random import Random
 from string import ascii_letters
-from typing import Any, Iterable
+from typing import Any
 
 import autoray as ar
 import more_itertools as mit

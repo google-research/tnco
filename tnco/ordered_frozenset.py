@@ -13,8 +13,10 @@
 # limitations under the License.
 """Ordered Frozen Set."""
 
+from collections.abc import Iterable
+from collections.abc import Iterator
 from itertools import chain
-from typing import Any, Iterable, Iterator
+from typing import Any
 
 from more_itertools import unique_everseen
 
@@ -174,7 +176,7 @@ class OrderedFrozenSet:
         return OrderedFrozenSet(chain(self._order, other._order))
 
     def __or__(self, other: Any) -> 'OrderedFrozenSet':
-        if not isinstance(other, (OrderedFrozenSet, set, frozenset)):
+        if not isinstance(other, OrderedFrozenSet | set | frozenset):
             raise TypeError(
                 "unsupported operand type(s) for |: '{}' and '{}'".format(
                     type(self).__name__,
@@ -182,7 +184,7 @@ class OrderedFrozenSet:
         return self.union(other)
 
     def __and__(self, other: Any) -> 'OrderedFrozenSet':
-        if not isinstance(other, (OrderedFrozenSet, set, frozenset)):
+        if not isinstance(other, OrderedFrozenSet | set | frozenset):
             raise TypeError(
                 "unsupported operand type(s) for &: '{}' and '{}'".format(
                     type(self).__name__,
@@ -190,7 +192,7 @@ class OrderedFrozenSet:
         return self.intersection(other)
 
     def __xor__(self, other: Any) -> 'OrderedFrozenSet':
-        if not isinstance(other, (OrderedFrozenSet, set, frozenset)):
+        if not isinstance(other, OrderedFrozenSet | set | frozenset):
             raise TypeError(
                 "unsupported operand type(s) for ^: '{}' and '{}'".format(
                     type(self).__name__,
@@ -198,7 +200,7 @@ class OrderedFrozenSet:
         return self.symmetric_difference(other)
 
     def __sub__(self, other: Any) -> 'OrderedFrozenSet':
-        if not isinstance(other, (OrderedFrozenSet, set, frozenset)):
+        if not isinstance(other, OrderedFrozenSet | set | frozenset):
             raise TypeError(
                 "unsupported operand type(s) for -: '{}' and '{}'".format(
                     type(self).__name__,
