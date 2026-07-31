@@ -44,10 +44,10 @@ struct Optimizer : optimize::optimizer::Optimizer {
   using ctree_type = tnco::ctree_type;
   using cmodel_type = CostModel;
   using prob_fn_type = Probability;
-  using index_type = typename ctree_type::node_type::index_type;
+  using index_type = ctree_type::node_type::index_type;
   using prob_type = tnco::prob_type;
   using cost_type = typename cmodel_type::cost_type;
-  using bitset_type = typename ctree_type::bitset_type;
+  using bitset_type = ctree_type::bitset_type;
   using prng_type = tnco::prng_type;
   using cost_cache_type = infinite_memory::utils::CostCache<cost_type>;
   using hyper_cache_type = infinite_memory::utils::HyperCache<bitset_type>;
@@ -59,7 +59,7 @@ struct Optimizer : optimize::optimizer::Optimizer {
   cost_type min_total_cost{};
 
   Optimizer(ctree_type ctree, const cmodel_type& cmodel,
-            std::optional<std::variant<size_t, std::string>> seed,
+            const std::optional<std::variant<size_t, std::string>>& seed,
             const bool disable_shared_inds, const atol_type& atol,
             std::optional<ctree_type> min_ctree = std::nullopt)
       : base_type{std::move(ctree), std::move(seed), disable_shared_inds,

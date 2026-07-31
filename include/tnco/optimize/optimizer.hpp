@@ -37,8 +37,8 @@ using namespace py::literals;
 
 struct Optimizer {
   using ctree_type = tnco::ctree_type;
-  using index_type = typename ctree_type::node_type::index_type;
-  using bitset_type = typename ctree_type::bitset_type;
+  using index_type = ctree_type::node_type::index_type;
+  using bitset_type = ctree_type::bitset_type;
   using prng_type = tnco::prng_type;
 
   ctree_type ctree;
@@ -197,7 +197,7 @@ struct Optimizer {
 
 void init(py::module& m, const std::string& name) {
   using self_type = Optimizer;
-  using ctree_type = typename self_type::ctree_type;
+  using ctree_type = self_type::ctree_type;
   py::class_<self_type>(m, name.c_str())
       .def(py::init<ctree_type,
                     const std::optional<std::variant<size_t, std::string>>&,

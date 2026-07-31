@@ -63,7 +63,7 @@ parallel = [
 ]
 formatting = [
   "clang-format==22.1.8",
-  "clang-tidy==21.1.1",
+  "clang-tidy==22.1.8",
   "docformatter==1.7.8",
   "yapf==0.43.0",
   "isort==8.0.1",

@@ -57,8 +57,8 @@ struct CostCache {
   }
 
   template <typename FloatType>
-  auto is_close_to(const CostCache& cache, const FloatType& atol) const
-      -> bool {
+  [[nodiscard]] auto is_close_to(const CostCache& cache,
+                                 const FloatType& atol) const -> bool {
     return tnco::utils::all_logclose(partial_cost, cache.partial_cost, atol) &&
            tnco::utils::all_logclose(contraction_cost, cache.contraction_cost,
                                      atol);
@@ -92,8 +92,8 @@ struct HyperCache {
   }
 
   template <typename FloatType>
-  auto is_close_to(const HyperCache& cache, const FloatType& atol) const
-      -> bool {
+  [[nodiscard]] auto is_close_to(const HyperCache& cache,
+                                 const FloatType& atol) const -> bool {
     // Check if hyper_inds is close
     return hyper_inds == cache.hyper_inds;
   }

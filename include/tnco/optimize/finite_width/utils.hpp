@@ -65,8 +65,8 @@ struct WidthCache {
   }
 
   template <typename FloatType>
-  auto is_close_to(const WidthCache& cache, const FloatType& atol) const
-      -> bool {
+  [[nodiscard]] auto is_close_to(const WidthCache& cache,
+                                 const FloatType& atol) const -> bool {
     return tnco::utils::all_close(width, cache.width, atol);
   }
 };
@@ -99,7 +99,8 @@ struct DimsCache {
   }
 
   template <typename FType>
-  auto is_close_to(const DimsCache& cache, const FType& atol) const -> bool {
+  [[nodiscard]] auto is_close_to(const DimsCache& cache,
+                                 const FType& atol) const -> bool {
     // Get pointers to vectors
     const auto* const px_ = std::get_if<std::vector<float_type>>(&log2_dims);
     const auto* const py_ =

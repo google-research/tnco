@@ -247,8 +247,11 @@ struct FixedFloat {
   friend auto to_string(const FixedFloat& x,
                         const std::optional<std::string>& fmt = std::nullopt)
       -> std::string {
+    // Get format
+    const std::string fmt_str = fmt.value_or("");
+
     // Default format
-    if (std::empty(fmt.value_or(""))) {
+    if (fmt_str.empty()) {
       std::ostringstream mpfr_fmt;
       mpfr_fmt << "1." << x.digits10() << "f";
       return to_string(x, mpfr_fmt.str());
@@ -275,9 +278,9 @@ struct FixedFloat {
         "([fFeEgG%])?");
 
     std::smatch match;
-    if (!std::regex_match(fmt.value(), match, re)) {
+    if (!std::regex_match(fmt_str, match, re)) {
       throw std::runtime_error("Error: Invalid Python format string '" +
-                               fmt.value() + "'.");
+                               fmt_str + "'.");
     }
 
     // --- 1. Extract components from the regex match ---
@@ -427,7 +430,9 @@ void init(py::module& m, const std::string& name) {
              return to_string(self, fmt);
            })
       .def("__float__",
-           [](const self_type& self) -> auto { return (long double)(self); })
+           [](const self_type& self) -> auto {
+             return static_cast<long double>(self);
+           })
       .def("__repr__",
            [](const self_type& self) -> auto { return to_string(self); })
       .def("__str__",

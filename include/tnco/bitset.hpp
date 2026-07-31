@@ -73,7 +73,7 @@ struct Bitset : boost::dynamic_bitset<T...> {
     }
   }
 
-  auto positions() const {
+  [[nodiscard]] auto positions() const {
     std::vector<size_t> pos;
     visit([&pos](auto&& p) -> auto { pos.push_back(p); });
     return pos;

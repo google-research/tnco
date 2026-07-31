@@ -65,13 +65,13 @@ template <typename WidthType, typename Bitset, typename DimsType>
     -> WidthType {
   if constexpr (std::is_arithmetic_v<DimsType>) {
     ASSERT(dims != 0, "Each dimension must be a positive number.");
-    return (1 - 2 * inds.test(pos)) * log2(dims);
+    return (1 - (2 * inds.test(pos))) * log2(dims);
   } else {
     ASSERT(std::size(inds) <= std::size(dims), "'Too few dimensions.'");
     ASSERT(std::none_of(std::begin(dims), std::end(dims),
                         [](auto&& d) -> auto { return d == 0; }),
            "Each dimension must be a positive number.");
-    return (1 - 2 * inds.test(pos)) * log2(dims[pos]);
+    return (1 - (2 * inds.test(pos))) * log2(dims[pos]);
   }
 }
 
@@ -84,7 +84,7 @@ struct CostModel : cost_model::base::CostModel<T...> {
   using bitset_type = typename base_type::bitset_type;
   using dims_type = typename base_type::dims_type;
 
-  CostModel(width_type max_width) : base_type{std::move(max_width)} {
+  CostModel(width_type max_width) : base_type{max_width} {
     if (max_width < 0) {
       throw std::runtime_error("'max_width' must be a non-negative number.");
     }
