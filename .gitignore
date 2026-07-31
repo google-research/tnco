@@ -57,3 +57,6 @@ __backup.*__
 
 # Temp files
 __temp.*__
+
+# Ignore local GEMINI.md
+GEMINI.md
