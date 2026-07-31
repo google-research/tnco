@@ -19,7 +19,7 @@ import itertools as its
 import math
 import operator as op
 from random import Random
-from typing import Any, Dict, FrozenSet, Iterable, Optional, Tuple, Union
+from typing import Any, Iterable, Optional, Union
 
 import autoray as ar
 import more_itertools as mit
@@ -78,10 +78,10 @@ def is_classical_operation(m: Matrix) -> bool:
 class SamplingIntermediateState:
     """Store the intermediate state of the sampling routine."""
 
-    data = Tuple[Union[Tuple[TensorNetwork, BaseContractionResults, Array,
-                             Tuple[Qubit], Tuple[Qubit]],
-                       Tuple[None, None, Array, None, Tuple[Qubit]]], ...]
-    qubits = FrozenSet[Qubit]
+    data = tuple[Union[tuple[TensorNetwork, BaseContractionResults, Array,
+                             tuple[Qubit], tuple[Qubit]],
+                       tuple[None, None, Array, None, tuple[Qubit]]], ...]
+    qubits = frozenset[Qubit]
 
     def __init__(self, data, qubits):
         object.__setattr__(self, 'data', tuple(data))
@@ -99,7 +99,7 @@ class SamplingIntermediateState:
 
 @fts.singledispatch
 def sample(
-    circuit: Union[Iterable[Tuple[Matrix, Tuple[Qubit]]],
+    circuit: Union[Iterable[tuple[Matrix, tuple[Qubit]]],
                    SamplingIntermediateState],
     optimizer: Optimizer,
     n_samples: int = 1,
@@ -117,7 +117,7 @@ def sample(
     seed: Optional[int] = None,
     verbose: int = False,
     **optimize_params
-) -> Union[Tuple[Dict[str, int], Tuple[Qubit]], SamplingIntermediateState]:
+) -> Union[tuple[dict[str, int], tuple[Qubit]], SamplingIntermediateState]:
     """Sample bitstrings from a circuit.
 
     Sample bitstrings from a circuit using the Bravyi-Gosset-Liu algorithm
@@ -494,7 +494,7 @@ class Sampler:
         return_intermediate_state_only: bool = False,
         contraction_backend: Optional[str] = None,
         **optimize_params
-    ) -> Union[Tuple[Dict[str, int], Tuple[Qubit]], SamplingIntermediateState]:
+    ) -> Union[tuple[dict[str, int], tuple[Qubit]], SamplingIntermediateState]:
         """Sample bitstrings from a circuit.
 
         Sample bitstrings from a circuit using the Bravyi-Gosset-Liu algorithm

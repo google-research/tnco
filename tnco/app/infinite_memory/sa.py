@@ -17,7 +17,7 @@ from dataclasses import dataclass
 import json
 from sys import stderr
 from time import perf_counter
-from typing import Any, Iterable, List, Optional, Tuple, Union
+from typing import Any, Iterable, Optional, Union
 
 import more_itertools as mit
 
@@ -74,8 +74,8 @@ class ContractionResults(BaseContractionResults):
             network.
     """
 
-    disconnected_costs: List[float]
-    disconnected_paths: List[List[Tuple[int, int]]]
+    disconnected_costs: list[float]
+    disconnected_paths: list[list[tuple[int, int]]]
 
     def to_json(self) -> Any:
         """Return JSON.
@@ -97,7 +97,7 @@ class Optimizer(BaseOptimizer):
 
     def optimize(self,
                  tn: Any,
-                 betas: Union[Tuple[float, float], Iterable[float]],
+                 betas: Union[tuple[float, float], Iterable[float]],
                  n_steps: Optional[int] = None,
                  n_runs: int = 1,
                  n_projs: Optional[int] = None,

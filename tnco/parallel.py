@@ -22,7 +22,7 @@ from threading import Thread
 from threading import TIMEOUT_MAX
 from threading import Timer
 from time import sleep
-from typing import Any, Callable, Iterable, Optional, Tuple, Union
+from typing import Any, Callable, Iterable, Optional, Union
 from warnings import warn
 
 import more_itertools as mit
@@ -114,7 +114,7 @@ def Parallel(core: Callable[..., Any],
              n_jobs: int = -1,
              timeout: Optional[float] = None,
              verbose: int = False,
-             buffers: Iterable[Tuple[str, str]] = (),
+             buffers: Iterable[tuple[str, str]] = (),
              refresh_per_second: Optional[float] = None,
              leave: bool = False,
              **kwargs: Any) -> Any:

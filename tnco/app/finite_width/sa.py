@@ -19,7 +19,7 @@ import json
 import operator as op
 from sys import stderr
 from time import perf_counter
-from typing import Any, FrozenSet, Iterable, List, Optional, Tuple, Union
+from typing import Any, Iterable, Optional, Union
 
 import more_itertools as mit
 
@@ -88,10 +88,10 @@ class ContractionResults(BaseContractionResults):
             by ``path`` within the given width.
     """
 
-    disconnected_costs: List[float]
-    disconnected_paths: List[List[Tuple[int, int]]]
-    disconnected_slices: List[FrozenSet[Index]]
-    slices: FrozenSet[Index]
+    disconnected_costs: list[float]
+    disconnected_paths: list[list[tuple[int, int]]]
+    disconnected_slices: list[frozenset[Index]]
+    slices: frozenset[Index]
 
     def to_json(self) -> Any:
         """Return JSON.
@@ -113,7 +113,7 @@ class Optimizer(BaseOptimizer):
 
     def optimize(self,
                  tn: Any,
-                 betas: Union[Tuple[float, float], Iterable[float]],
+                 betas: Union[tuple[float, float], Iterable[float]],
                  n_steps: Optional[int] = None,
                  n_runs: int = 1,
                  n_projs: Optional[int] = None,

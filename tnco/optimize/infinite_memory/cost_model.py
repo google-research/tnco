@@ -14,7 +14,7 @@
 """Cost model for infinite memory optimization."""
 
 from importlib import import_module
-from typing import Dict, FrozenSet, Iterable, Literal, Optional, Union
+from typing import Iterable, Literal, Optional, Union
 
 import more_itertools as mit
 
@@ -105,7 +105,7 @@ class SimpleCostModel(BaseCostModel):
         return self._cost_type
 
     @property
-    def sparse_inds(self) -> FrozenSet[Index]:
+    def sparse_inds(self) -> frozenset[Index]:
         """Sparse indices.
 
         Return a set of the sparse indices.
@@ -128,7 +128,7 @@ class SimpleCostModel(BaseCostModel):
 
     def contraction_cost(self, inds_in1: Iterable[Index],
                          inds_in2: Iterable[Index], inds_out: Iterable[Index],
-                         dims: Union[Dict[Index, int], int]) -> float:
+                         dims: Union[dict[Index, int], int]) -> float:
         """Contraction cost.
 
         Return the cost of contracting 'inds_in1' with 'inds_in2', to return

@@ -14,7 +14,7 @@
 """Cost model for finite width optimization."""
 
 from importlib import import_module
-from typing import Dict, FrozenSet, Iterable, List, Literal, Optional, Union
+from typing import Iterable, Literal, Optional, Union
 
 import more_itertools as mit
 
@@ -154,7 +154,7 @@ class SimpleCostModel(BaseCostModel):
         return self._cost_type
 
     @property
-    def sparse_inds(self) -> FrozenSet[Index]:
+    def sparse_inds(self) -> frozenset[Index]:
         """Sparse indices.
 
         Return a set of the sparse indices.
@@ -175,7 +175,7 @@ class SimpleCostModel(BaseCostModel):
         """
         return self._n_projs
 
-    def width(self, inds: Iterable[Index], dims: Union[Dict[Index, int],
+    def width(self, inds: Iterable[Index], dims: Union[dict[Index, int],
                                                        int]) -> float:
         """Return the width of a tensor.
 
@@ -220,8 +220,8 @@ class SimpleCostModel(BaseCostModel):
         # Get result
         return core.width(inds, dims)
 
-    def get_max_width(self, ts_inds: Iterable[List[Index]],
-                      dims: Union[Dict[Index, int], int]) -> float:
+    def get_max_width(self, ts_inds: Iterable[list[Index]],
+                      dims: Union[dict[Index, int], int]) -> float:
         """Return the maximum width of a tensor network.
 
         It returns the maximum width of a tensors network given its indices and
@@ -268,7 +268,7 @@ class SimpleCostModel(BaseCostModel):
                 Bitset(map(inds_map.get, xs), len(all_inds)) for xs in ts_inds))
 
     def delta_width(self, inds: Iterable[Index],
-                    dims: Union[Dict[Index, int], int], index: Index) -> float:
+                    dims: Union[dict[Index, int], int], index: Index) -> float:
         """Difference of width.
 
         Return the difference of the width for a given tensor if 'index' were
@@ -322,7 +322,7 @@ class SimpleCostModel(BaseCostModel):
 
     def contraction_cost(self, inds_in1: Iterable[Index],
                          inds_in2: Iterable[Index], inds_out: Iterable[Index],
-                         dims: Union[Dict[Index, int],
+                         dims: Union[dict[Index, int],
                                      int], slices: Iterable[Index]) -> float:
         """Contraction cost.
 

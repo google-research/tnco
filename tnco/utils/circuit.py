@@ -19,7 +19,7 @@ import itertools as its
 import math
 import operator as op
 from random import Random
-from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
+from typing import Any, Iterable, Optional, Union
 
 import autoray as ar
 import more_itertools as mit
@@ -37,8 +37,8 @@ import tnco.utils.tn as tn_utils
 __all__ = ['load']
 
 
-def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
-            gate_B: Tuple[Matrix, Iterable[Qubit]],
+def commute(gate_A: tuple[Matrix, Iterable[Qubit]],
+            gate_B: tuple[Matrix, Iterable[Qubit]],
             *,
             use_matrix_commutation: bool = True,
             atol: float = 1e-8) -> bool:
@@ -133,8 +133,8 @@ def commute(gate_A: Tuple[Matrix, Iterable[Qubit]],
     return ar.do('allclose', array_AB, array_BA, atol=atol)
 
 
-def same(gate_A: Tuple[Matrix, Iterable[Qubit]],
-         gate_B: Tuple[Matrix, Iterable[Qubit]],
+def same(gate_A: tuple[Matrix, Iterable[Qubit]],
+         gate_B: tuple[Matrix, Iterable[Qubit]],
          *,
          atol: float = 1e-8) -> bool:
     """Checks if two gates are equivalent (up to a global phase).
@@ -203,10 +203,10 @@ def same(gate_A: Tuple[Matrix, Iterable[Qubit]],
 
 
 @fts.singledispatch
-def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
+def load(circuit: Iterable[tuple[Matrix, tuple[Qubit]]],
          *,
-         initial_state: Union[str, Dict[Qubit, Matrix], None] = '0',
-         final_state: Union[str, Dict[Qubit, Matrix], None] = '0',
+         initial_state: Union[str, dict[Qubit, Matrix], None] = '0',
+         final_state: Union[str, dict[Qubit, Matrix], None] = '0',
          simplify: bool = True,
          use_matrix_commutation: bool = True,
          decompose_hyper_inds: bool = True,
@@ -216,7 +216,7 @@ def load(circuit: Iterable[Tuple[Matrix, Tuple[Qubit]]],
          backend: Optional[str] = None,
          seed: Optional[int] = None,
          verbose: int = False,
-         **kwargs) -> Tuple[List[Array], List[Tuple[Index]], FrozenSet[Index]]:
+         **kwargs) -> tuple[list[Array], list[tuple[Index]], frozenset[Index]]:
     """Loads a quantum circuit and converts it to a tensor network.
 
     Args:
@@ -523,7 +523,7 @@ try:
     def cirq_to_arrays(
             circuit: Iterable[cirq.Operation],
             dtype: Optional[Any] = None,
-            backend: Optional[str] = None) -> List[Tuple[Array, Tuple[Qubit]]]:
+            backend: Optional[str] = None) -> list[tuple[Array, tuple[Qubit]]]:
         """Convert a 'cirq' circuit to arrays.
 
         Args:
@@ -576,7 +576,7 @@ try:
     def qiskit_to_arrays(
             circuit: Iterable[qiskit.circuit.CircuitInstruction],
             dtype: Optional[Any] = None,
-            backend: Optional[str] = None) -> List[Tuple[Array, Tuple[Qubit]]]:
+            backend: Optional[str] = None) -> list[tuple[Array, tuple[Qubit]]]:
         """Convert a 'qiskit' circuit to arrays.
 
         Args:

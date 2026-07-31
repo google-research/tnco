@@ -14,8 +14,7 @@
 """Optimizer for finite width."""
 
 from importlib import import_module
-from typing import (Any, FrozenSet, Iterable, Literal, NoReturn, Optional,
-                    TypeVar, Union)
+from typing import Any, Iterable, Literal, NoReturn, Optional, TypeVar, Union
 
 from tnco.bitset import Bitset
 from tnco.ctree import ContractionTree
@@ -175,7 +174,7 @@ class Optimizer:
         return self._cmodel
 
     @property
-    def skip_slices(self) -> FrozenSet[Index]:
+    def skip_slices(self) -> frozenset[Index]:
         """Indices to skip while slicing.
 
         Returns the set of indices which are not sliced to fit within the given
@@ -260,7 +259,7 @@ class Optimizer:
         return self._optimizer.log2_min_total_cost
 
     @property
-    def slices(self) -> FrozenSet[Index]:
+    def slices(self) -> frozenset[Index]:
         """Slices used by ``Optimizer.ctree``.
 
         Returns the sliced indices used in ``Optimizer.ctree`` to keep every
@@ -274,7 +273,7 @@ class Optimizer:
                 self._optimizer.slices.positions()))
 
     @property
-    def min_slices(self) -> FrozenSet[Index]:
+    def min_slices(self) -> frozenset[Index]:
         """Slices used by ``Optimizer.min_ctree``.
 
         Returns the sliced indices used in ``Optimizer.min_ctree`` to keep every

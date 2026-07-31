@@ -18,7 +18,7 @@ import itertools as its
 import operator as op
 from random import Random
 from string import ascii_letters
-from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
+from typing import Any, Iterable, Optional, Union
 
 import autoray as ar
 import more_itertools as mit
@@ -70,7 +70,7 @@ def decompose_hyper_inds(
     *,
     atol: float = 1e-8,
     **kwargs
-) -> Tuple[Tuple[Array, List[Index]], Dict[Index, FrozenSet[Index]]]:
+) -> tuple[tuple[Array, list[Index]], dict[Index, frozenset[Index]]]:
     """Decomposes an array into hyper-indices.
 
     Decomposes an array into hyper-indices (diagonal structure).
@@ -173,13 +173,13 @@ def get_einsum_subscripts(inds_a: Iterable[Index], inds_b: Iterable[Index],
 
 
 def tensordot(
-    x: Tuple[Array, Iterable[Index]],
-    y: Tuple[Array, Iterable[Index]],
+    x: tuple[Array, Iterable[Index]],
+    y: tuple[Array, Iterable[Index]],
     /,
     *,
     hyper_inds: Optional[Iterable[Index]] = None,
     return_inds_only: bool = False
-) -> Union[Tuple[Array, List[Index]], List[Index]]:
+) -> Union[tuple[Array, list[Index]], list[Index]]:
     """Contracts two tensors.
 
     Contracts tensor ``x`` with tensor ``y``.
@@ -262,7 +262,7 @@ def svd(array: Array,
         *,
         svd_index_name: Optional[Any] = None,
         atol: float = 1e-8,
-        seed: Optional[int] = None) -> List[Tuple[Array, Tuple[Index, ...]]]:
+        seed: Optional[int] = None) -> list[tuple[Array, tuple[Index, ...]]]:
     """Performs Singular Value Decomposition (SVD).
 
     Decomposes an array into three tensors using SVD: U, s, Vh.

@@ -28,7 +28,7 @@ import pickle
 from random import Random
 import re
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 from warnings import warn
 
 import autoray as ar
@@ -75,7 +75,7 @@ class BaseContractionResults:
 
     cost: float
     runtime_s: float
-    path: List[Tuple[int, int]]
+    path: list[tuple[int, int]]
 
     def __lt__(self, other):
         if not isinstance(other, BaseContractionResults):
@@ -153,8 +153,8 @@ def load_tn(obj: Any,
             fuse: float = 4,
             decompose_hyper_inds: bool = True,
             simplify_circuit: bool = True,
-            initial_state: Union[str, Dict[Qubit, Matrix], None] = '0',
-            final_state: Union[str, Dict[Qubit, Matrix], None] = '0',
+            initial_state: Union[str, dict[Qubit, Matrix], None] = '0',
+            final_state: Union[str, dict[Qubit, Matrix], None] = '0',
             output_index_token: str = '*',
             sparse_index_token: str = '/',
             atol: float = 1e-5,
@@ -568,7 +568,7 @@ def load_tn(obj: Any,
 
 
 def dump_results(tn: TensorNetwork,
-                 res: List[BaseContractionResults],
+                 res: list[BaseContractionResults],
                  *,
                  output_format: Optional[str] = None,
                  output_filename: Optional[str] = None,
