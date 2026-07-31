@@ -22,7 +22,6 @@ import math
 import operator as op
 from random import Random
 from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
-from warnings import warn
 
 import autoray as ar
 import more_itertools as mit
@@ -109,7 +108,7 @@ def get_connected_components(ts_inds: Iterable[List[Index]],
 
 def get_random_contraction_path(
         ts_inds: Iterable[List[Index]],
-        output_inds: Optional[Iterable[Index]] = None,
+        output_inds: Iterable[Index],
         *,
         merge_paths: bool = True,
         autocomplete: bool = True,
@@ -122,7 +121,7 @@ def get_random_contraction_path(
 
     Args:
         ts_inds: List of indices for each tensor.
-        output_inds: (Deprecated) List of output indices.
+        output_inds: List of output indices.
         merge_paths: If ``True``, merges all paths even if tensors are
             disconnected. If ``False``, returns separate paths for each
             connected component.
@@ -153,40 +152,33 @@ def get_random_contraction_path(
     Examples:
         >>> from tnco.utils.tn import get_random_contraction_path
         >>> ts_inds = [['i', 'j'], ['j', 'k'], ['k', 'l']]
-        >>> get_random_contraction_path(ts_inds, seed=42)
+        >>> get_random_contraction_path(ts_inds, ['i', 'l'], seed=42)
         [(0, 1), (0, 1)]
     """
-    if output_inds is not None:
-        warn(
-            "'output_inds' is deprecated, "
-            "and it will be removed in version '0.2'.",
-            DeprecationWarning,
-            stacklevel=2)
-
     _return_contraction = kwargs.pop('_return_contraction', False)
     if kwargs:
         raise TypeError("Got an expected keyword argument(s).")
 
+    # Initialize random generator and tensor count
     rng = Random(seed)
     ts_inds = list(ts_inds)
     n_tensors = len(ts_inds)
 
-    if output_inds is None:
-        base_hyper_count = get_hyper_count(ts_inds)
-        output_inds_set = OrderedFrozenSet(
-            x for x, count in base_hyper_count.items() if count == 0)
-    else:
-        output_inds_set = OrderedFrozenSet(output_inds)
+    # Process output indices
+    output_inds_set = OrderedFrozenSet(output_inds)
 
+    # Filter connecting hyper-indices from output indices
     hyper_count = get_hyper_count(ts_inds, output_inds=output_inds_set)
     filtered_output_inds = OrderedFrozenSet(
         x for x in output_inds_set if hyper_count.get(x, 0) <= 1)
 
+    # Partition tensors into connected components
     avail_inds_cc = get_connected_components(ts_inds, verbose=verbose)
 
     paths = []
     next_id = n_tensors
 
+    # Compute contraction paths for each connected component
     for i, cc in track(
             enumerate(avail_inds_cc),
             description="Getting contraction paths ...",
@@ -198,6 +190,7 @@ def get_random_contraction_path(
             paths.append([])
             continue
 
+        # Shuffle tensor ordering within component for randomized path finding
         cc_list = list(cc)
         rng.shuffle(cc_list)
 
@@ -208,6 +201,7 @@ def get_random_contraction_path(
         subscripts = get_einsum_subscripts(ts_inds_cc, output_inds_cc)
         shapes = [(2,) * len(xs) for xs in ts_inds_cc]
 
+        # Optimize contraction path with optional progress bar tracking
         with Progress(
                 console=Console(stderr=True),
                 disable=(verbose < 2 or len(ts_inds_cc) <= 1),
@@ -235,6 +229,7 @@ def get_random_contraction_path(
                 optimize=optimize,
             )
 
+        # Map local contraction steps to intermediate node identifiers
         loc = list(cc_list)
         path_cc = []
         for px, py in linear_path_cc:
@@ -250,6 +245,7 @@ def get_random_contraction_path(
     if _return_contraction:
         return paths
 
+    # Convert component contraction paths back to global linear einsum order
     linear_paths = []
     for i, path in enumerate(paths):
         linear_path = []
@@ -268,6 +264,7 @@ def get_random_contraction_path(
             linear_path.append((px, py))
         linear_paths.append(linear_path)
 
+    # Merge paths across components if requested
     return (merge_contraction_paths(
         n_tensors,
         linear_paths,

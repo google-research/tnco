@@ -335,6 +335,7 @@ def test_ContractionTree(random_seed: int, **kwargs):
 
     # Get contraction
     paths = get_random_contraction_path(tensors,
+                                        output_inds,
                                         seed=random_seed,
                                         verbose=verbose,
                                         merge_paths=False)
