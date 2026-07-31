@@ -48,26 +48,28 @@ class JSONEncoder(json.JSONEncoder):
         Returns:
             Encoded object in the JSON format.
         """
-        if isinstance(obj, complex):
-            return '{} + {}j'.format(obj.real, obj.imag)
-        if isinstance(obj, frozenset):
-            return tuple(obj)
-        if isinstance(obj, Tensor):
-            return dict(inds=obj.inds,
-                        dims=obj.dims,
-                        array=None if obj.array is None else obj.array.tolist(),
-                        tags=obj.tags)
-        if isinstance(obj, TensorNetwork):
-            return dict(tensors=obj.tensors,
-                        output_inds=obj.output_inds,
-                        sparse_inds=obj.sparse_inds)
-        if type(obj).__module__.startswith('cirq.') and type(
-                obj).__name__.endswith('Qubit'):
-            return repr(obj)
-        if hasattr(obj, 'to_json'):
-            return obj.to_json()
-
-        return super().default(obj)
+        match obj:
+            case complex():
+                return '{} + {}j'.format(obj.real, obj.imag)
+            case frozenset():
+                return tuple(obj)
+            case Tensor():
+                return dict(
+                    inds=obj.inds,
+                    dims=obj.dims,
+                    array=None if obj.array is None else obj.array.tolist(),
+                    tags=obj.tags)
+            case TensorNetwork():
+                return dict(tensors=obj.tensors,
+                            output_inds=obj.output_inds,
+                            sparse_inds=obj.sparse_inds)
+            case _ if (type(obj).__module__.startswith('cirq.') and
+                       type(obj).__name__.endswith('Qubit')):
+                return repr(obj)
+            case _ if hasattr(obj, 'to_json'):
+                return obj.to_json()
+            case _:
+                return super().default(obj)
 
 
 @dataclass(frozen=True, repr=False, eq=False)

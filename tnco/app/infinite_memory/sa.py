@@ -49,13 +49,14 @@ class JSONEncoder(BaseJSONEncoder):
         Returns:
             Encoded object in the JSON format.
         """
-        if isinstance(obj, ContractionResults):
-            return dict(**BaseJSONEncoder().default(obj),
-                        disconnected_paths=obj.disconnected_paths)
-        if hasattr(obj, 'to_json'):
-            return obj.to_json()
-
-        return super().default(obj)
+        match obj:
+            case ContractionResults():
+                return dict(**BaseJSONEncoder().default(obj),
+                            disconnected_paths=obj.disconnected_paths)
+            case _ if hasattr(obj, 'to_json'):
+                return obj.to_json()
+            case _:
+                return super().default(obj)
 
 
 @dataclass(repr=False, frozen=True, eq=False)

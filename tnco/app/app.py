@@ -48,14 +48,17 @@ __all__ = ['Optimizer']
 class JSONEncoder(json.JSONEncoder):
 
     def default(self, obj) -> Any:
-        if isinstance(obj, Decimal):
-            return str(obj)
-        if isinstance(obj, BaseContractionResults):
-            return dict(cost=obj.cost, runtime_s=obj.runtime_s, path=obj.path)
-        if hasattr(obj, 'to_json'):
-            return obj.to_json()
-
-        return super().default(obj)
+        match obj:
+            case Decimal():
+                return str(obj)
+            case BaseContractionResults():
+                return dict(cost=obj.cost,
+                            runtime_s=obj.runtime_s,
+                            path=obj.path)
+            case _ if hasattr(obj, 'to_json'):
+                return obj.to_json()
+            case _:
+                return super().default(obj)
 
 
 @dataclass(repr=False, frozen=True, eq=False)

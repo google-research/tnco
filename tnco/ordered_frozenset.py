@@ -206,51 +206,61 @@ class OrderedFrozenSet:
         return self.difference(other)
 
     def __lt__(self, other: Any) -> bool:
-        if isinstance(other, OrderedFrozenSet):
-            return self._set < other._set
-        if isinstance(other, (set, frozenset)):
-            return self._set < other
-        raise TypeError(
-            "unsupported operand type(s) for <: '{}' and '{}'".format(
-                type(self).__name__,
-                type(other).__name__))
+        match other:
+            case OrderedFrozenSet():
+                return self._set < other._set
+            case set() | frozenset():
+                return self._set < other
+            case _:
+                raise TypeError(
+                    "unsupported operand type(s) for <: '{}' and '{}'".format(
+                        type(self).__name__,
+                        type(other).__name__))
 
     def __le__(self, other: Any) -> bool:
-        if isinstance(other, OrderedFrozenSet):
-            return self._set <= other._set
-        if isinstance(other, (set, frozenset)):
-            return self._set <= other
-        raise TypeError(
-            "unsupported operand type(s) for <=: '{}' and '{}'".format(
-                type(self).__name__,
-                type(other).__name__))
+        match other:
+            case OrderedFrozenSet():
+                return self._set <= other._set
+            case set() | frozenset():
+                return self._set <= other
+            case _:
+                raise TypeError(
+                    "unsupported operand type(s) for <=: '{}' and '{}'".format(
+                        type(self).__name__,
+                        type(other).__name__))
 
     def __gt__(self, other: Any) -> bool:
-        if isinstance(other, OrderedFrozenSet):
-            return self._set > other._set
-        if isinstance(other, (set, frozenset)):
-            return self._set > other
-        raise TypeError(
-            "unsupported operand type(s) for >: '{}' and '{}'".format(
-                type(self).__name__,
-                type(other).__name__))
+        match other:
+            case OrderedFrozenSet():
+                return self._set > other._set
+            case set() | frozenset():
+                return self._set > other
+            case _:
+                raise TypeError(
+                    "unsupported operand type(s) for >: '{}' and '{}'".format(
+                        type(self).__name__,
+                        type(other).__name__))
 
     def __ge__(self, other: Any) -> bool:
-        if isinstance(other, OrderedFrozenSet):
-            return self._set >= other._set
-        if isinstance(other, (set, frozenset)):
-            return self._set >= other
-        raise TypeError(
-            "unsupported operand type(s) for >=: '{}' and '{}'".format(
-                type(self).__name__,
-                type(other).__name__))
+        match other:
+            case OrderedFrozenSet():
+                return self._set >= other._set
+            case set() | frozenset():
+                return self._set >= other
+            case _:
+                raise TypeError(
+                    "unsupported operand type(s) for >=: '{}' and '{}'".format(
+                        type(self).__name__,
+                        type(other).__name__))
 
     def __eq__(self, other: Any) -> bool:
-        if isinstance(other, OrderedFrozenSet):
-            return self._set == other._set
-        if isinstance(other, (set, frozenset)):
-            return self._set == other
-        raise TypeError(
-            "unsupported operand type(s) for ==: '{}' and '{}'".format(
-                type(self).__name__,
-                type(other).__name__))
+        match other:
+            case OrderedFrozenSet():
+                return self._set == other._set
+            case set() | frozenset():
+                return self._set == other
+            case _:
+                raise TypeError(
+                    "unsupported operand type(s) for ==: '{}' and '{}'".format(
+                        type(self).__name__,
+                        type(other).__name__))

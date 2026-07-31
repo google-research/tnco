@@ -283,38 +283,37 @@ def load(circuit: Iterable[tuple[Matrix, tuple[Qubit]]],
 
     # Convert initial/final state
     def get_state(state, tag):
-        if state is None:
-            return {}
+        match state:
+            case None:
+                return {}
+            case str() if state in valid_token:
+                return dict(
+                    zip(zip(qubits, its.repeat(tag)),
+                        its.repeat(valid_token[state])))
+            case dict():
 
-        if isinstance(state, str) and state in valid_token:
-            return dict(
-                zip(zip(qubits, its.repeat(tag)),
-                    its.repeat(valid_token[state])))
+                # Check valid tokens
+                if not all(x in valid_token
+                           for x in state.values()
+                           if isinstance(x, str)):
+                    raise ValueError("State has not supported tokens.")
 
-        if isinstance(state, dict):
+                # Convert state
+                state = dict(
+                    ((q, tag), valid_token[x] if isinstance(x, str) else ar.
+                     do('asarray', x, dtype=dtype, like=backend))
+                    for q, x in state.items()
+                    if q in qubits)
 
-            # Check valid tokens
-            if not all(x in valid_token
-                       for x in state.values()
-                       if isinstance(x, str)):
-                raise ValueError("State has not supported tokens.")
+                # Check states
+                if not all(x.shape == (2,) and abs(ar.do('linalg.norm', x) -
+                                                   1) < atol
+                           for x in state.values()):
+                    raise ValueError("State is not properly normalized.")
 
-            # Convert state
-            state = dict(
-                ((q, tag), valid_token[x] if isinstance(x, str) else ar.
-                 do('asarray', x, dtype=dtype, like=backend))
-                for q, x in state.items()
-                if q in qubits)
-
-            # Check states
-            if not all(
-                    x.shape == (2,) and abs(ar.do('linalg.norm', x) - 1) < atol
-                    for x in state.values()):
-                raise ValueError("State is not properly normalized.")
-
-            return state
-
-        raise NotImplementedError("State not supported.")
+                return state
+            case _:
+                raise NotImplementedError("State not supported.")
 
     def get_delta(n: int):
         """Return a Kronecker delta of n-dimensions."""

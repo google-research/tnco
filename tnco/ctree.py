@@ -225,13 +225,12 @@ class ContractionTree(_ContractionTree):
             self._inds_order = tuple(mit.unique_everseen(mit.flatten(ts_inds)))
 
         def get_node(node):
-            # If Node, just return
-            if isinstance(node, Node):
-                return node
-
-            # Otherwise, convert to Node
-            x, y, z = map(lambda x: -1 if x is None else x, node)
-            return Node((x, y), z)
+            match node:
+                case Node():
+                    return node
+                case _:
+                    x, y, z = map(lambda x: -1 if x is None else x, node)
+                    return Node((x, y), z)
 
         # Get inds map
         inds_map_ = dict(zip(self._inds_order, range(len(self._inds_order))))

@@ -94,3 +94,6 @@ split_before_named_assigns = false
 
 [tool.docformatter]
 style = "sphinx"
+
+[tool.ruff]
+target-version = "py310"

@@ -52,20 +52,21 @@ class JSONEncoder(BaseJSONEncoder):
         Returns:
             Encoded object in the JSON format.
         """
-        if isinstance(obj, frozenset):
-            return tuple(obj)
-        if isinstance(obj, ContractionResults):
-            return dict(**BaseJSONEncoder().default(obj),
-                        disconnected_paths=obj.disconnected_paths,
-                        disconnected_slices=obj.disconnected_slices,
-                        slices=obj.slices)
-        if type(obj).__module__.startswith('cirq.') and type(
-                obj).__name__.endswith('Qubit'):
-            return repr(obj)
-        if hasattr(obj, 'to_json'):
-            return obj.to_json()
-
-        return super().default(obj)
+        match obj:
+            case frozenset():
+                return tuple(obj)
+            case ContractionResults():
+                return dict(**BaseJSONEncoder().default(obj),
+                            disconnected_paths=obj.disconnected_paths,
+                            disconnected_slices=obj.disconnected_slices,
+                            slices=obj.slices)
+            case _ if (type(obj).__module__.startswith('cirq.') and
+                       type(obj).__name__.endswith('Qubit')):
+                return repr(obj)
+            case _ if hasattr(obj, 'to_json'):
+                return obj.to_json()
+            case _:
+                return super().default(obj)
 
 
 @dataclass(repr=False, frozen=True, eq=False)
