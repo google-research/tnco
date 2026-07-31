@@ -22,7 +22,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "tnco"
 description = "Tensor Network Contraction Optimizer (TNCO)"
-version = "0.3.0"
+version = "0.3.1"
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [

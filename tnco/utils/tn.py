@@ -44,6 +44,21 @@ __all__ = [
 ]
 
 
+class GreedyProgress(oe.paths.PathOptimizer):
+    """PathOptimizer wrapper supporting a candidate chooser progress
+    callback."""
+
+    def __init__(self, choose_fn):
+        self.choose_fn = choose_fn
+
+    def __call__(self, inputs, output, size_dict, memory_limit=None):
+        return oe.paths.greedy(inputs,
+                               output,
+                               size_dict,
+                               memory_limit=memory_limit,
+                               choose_fn=self.choose_fn)
+
+
 def get_connected_components(ts_inds: Iterable[List[Index]],
                              verbose: int = 0) -> List[List[int]]:
     ts_inds_list = list(ts_inds)
@@ -176,7 +191,7 @@ def get_random_contraction_path(
             enumerate(avail_inds_cc),
             description="Getting contraction paths ...",
             total=len(avail_inds_cc),
-            disable=(verbose <= 0),
+            disable=(verbose != 1),
             console=Console(stderr=True),
     ):
         if len(cc) <= 1:
@@ -192,10 +207,33 @@ def get_random_contraction_path(
 
         subscripts = get_einsum_subscripts(ts_inds_cc, output_inds_cc)
         shapes = [(2,) * len(xs) for xs in ts_inds_cc]
-        linear_path_cc, _ = oe.contract_path(subscripts,
-                                             *shapes,
-                                             shapes=True,
-                                             optimize='greedy')
+
+        with Progress(
+                console=Console(stderr=True),
+                disable=(verbose < 2 or len(ts_inds_cc) <= 1),
+        ) as progress:
+            if verbose >= 2 and len(ts_inds_cc) > 1:
+                task = progress.add_task(
+                    f"Greedy optimization ({i + 1}/{len(avail_inds_cc)}) ...",
+                    total=len(ts_inds_cc) - 1,
+                )
+
+                def choose_fn_with_progress(queue, remaining):
+                    con = oe.paths._simple_chooser(queue, remaining)
+                    if con is not None:
+                        progress.advance(task, 1)
+                    return con
+
+                optimize = GreedyProgress(choose_fn_with_progress)
+            else:
+                optimize = 'greedy'
+
+            linear_path_cc, _ = oe.contract_path(
+                subscripts,
+                *shapes,
+                shapes=True,
+                optimize=optimize,
+            )
 
         loc = list(cc_list)
         path_cc = []
