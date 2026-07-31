@@ -113,7 +113,7 @@ def load_file(filename: str) -> Any:
     try:
         validate_filepath(filename, platform='auto')
     except ValidationError as e:
-        raise ValueError("'filename' is not valid ({})".format(e))
+        raise ValueError("'filename' is not valid ({})".format(e)) from e
 
     # Check that file exists and it's a file.
     filename = Path(filename).expanduser()
@@ -641,7 +641,8 @@ def dump_results(tn: TensorNetwork,
         try:
             validate_filepath(output_filename, platform='auto')
         except ValidationError as e:
-            raise ValueError("'output_filename' is not valid ({})".format(e))
+            raise ValueError(
+                "'output_filename' is not valid ({})".format(e)) from e
 
     # Check if filename already exists
     output_filename = (None if output_filename is None else

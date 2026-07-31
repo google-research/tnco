@@ -385,8 +385,9 @@ def merge_contraction_paths(n_tensors: int,
             # Update merged path
             try:
                 mx, my = sorted((merged_pos.index(x), merged_pos.index(y)))
-            except ValueError:
-                raise ValueError("'paths' are not valid or not disconnected.")
+            except ValueError as e:
+                raise ValueError(
+                    "'paths' are not valid or not disconnected.") from e
             merged_path.append((mx, my))
             merged_pos.pop(my)
             merged_pos.pop(mx)

@@ -66,8 +66,8 @@ class Buffer:
 
         try:
             calcsize(dtype)
-        except Exception:
-            raise ValueError("'dtype' is not valid.")
+        except Exception as e:
+            raise ValueError("'dtype' is not valid.") from e
 
         # Get sequence and size
         try:

@@ -258,7 +258,7 @@ class SimpleCostModel(BaseCostModel):
         except (ValueError, TypeError):
             dims = tuple(map(dims.get, all_inds))
             if any(d is None for d in dims):
-                raise ValueError("Some dimensions are missing.")
+                raise ValueError("Some dimensions are missing.") from None
 
         # Get core
         core = self.__get_core__(all_inds)

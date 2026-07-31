@@ -216,9 +216,9 @@ class ContractionTree(_ContractionTree):
                 dims = dict(
                     map(lambda x: (x, dims[x]),
                         mit.unique_everseen(mit.flatten(ts_inds))))
-            except TypeError:
+            except TypeError as e:
                 if int(dims) != dims:
-                    raise ValueError("'dims' is not valid.")
+                    raise ValueError("'dims' is not valid.") from e
                 dims = dict(
                     zip(mit.unique_everseen(mit.flatten(ts_inds)),
                         its.repeat(int(dims))))
