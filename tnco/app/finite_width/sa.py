@@ -19,7 +19,7 @@ import json
 import operator as op
 from sys import stderr
 from time import perf_counter
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Iterable
 
 import more_itertools as mit
 
@@ -113,12 +113,12 @@ class Optimizer(BaseOptimizer):
 
     def optimize(self,
                  tn: Any,
-                 betas: Union[tuple[float, float], Iterable[float]],
-                 n_steps: Optional[int] = None,
+                 betas: tuple[float, float] | Iterable[float],
+                 n_steps: int | None = None,
                  n_runs: int = 1,
-                 n_projs: Optional[int] = None,
+                 n_projs: int | None = None,
                  update_slices: int = 10,
-                 timeout: Optional[float] = None,
+                 timeout: float | None = None,
                  **load_tn_options) -> Any:
         """Optimizes the tensor network ``tn``.
 

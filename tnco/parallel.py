@@ -22,7 +22,7 @@ from threading import Thread
 from threading import TIMEOUT_MAX
 from threading import Timer
 from time import sleep
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import Any, Callable, Iterable
 from warnings import warn
 
 import more_itertools as mit
@@ -55,7 +55,7 @@ class Buffer:
     """
 
     def __init__(self,
-                 sequence_or_size: Union[Iterable[Any], int],
+                 sequence_or_size: Iterable[Any] | int,
                  dtype: str = 'q') -> None:
 
         # Check dtype
@@ -112,10 +112,10 @@ def Parallel(core: Callable[..., Any],
              description: str = "Processing...",
              text: str = "",
              n_jobs: int = -1,
-             timeout: Optional[float] = None,
+             timeout: float | None = None,
              verbose: int = False,
              buffers: Iterable[tuple[str, str]] = (),
-             refresh_per_second: Optional[float] = None,
+             refresh_per_second: float | None = None,
              leave: bool = False,
              **kwargs: Any) -> Any:
     """Parallelize ``core``.

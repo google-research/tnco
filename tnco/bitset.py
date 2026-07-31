@@ -13,7 +13,7 @@
 # limitations under the License.
 """Bitset implementation."""
 
-from typing import Iterable, Optional, Union
+from typing import Iterable
 
 import more_itertools as mit
 from tnco_core import Bitset as Bitset_
@@ -42,8 +42,8 @@ class Bitset(Bitset_):
     """
 
     def __init__(self,
-                 bits: Optional[Union[str, Iterable[int]]] = None,
-                 n: Optional[int] = None) -> None:
+                 bits: str | Iterable[int] | None = None,
+                 n: int | None = None) -> None:
         if bits is None:
             # If 'bits' is not provided, 'n' must be None or 0
             if n is not None and n != 0:

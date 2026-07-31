@@ -18,7 +18,7 @@ import itertools as its
 import operator as op
 from random import Random
 from string import ascii_letters
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Iterable
 
 import autoray as ar
 import more_itertools as mit
@@ -173,13 +173,13 @@ def get_einsum_subscripts(inds_a: Iterable[Index], inds_b: Iterable[Index],
 
 
 def tensordot(
-    x: tuple[Array, Iterable[Index]],
-    y: tuple[Array, Iterable[Index]],
-    /,
-    *,
-    hyper_inds: Optional[Iterable[Index]] = None,
-    return_inds_only: bool = False
-) -> Union[tuple[Array, list[Index]], list[Index]]:
+        x: tuple[Array, Iterable[Index]],
+        y: tuple[Array, Iterable[Index]],
+        /,
+        *,
+        hyper_inds: Iterable[Index] | None = None,
+        return_inds_only: bool = False
+) -> tuple[Array, list[Index]] | list[Index]:
     """Contracts two tensors.
 
     Contracts tensor ``x`` with tensor ``y``.
@@ -260,9 +260,9 @@ def svd(array: Array,
         inds: Iterable[Index],
         left_inds: Iterable[Index],
         *,
-        svd_index_name: Optional[Any] = None,
+        svd_index_name: Any | None = None,
         atol: float = 1e-8,
-        seed: Optional[int] = None) -> list[tuple[Array, tuple[Index, ...]]]:
+        seed: int | None = None) -> list[tuple[Array, tuple[Index, ...]]]:
     """Performs Singular Value Decomposition (SVD).
 
     Decomposes an array into three tensors using SVD: U, s, Vh.

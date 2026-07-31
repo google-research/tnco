@@ -18,7 +18,7 @@ import itertools as its
 import json
 import operator as op
 from types import MappingProxyType
-from typing import Any, Iterator, Optional
+from typing import Any, Iterator
 
 import autoray as ar
 import more_itertools as mit
@@ -92,9 +92,9 @@ class Tensor:
         2
     """
     inds: tuple[Index]
-    dims: Optional[tuple[int]] = None
-    array: Optional[Matrix] = None
-    tags: Optional[dict[Any, Any]] = None
+    dims: tuple[int] | None = None
+    array: Matrix | None = None
+    tags: dict[Any, Any] | None = None
 
     def __post_init__(self) -> None:
 
@@ -196,9 +196,9 @@ class TensorNetwork:
         2
     """
     tensors: tuple[Tensor]
-    output_inds: Optional[frozenset[Index]] = None
-    sparse_inds: Optional[frozenset[Index]] = None
-    tags: Optional[dict[Any, Any]] = None
+    output_inds: frozenset[Index] | None = None
+    sparse_inds: frozenset[Index] | None = None
+    tags: dict[Any, Any] | None = None
 
     def __post_init__(self) -> None:
         # Convert

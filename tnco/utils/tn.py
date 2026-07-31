@@ -21,7 +21,7 @@ import itertools as its
 import math
 import operator as op
 from random import Random
-from typing import Iterable, Optional, Union
+from typing import Iterable
 
 import autoray as ar
 import more_itertools as mit
@@ -112,9 +112,9 @@ def get_random_contraction_path(
         *,
         merge_paths: bool = True,
         autocomplete: bool = True,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         verbose: int = False,
-        **kwargs) -> Union[list[tuple[int, int]], list[list[tuple[int, int]]]]:
+        **kwargs) -> list[tuple[int, int]] | list[list[tuple[int, int]]]:
     """Generates a random contraction path.
 
     Generates a random contraction path for the given tensor indices.
@@ -301,7 +301,7 @@ def get_symbol(i: int) -> str:
 
 
 def get_einsum_subscripts(ts_inds: Iterable[list[Index]],
-                          output_inds: Optional[Iterable[Index]] = ()):
+                          output_inds: Iterable[Index] | None = ()):
     """Generates einsum subscripts.
 
     Generates the einsum subscripts string for contracting multiple tensors.
@@ -406,8 +406,8 @@ def split_contraction_path(
     return_connected_components: bool = False,
     normalize_paths: bool = False,
     verbose: int = False
-) -> Union[list[list[tuple[int, int]]], tuple[list[list[tuple[int, int]]],
-                                              list[frozenset[int]]]]:
+) -> list[list[tuple[int, int]]] | tuple[list[list[tuple[int, int]]],
+                                         list[frozenset[int]]]:
     """Splits a contraction path.
 
     Splits a contraction path into disconnected components.
@@ -570,7 +570,7 @@ def read_inds(
 
 def get_hyper_count(
         ts_inds: Iterable[Iterable[Index]],
-        output_inds: Optional[Iterable[Index]] = None) -> dict[Index, int]:
+        output_inds: Iterable[Index] | None = None) -> dict[Index, int]:
     """Computes the hyper-count for each index in a tensor network.
 
     The hyper-count of an index is defined as the number of times it is
@@ -596,15 +596,15 @@ def get_hyper_count(
 
 def fuse(
     ts_inds: Iterable[list[Index]],
-    dims: Union[int, dict[Index, int]],
+    dims: int | dict[Index, int],
     max_width: float,
-    output_inds: Optional[Iterable[Index]] = None,
+    output_inds: Iterable[Index] | None = None,
     *,
-    exclude_inds: Optional[Iterable[Index]] = (),
-    seed: Optional[int] = None,
+    exclude_inds: Iterable[Index] | None = (),
+    seed: int | None = None,
     return_fused_inds: bool = False,
     verbose: int = False
-) -> tuple[list[tuple[int, int]], Optional[list[tuple[Index]]]]:
+) -> tuple[list[tuple[int, int]], list[tuple[Index]] | None]:
     """Fuses tensors.
 
     Contracts tensors such that the resulting tensor width does not exceed
@@ -905,13 +905,13 @@ def decompose_hyper_inds(
 def contract(
     path: Iterable[tuple[int, int]],
     ts_inds: Iterable[list[Index]],
-    output_inds: Optional[Iterable[Index]] = None,
-    arrays: Optional[Iterable[Array]] = None,
-    dims: Optional[Union[int, dict[Index, int]]] = None,
+    output_inds: Iterable[Index] | None = None,
+    arrays: Iterable[Array] | None = None,
+    dims: int | dict[Index, int] | None = None,
     *,
-    backend: Optional[str] = None,
+    backend: str | None = None,
     verbose: int = False
-) -> tuple[list[list[Index]], frozenset[Index], Optional[list[Array]]]:
+) -> tuple[list[list[Index]], frozenset[Index], list[Array] | None]:
     """Contracts a tensor network.
 
     Contracts a tensor network following a given path.

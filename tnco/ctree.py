@@ -18,7 +18,7 @@ import itertools as its
 import math
 import operator as op
 from types import MappingProxyType
-from typing import Any, Callable, Iterable, NoReturn, Optional, Union
+from typing import Any, Callable, Iterable, NoReturn
 
 import more_itertools as mit
 from rich.console import Console
@@ -68,9 +68,9 @@ class ContractionTree(_ContractionTree):
     def __init__(self,
                  path: Iterable[tuple[int, int]],
                  ts_inds: Iterable[list[Index]],
-                 dims: Union[dict[Index, int], int],
+                 dims: dict[Index, int] | int,
                  *,
-                 output_inds: Optional[Iterable[Index]] = None,
+                 output_inds: Iterable[Index] | None = None,
                  check_shared_inds: bool = False,
                  verbose: bool = False,
                  **kwargs) -> None:
@@ -314,8 +314,8 @@ class ContractionTree(_ContractionTree):
                 self._inds_map = inds_map
 
             def __getitem__(
-                self, key: Union[int, slice]
-            ) -> Union[frozenset[Index], tuple[frozenset[Index], ...]]:
+                self, key: int | slice
+            ) -> frozenset[Index] | tuple[frozenset[Index], ...]:
 
                 def get_inds(xs):
                     return frozenset(

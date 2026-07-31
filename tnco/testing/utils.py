@@ -20,7 +20,7 @@ import operator as op
 import pickle
 from random import Random
 from string import ascii_letters
-from typing import Iterable, Optional, Union
+from typing import Iterable
 
 import more_itertools as mit
 from rich.console import Console
@@ -136,7 +136,7 @@ def get_connected_components(ts_inds: Iterable[list[Index]],
                        tuple).values())
 
 
-def generate_random_inds(n: int, *, seed: Optional[int] = None) -> list[Index]:
+def generate_random_inds(n: int, *, seed: int | None = None) -> list[Index]:
     """Generates random index names.
 
     Generates ``n`` unique random index names.
@@ -188,7 +188,7 @@ def generate_random_tensors(
         n_output_inds: int = 0,
         n_cc: int = 1,
         randomize_names: bool = True,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         verbose: int = False
 ) -> tuple[list[list[IndexName]], frozenset[IndexName]]:
     """Generates a random tensor network.
@@ -360,12 +360,11 @@ def generate_random_tensors(
 
 
 def is_valid_contraction_tree(ctree: ContractionTree,
-                              ts_inds: Optional[Iterable[list[Index]]] = None,
-                              dims: Optional[Union[dict[Index, int],
-                                                   int]] = None,
-                              output_inds: Optional[Iterable[Index]] = None,
-                              hyper_count: Optional[dict[Index, int]] = None,
-                              check_shared_inds: Optional[bool] = None) -> bool:
+                              ts_inds: Iterable[list[Index]] | None = None,
+                              dims: dict[Index, int] | int | None = None,
+                              output_inds: Iterable[Index] | None = None,
+                              hyper_count: dict[Index, int] | None = None,
+                              check_shared_inds: bool | None = None) -> bool:
     """Checks validity of a contraction tree.
 
     Verifies if a ``ContractionTree`` is consistent with the provided tensor

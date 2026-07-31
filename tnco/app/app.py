@@ -28,7 +28,7 @@ import pickle
 from random import Random
 import re
 import sys
-from typing import Any, Optional, Union
+from typing import Any
 from warnings import warn
 
 import autoray as ar
@@ -153,14 +153,14 @@ def load_tn(obj: Any,
             fuse: float = 4,
             decompose_hyper_inds: bool = True,
             simplify_circuit: bool = True,
-            initial_state: Union[str, dict[Qubit, Matrix], None] = '0',
-            final_state: Union[str, dict[Qubit, Matrix], None] = '0',
+            initial_state: str | dict[Qubit, Matrix] | None = '0',
+            final_state: str | dict[Qubit, Matrix] | None = '0',
             output_index_token: str = '*',
             sparse_index_token: str = '/',
             atol: float = 1e-5,
-            dtype: Optional[Any] = None,
-            backend: Optional[str] = None,
-            seed: Optional[int] = None,
+            dtype: Any | None = None,
+            backend: str | None = None,
+            seed: int | None = None,
             verbose: int = False) -> TensorNetwork:
     """Loads a tensor network from various object types.
 
@@ -570,8 +570,8 @@ def load_tn(obj: Any,
 def dump_results(tn: TensorNetwork,
                  res: list[BaseContractionResults],
                  *,
-                 output_format: Optional[str] = None,
-                 output_filename: Optional[str] = None,
+                 output_format: str | None = None,
+                 output_filename: str | None = None,
                  output_compression: str = 'auto',
                  overwrite_output_file: bool = False,
                  **kwargs) -> Any:
@@ -748,18 +748,18 @@ class BaseOptimizer:
         verbose: If ``True``, prints verbose output.
     """
 
-    max_width: Optional[float] = None
+    max_width: float | None = None
     n_jobs: int = -1
     width_type: str = 'float32'
     cost_type: str = 'float64'
-    output_format: Optional[str] = None
-    output_filename: Optional[str] = None
+    output_format: str | None = None
+    output_filename: str | None = None
     output_compression: str = 'auto'
     overwrite_output_file: bool = False
     atol: float = 1e-5
-    dtype: Optional[Any] = None
-    backend: Optional[str] = None
-    seed: Optional[int] = None
+    dtype: Any | None = None
+    backend: str | None = None
+    seed: int | None = None
     verbose: int = False
 
     def optimize(self, *args: Any, **kwargs: Any) -> Any:
@@ -792,18 +792,18 @@ class BaseOptimizer:
 
 
 def Optimizer(method: str = 'sa',
-              max_width: Optional[float] = None,
+              max_width: float | None = None,
               n_jobs: int = -1,
               width_type: str = 'float32',
               cost_type: str = 'float64',
-              output_format: Optional[str] = None,
-              output_filename: Optional[str] = None,
+              output_format: str | None = None,
+              output_filename: str | None = None,
               output_compression: str = 'auto',
               overwrite_output_file: bool = False,
               atol: float = 1e-5,
-              dtype: Optional[Any] = None,
-              backend: Optional[str] = None,
-              seed: Optional[int] = None,
+              dtype: Any | None = None,
+              backend: str | None = None,
+              seed: int | None = None,
               verbose: int = False) -> BaseOptimizer:
     """Factory function to create an optimizer.
 

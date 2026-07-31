@@ -14,7 +14,7 @@
 """Cost model for infinite memory optimization."""
 
 from importlib import import_module
-from typing import Iterable, Literal, Optional, Union
+from typing import Iterable, Literal
 
 import more_itertools as mit
 
@@ -66,8 +66,8 @@ class SimpleCostModel(BaseCostModel):
                  *,
                  cost_type: Literal['float32', 'float64', 'float128',
                                     'float1024'] = 'float64',
-                 sparse_inds: Optional[Iterable[Index]] = None,
-                 n_projs: Optional[int] = None):
+                 sparse_inds: Iterable[Index] | None = None,
+                 n_projs: int | None = None):
 
         # Check type
         cost_type = str(cost_type).lower()
@@ -128,7 +128,7 @@ class SimpleCostModel(BaseCostModel):
 
     def contraction_cost(self, inds_in1: Iterable[Index],
                          inds_in2: Iterable[Index], inds_out: Iterable[Index],
-                         dims: Union[dict[Index, int], int]) -> float:
+                         dims: dict[Index, int] | int) -> float:
         """Contraction cost.
 
         Return the cost of contracting 'inds_in1' with 'inds_in2', to return

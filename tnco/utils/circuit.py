@@ -19,7 +19,7 @@ import itertools as its
 import math
 import operator as op
 from random import Random
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Iterable
 
 import autoray as ar
 import more_itertools as mit
@@ -205,16 +205,16 @@ def same(gate_A: tuple[Matrix, Iterable[Qubit]],
 @fts.singledispatch
 def load(circuit: Iterable[tuple[Matrix, tuple[Qubit]]],
          *,
-         initial_state: Union[str, dict[Qubit, Matrix], None] = '0',
-         final_state: Union[str, dict[Qubit, Matrix], None] = '0',
+         initial_state: str | dict[Qubit, Matrix] | None = '0',
+         final_state: str | dict[Qubit, Matrix] | None = '0',
          simplify: bool = True,
          use_matrix_commutation: bool = True,
          decompose_hyper_inds: bool = True,
          fuse: float = 4,
-         dtype: Optional[Any] = None,
+         dtype: Any | None = None,
          atol: float = 1e-8,
-         backend: Optional[str] = None,
-         seed: Optional[int] = None,
+         backend: str | None = None,
+         seed: int | None = None,
          verbose: int = False,
          **kwargs) -> tuple[list[Array], list[tuple[Index]], frozenset[Index]]:
     """Loads a quantum circuit and converts it to a tensor network.
@@ -522,8 +522,8 @@ try:
 
     def cirq_to_arrays(
             circuit: Iterable[cirq.Operation],
-            dtype: Optional[Any] = None,
-            backend: Optional[str] = None) -> list[tuple[Array, tuple[Qubit]]]:
+            dtype: Any | None = None,
+            backend: str | None = None) -> list[tuple[Array, tuple[Qubit]]]:
         """Convert a 'cirq' circuit to arrays.
 
         Args:
@@ -575,8 +575,8 @@ try:
 
     def qiskit_to_arrays(
             circuit: Iterable[qiskit.circuit.CircuitInstruction],
-            dtype: Optional[Any] = None,
-            backend: Optional[str] = None) -> list[tuple[Array, tuple[Qubit]]]:
+            dtype: Any | None = None,
+            backend: str | None = None) -> list[tuple[Array, tuple[Qubit]]]:
         """Convert a 'qiskit' circuit to arrays.
 
         Args:

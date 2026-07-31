@@ -14,7 +14,7 @@
 """Optimizer for finite width."""
 
 from importlib import import_module
-from typing import Any, Iterable, Literal, NoReturn, Optional, TypeVar, Union
+from typing import Any, Iterable, Literal, NoReturn, TypeVar
 
 from tnco.bitset import Bitset
 from tnco.ctree import ContractionTree
@@ -56,8 +56,8 @@ class Optimizer:
                  *,
                  slice_update: Literal['greedy'] = 'greedy',
                  max_number_new_slices: int = 0,
-                 skip_slices: Optional[Iterable[Index]] = None,
-                 seed: Optional[Union[int, str]] = None,
+                 skip_slices: Iterable[Index] | None = None,
+                 seed: int | str | None = None,
                  disable_shared_inds: bool = False,
                  atol: float = 1e-5,
                  **kwargs) -> None:
