@@ -13,11 +13,11 @@
 # limitations under the License.
 """Type definitions."""
 
-from typing import Any, TypeVar
+from typing import Any, TypeAlias, TypeVar
 
-TensorName = Any
-Index = Any
-IndexName = Any
+TensorName: TypeAlias = Any
+Index: TypeAlias = Any
+IndexName: TypeAlias = Any
 Array = TypeVar('Array')
 Matrix = TypeVar('Matrix')
 Qubit = TypeVar('Qubit')
