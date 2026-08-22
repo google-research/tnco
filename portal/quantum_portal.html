@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quantum TNCO Portal</title>
+<style>
+  :root {
+    --bg:#0f1420; --panel:#171e2e; --ink:#dce3f2; --dim:#7b87a3;
+    --acc:#4cc3ff; --warm:#ff9f43; --good:#6ee7a0; --bad:#ff6b7a;
+    --wire:#3a4763;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:12px 16px; background:var(--bg); color:var(--ink);
+         font:13.5px/1.4 -apple-system,"Segoe UI",Roboto,sans-serif; }
+  h1 { font-size:17px; margin:0 0 10px; }
+  h1 .tag { color:var(--dim); font-weight:400; font-size:13px; }
+  h2 { font-size:13.5px; margin:0 0 8px; font-weight:600; }
+  h2 .tag { color:var(--dim); font-weight:400; }
+  section { background:var(--panel); border-radius:10px; padding:10px 12px;
+            margin-bottom:10px; }
+  .codewrap { position:relative; border:1px solid #2a3550; border-radius:7px;
+              background:#0c101a; }
+  .codewrap:focus-within { border-color:#3c7ab8; }
+  .codewrap pre, .codewrap textarea {
+    margin:0; width:100%; min-height:100px; padding:10px 12px;
+    font:13px/1.5 "SF Mono",Menlo,Consolas,monospace; tab-size:4;
+    white-space:pre; box-sizing:border-box;
+  }
+  .codewrap pre { position:absolute; inset:0; overflow:hidden;
+                  color:var(--ink); pointer-events:none; }
+  .codewrap textarea {
+    position:relative; display:block; background:transparent;
+    color:transparent; caret-color:#dce3f2; border:none; outline:none;
+    resize:none; overflow:auto; z-index:1;
+  }
+  .codewrap textarea::selection { background:rgba(76,195,255,.28); }
+  .codewrap.ro { border-style:dashed; }
+  .seg { display:inline-flex; position:relative; background:#0c101a;
+         border:1px solid #2a3550; border-radius:999px; padding:2px;
+         vertical-align:middle; user-select:none; }
+  .seg .opt { position:relative; z-index:1; padding:2px 11px;
+              border-radius:999px; cursor:pointer; color:var(--dim);
+              font:400 12px/1.5 -apple-system,"Segoe UI",sans-serif;
+              transition:color .15s; white-space:nowrap; }
+  .seg .opt.active { color:#fff; }
+  .seg .thumb { position:absolute; top:2px; bottom:2px; left:2px; width:40px;
+                background:#2b5d8f; border-radius:999px;
+                transition:left .18s ease, width .18s ease; }
+  .codewrap.ro::after {
+    content:'compiled · read-only'; position:absolute; top:6px; right:12px;
+    color:var(--dim); font:11px Menlo,monospace; z-index:2;
+  }
+  .tok-c { color:#66718c; font-style:italic; }
+  .tok-s { color:#6ee7a0; }
+  .tok-n { color:#ff9f43; }
+  .tok-k { color:#4cc3ff; }
+  .tok-b { color:#b48ee0; }
+  .tok-q { color:#7fe8ff; font-weight:600;
+           text-shadow:0 0 6px #4cc3ffcc; animation:qglow 1.6s ease-in-out
+           infinite alternate; }
+  @keyframes qglow {
+    from { text-shadow:0 0 4px #4cc3ff88; }
+    to   { text-shadow:0 0 11px #4cc3ffee, 0 0 22px #4cc3ff55; }
+  }
+  .treeBox line.lk { opacity:.13; transition:opacity .1s; }
+  .treeBox line.lk.hot { opacity:.95; }
+  .treeBox .pv { cursor:pointer; }
+  .treeBox .pv.hot { stroke:#ffffff; stroke-width:1.8; }
+  h2.fold { cursor:pointer; user-select:none; display:flex;
+             align-items:center; flex-wrap:wrap; gap:4px 8px; }
+  h2.fold .caret { display:inline-block; width:14px; color:var(--dim);
+                   transition:transform .15s; }
+  h2.fold.closed .caret { transform:rotate(-90deg); }
+  button {
+    background:#2a3550; border:1px solid #3a4a6b; color:var(--ink);
+    border-radius:7px; padding:5px 13px; cursor:pointer; font-size:13px;
+  }
+  button:hover { background:#33405f; }
+  button.primary { background:#2b5d8f; border-color:#3c7ab8; font-weight:600; }
+  .bar { display:flex; gap:8px; align-items:center; margin-top:8px;
+         flex-wrap:wrap; }
+  .err { color:var(--bad); white-space:pre-wrap;
+         font:12px Menlo,monospace; margin-top:6px; }
+  .stdout { color:#9fe8b8; white-space:pre-wrap; margin:6px 0 0;
+            font:12.5px Menlo,monospace; }
+  .stdout:empty { display:none; }
+  #statsBox { margin-top:8px; }
+  .srow { display:flex; align-items:center; gap:8px; margin:2px 0;
+          font:12.5px Menlo,monospace; }
+  .srow .lbl { min-width:70px; text-align:right; color:var(--ink); }
+  .srow .bar1 { height:13px; background:#6ee7a0; border-radius:3px;
+                min-width:2px; }
+  .srow .pct { color:var(--dim); }
+  .shead { color:var(--dim); font:12px Menlo,monospace; margin:6px 0 2px; }
+  .chip { display:inline-block; background:#0c101a; border:1px solid #2a3550;
+          border-radius:5px; padding:1px 8px; margin:1px 3px 1px 0;
+          font:12.5px Menlo,monospace; }
+  .chip b { color:var(--good); font-weight:600; }
+  #circuitBox { overflow-x:auto; margin-top:8px; }
+  .duo { display:flex; gap:12px; flex-wrap:wrap; }
+  .duo > div { flex:1; min-width:320px; }
+  .treeHead { display:flex; justify-content:space-between;
+              align-items:baseline; }
+  .total { font-size:18px; font-weight:700;
+           font-variant-numeric:tabular-nums; }
+  .total small { font-size:11px; color:var(--dim); font-weight:400; }
+  .initTotal { color:var(--warm); } .optTotal { color:var(--good); }
+  .treeBox { width:100%; height:190px; border-radius:7px; background:#0c101a;
+             overflow:hidden; }
+  .treeBox svg { display:block; width:100%; height:100%; }
+  canvas.chart { width:100%; height:170px; border-radius:7px;
+                 background:#0c101a; display:block; }
+  .hint { color:var(--dim); font-size:12px; margin-top:5px; }
+  .gain { font-size:13px; color:var(--dim); margin-top:6px; }
+  .gain b { color:var(--acc); }
+  svg text { font:11px Menlo,monospace; fill:var(--ink); }
+</style>
+</head>
+<body>
+<h1>Quantum TNCO Portal
+  <span class="tag">— program → circuit → network → trees → sandbox</span></h1>
+
+<!-- ================= 1 ================= -->
+<section>
+  <h2 class="fold" data-body="body1"><span class="caret">▾</span>
+    1 · Program <span class="tag">— quantum.py or OpenQASM 2.0, auto-detected</span>
+    <span class="seg" id="viewToggle">
+      <span class="thumb" id="segThumb"></span>
+      <span class="opt active" id="segRaw">Raw quantum.py</span>
+      <span class="opt" id="segCompiled">Compiled QASM</span>
+    </span>
+    <select id="preset" style="margin-left:auto;background:#0c101a;
+      color:var(--ink);border:1px solid #2a3550;border-radius:6px;
+      padding:3px 8px;font-size:13px">
+      <option value="ghz">GHZ chain</option>
+      <option value="bell">Alice and Bob: a Bell pair</option>
+      <option value="qft">Fourier (QFT)</option>
+      <option value="ghz_qasm">GHZ chain · qasm</option>
+      <option value="bell_qasm">Bell pair · qasm</option>
+      <option value="qft_qasm">Fourier (QFT) · qasm</option>
+    </select>
+</h2>
+  <div id="body1">
+    <div class="codewrap" id="codewrap">
+      <pre id="hl"></pre>
+      <textarea id="code" spellcheck="false" wrap="off"></textarea>
+    </div>
+    <div class="bar">
+      <button class="primary" id="btnGo">Done → circuit and network</button>
+      <span id="tnStats" class="hint"></span>
+      <span id="obsBox"></span>
+    </div>
+    <pre class="stdout" id="out1"></pre>
+    <div class="err" id="err1"></div>
+    <div id="circuitBox"></div>
+  </div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section id="secTrees" style="display:none">
+  <h2 class="fold" data-body="body2"><span class="caret">▾</span>
+    2 · Contraction trees
+    <span class="tag">— a node is a contraction; size and colour are
+    log₂ of its cost; hover to see the indices</span></h2>
+  <div id="body2">
+  <div class="duo">
+    <div>
+      <div class="treeHead"><h2 style="color:var(--warm)">natural
+        <span class="tag">— applied left to right</span></h2>
+        <span class="total initTotal" id="tot0"></span></div>
+      <div class="treeBox" id="tree0"></div>
+      <div class="hint" id="cap0"></div>
+    </div>
+    <div>
+      <div class="treeHead"><h2 style="color:var(--good)">optimized</h2>
+        <span class="total optTotal" id="tot1"></span></div>
+      <div class="treeBox" id="tree1"></div>
+      <div class="hint" id="cap1"></div>
+    </div>
+  </div>
+  <div class="gain" id="gain"></div>
+
+  <div style="margin-top:14px; border-top:1px solid #2a3550;
+       padding-top:10px">
+    <h2 class="fold" data-body="liveBody"><span class="caret">▾</span>
+      SA live <span class="tag">— a mini tnco in JS: the same moves, the
+      same acceptance; an exact port for networks of twos</span></h2>
+    <div id="liveBody">
+    <div class="bar">
+      <button class="primary" id="btnLive">▶ Optimize live</button>
+      <button id="btnRestart">↻ From random</button>
+      <button id="btnRestartNat">↻ From natural</button>
+      <label>speed <input type="range" id="liveSpeed" min="0" max="100"
+        value="11"> <span id="liveSpeedV"></span></label>
+      <span class="hint" id="liveInfo"></span>
+    </div>
+    <div class="duo" style="margin-top:8px">
+      <div>
+        <div class="treeHead"><h2>current tree</h2>
+          <span class="total optTotal" id="tot2"></span></div>
+        <div class="treeBox" id="movieTree"></div>
+        <div class="hint" id="cap2"></div>
+      </div>
+      <div>
+        <h2>energy <span class="tag">— <span style="color:var(--warm)">
+          current</span>, <span style="color:var(--good)">best</span>,
+          dashed — the optimized tree's cost</span></h2>
+        <canvas class="chart" id="liveChart" style="height:230px"></canvas>
+      </div>
+    </div>
+    </div>
+  </div>
+  </div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section id="secPlay" style="display:none">
+  <h2 class="fold" data-body="body3"><span class="caret">▾</span>
+    3 · Sandbox
+    <span class="tag">— draw the initial state with the mouse</span></h2>
+  <div id="body3">
+  <div class="duo">
+    <div>
+      <h2>input <span class="tag" id="dimLabel"></span></h2>
+      <canvas class="chart" id="cvIn"></canvas>
+      <div class="bar">
+        <button id="btnZero">⟲ |0…0⟩</button>
+        <button id="btnFlat">▁ Uniform</button>
+        <button class="primary" id="btnRun">▶ Recompute</button>
+      </div>
+    </div>
+    <div>
+      <h2>output amplitudes
+        <span class="tag">— <span style="color:var(--acc)">Re</span> and
+        <span style="color:var(--warm)">Im</span></span></h2>
+      <canvas class="chart" id="cvOut"></canvas>
+      <div class="bar">
+        <button id="btnStats">📊 Observation statistics</button>
+        <span id="obsBox2"></span>
+        <span class="hint" id="randNote"></span></div>
+      <div id="statsBox"></div>
+      <pre class="stdout" id="out3"></pre>
+    </div>
+  </div>
+  <div class="err" id="err3"></div>
+  </div>
+</section>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+let N = 0, amps = [], lastAmps = null, lastObs = null;
+
+// ------------------------------------------------------------------ presets
+const PRESETS = {
+  ghz: `m = Observable()
+with Qubits(5) as a:
+    a[0].H()
+    for i in range(4):
+        a[i+1] ^= a[i]
+    m << a[4]          # observation: the GHZ collapses
+`,
+  bell: `alice = Observable()
+bob = Observable()
+with Qubits(2) as a:
+    a[0].H()        # Alice entangles the pair
+    a[1] ^= a[0]    # and hands the second qubit to Bob
+    alice << a[0]   # Alice measures hers
+    bob << a[1]     # Bob measures his: always the same
+`,
+  qft: `# draw a periodic wave on the left — Fourier shows its frequency
+with Qubits(5) as a:
+    n = len(a)
+    for i in range(n):
+        a[i].H()
+        for j in range(i + 1, n):
+            a[i].CP(a[j], pi / 2 ** (j - i))
+    for i in range(n // 2):          # bit reversal (a swap = 3 CNOTs)
+        a[i] ^= a[n-1-i]
+        a[n-1-i] ^= a[i]
+        a[i] ^= a[n-1-i]
+# to sample, add:
+# m = Observable(); m << a
+`,
+  ghz_qasm: `// GHZ chain, OpenQASM 2.0
+OPENQASM 2.0;
+include "qelib1.inc";
+
+qreg q[5];
+creg m[1];
+
+h q[0];
+cx q[0],q[1];
+cx q[1],q[2];
+cx q[2],q[3];
+cx q[3],q[4];
+measure q[4] -> m[0];    // observation: the GHZ collapses
+`,
+  bell_qasm: `// A Bell pair for Alice and Bob, OpenQASM 2.0
+OPENQASM 2.0;
+include "qelib1.inc";
+
+qreg q[2];
+creg alice[1];
+creg bob[1];
+
+h q[0];                  // Alice entangles the pair
+cx q[0],q[1];            // and hands the second qubit to Bob
+measure q[0] -> alice[0];
+measure q[1] -> bob[0];  // always the same as Alice's
+`,
+  qft_qasm: `// QFT, OpenQASM 2.0 — draw a wave on the left, see its frequency
+OPENQASM 2.0;
+include "qelib1.inc";
+
+qreg q[5];
+
+h q[0];
+cu1(pi/2) q[1],q[0];
+cu1(pi/4) q[2],q[0];
+cu1(pi/8) q[3],q[0];
+cu1(pi/16) q[4],q[0];
+h q[1];
+cu1(pi/2) q[2],q[1];
+cu1(pi/4) q[3],q[1];
+cu1(pi/8) q[4],q[1];
+h q[2];
+cu1(pi/2) q[3],q[2];
+cu1(pi/4) q[4],q[2];
+h q[3];
+cu1(pi/2) q[4],q[3];
+h q[4];
+swap q[0],q[4];
+swap q[1],q[3];
+`,
+};
+$('preset').onchange = () => {
+  exitCompiledView();
+  $('code').value = PRESETS[$('preset').value];
+  renderHl();
+};
+$('preset').onclick = e => e.stopPropagation();
+
+// --------------------------------------------- compiled view (the toggle)
+// native is editable, compiled is the other language, read-only
+function currentProgram() {
+  return compiledMode ? nativeBuffer : $('code').value;
+}
+let compiledMode = false;
+let nativeBuffer = '';
+function exitCompiledView() {
+  if (!compiledMode) return;
+  compiledMode = false;
+  $('code').readOnly = false;
+  $('codewrap').classList.remove('ro');
+  $('code').value = nativeBuffer;
+  renderHl();
+}
+$('viewToggle').onclick = e => e.stopPropagation();
+async function enterCompiledView() {
+  if (compiledMode) return;
+  compiledMode = true;
+  const ta = $('code');
+  nativeBuffer = ta.value;
+  ta.readOnly = true;
+  $('codewrap').classList.add('ro');
+  try {
+    const j = await post('/translate', { code: nativeBuffer, seed: 7 });
+    ta.value = j.text;
+  } catch (err) {
+    ta.value = (detectLang(nativeBuffer) === 'python' ? '# ' : '// ')
+      + err.message;
+  }
+  renderHl();
+}
+$('segRaw').onclick = () => { exitCompiledView(); };
+$('segCompiled').onclick = () => { enterCompiledView(); };
+function updateSeg() {
+  const compiled = compiledMode;
+  const nativeLang = detectLang(compiled ? nativeBuffer : $('code').value);
+  $('segRaw').textContent =
+    'Raw ' + (nativeLang === 'python' ? 'quantum.py' : 'QASM');
+  $('segCompiled').textContent =
+    'Compiled ' + (nativeLang === 'python' ? 'QASM' : 'quantum.py');
+  $('segRaw').classList.toggle('active', !compiled);
+  $('segCompiled').classList.toggle('active', compiled);
+  const on = compiled ? $('segCompiled') : $('segRaw');
+  const th = $('segThumb');
+  th.style.left = on.offsetLeft + 'px';
+  th.style.width = on.offsetWidth + 'px';
+}
+
+// ------------------------------------------------------ folding sections
+let lastTreesData = null;
+document.querySelectorAll('h2.fold').forEach(h => {
+  h.addEventListener('click', () => {
+    const body = $(h.dataset.body);
+    const closed = body.style.display === 'none';
+    body.style.display = closed ? '' : 'none';
+    h.classList.toggle('closed', !closed);
+    if (!closed) return;   // folded up — nothing to redraw
+    // redraw at real sizes
+    if (N) { drawIn(); drawOut(lastAmps, lastObs); }
+    if (h.dataset.body === 'body2' && lastTreesData) {
+      const d = lastTreesData;
+      drawTree('tree0', 'tot0', d.initial, d.mc, null, d.strip);
+      drawTree('tree1', 'tot1', d.optimized, d.mc, null, d.strip);
+      if (engine) engine.dirty = true;
+    }
+  });
+});
+
+// ------------------------------------------------- python highlighting
+const PY_KW = new Set(('with as for in if elif else def return while not and '
+  + 'or import from print break continue lambda True False None').split(' '));
+const PY_BI = new Set('Qubits Observable len range pi math'.split(' '));
+function qvarNames(code) {
+  const out = new Set();
+  for (const m of code.matchAll(/\bwith\s+Qubits\s*\([^)]*\)\s*as\s+(\w+)/g))
+    out.add(m[1]);
+  for (const m of code.matchAll(/\b(\w+)\s*=\s*Qubits\s*\(/g)) out.add(m[1]);
+  // Observable is classical: no glow
+  return out;
+}
+function detectLang(code) {
+  // OPENQASM/qreg means QASM
+  return /^\s*(OPENQASM\b|qreg\s)/m.test(code) ? 'qasm' : 'python';
+}
+const QASM_KW = new Set(
+  'OPENQASM include qreg creg measure barrier if'.split(' '));
+const QASM_BI = new Set(('h x y z s sdg t tdg rx ry rz p u1 u2 u3 u '
+  + 'cx cz cp cu1 cu3 ccx swap pi').split(' '));
+function renderHl() {
+  const code = $('code').value;
+  const lang = detectLang(code);
+  const qv = lang === 'python' ? qvarNames(code)
+    : new Set([...code.matchAll(/\bqreg\s+(\w+)/g)].map(m => m[1]));
+  const comment = lang === 'python' ? /#[^\n]*/ : /\/\/[^\n]*/;
+  const rx = new RegExp(
+    `(${comment.source})` +
+    `|('(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")` +
+    `|(\\b\\d+(?:\\.\\d+)?\\b)|(\\b\\w+\\b)|([\\s\\S])`, 'g');
+  let html = '';
+  for (const m of code.matchAll(rx)) {
+    if (m[1] !== undefined) html += `<span class="tok-c">${esc(m[1])}</span>`;
+    else if (m[2] !== undefined)
+      html += `<span class="tok-s">${esc(m[2])}</span>`;
+    else if (m[3] !== undefined)
+      html += `<span class="tok-n">${esc(m[3])}</span>`;
+    else if (m[4] !== undefined) {
+      const w = m[4];
+      const cls = qv.has(w) ? 'tok-q'
+        : (lang === 'python' ? PY_KW : QASM_KW).has(w) ? 'tok-k'
+        : (lang === 'python' ? PY_BI : QASM_BI).has(w) ? 'tok-b' : '';
+      html += cls ? `<span class="${cls}">${esc(w)}</span>` : esc(w);
+    } else html += esc(m[5]);
+  }
+  $('hl').innerHTML = html + '\n';
+  const ta = $('code');
+  ta.style.height = 'auto';
+  ta.style.height = (ta.scrollHeight + 2) + 'px';
+  $('hl').scrollTop = $('code').scrollTop;
+  $('hl').scrollLeft = $('code').scrollLeft;
+  updateSeg();
+}
+$('code').addEventListener('input', renderHl);
+$('code').addEventListener('scroll', () => {
+  $('hl').scrollTop = $('code').scrollTop;
+  $('hl').scrollLeft = $('code').scrollLeft;
+});
+$('code').value = PRESETS.ghz;
+renderHl();
+
+// -------------------------------------------------------------- circuit SVG
+function fmtAngle(phi) {
+  // as _fmt_angle in quantum.py: a fraction of pi
+  const r = phi / Math.PI;
+  for (let den = 1; den <= 64; den++) {
+    const num = Math.round(r * den);
+    if (num !== 0 && Math.abs(phi - num / den * Math.PI) < 1e-9) {
+      const s = num === 1 ? 'π' : (num === -1 ? '-π' : num + 'π');
+      return den === 1 ? s : s + '/' + den;
+    }
+  }
+  return phi.toPrecision(3);
+}
+function drawCircuit(c) {
+  // the column width fits the longest gate label
+  let maxLabel = 1;
+  for (const op of c.ops) {
+    if (op.k === 'g' || op.k === 'mc1')
+      maxLabel = Math.max(maxLabel, op.label.length);
+    else if (op.k === 'cp' && Math.abs(op.phi - Math.PI) > 1e-9)
+      maxLabel = Math.max(maxLabel, fmtAngle(op.phi).length + 3);
+    else if (op.k === 'perm') maxLabel = Math.max(maxLabel, op.name.length);
+  }
+  const CW = Math.max(38, maxLabel * 7 + 12);
+  const RH = 26, L = 46, R = 10, T = 8;
+  const w = L + c.ops.length * CW + R, h = T + c.n * RH + 4;
+  const y = q => T + q * RH + RH / 2;
+  let s = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">`;
+  for (let q = 0; q < c.n; q++) {
+    s += `<line x1="${L-14}" y1="${y(q)}" x2="${w-R}" y2="${y(q)}"
+          stroke="var(--wire)" stroke-width="1.3"/>`;
+    s += `<text x="6" y="${y(q)+4}">q${q}</text>`;
+  }
+  const box = (x, q, label, color) => {
+    const bw = Math.max(22, label.length * 7 + 6);
+    return `<rect x="${x-bw/2}" y="${y(q)-11}" width="${bw}" height="22" rx="4"
+        fill="#0c101a" stroke="${color}" stroke-width="1.3"/>
+      <text x="${x}" y="${y(q)+4}" text-anchor="middle">${esc(label)}</text>`;
+  };
+  c.ops.forEach((op, i) => {
+    const x = L + i * CW + CW / 2;
+    const vline = (a, b) => `<line x1="${x}" y1="${y(a)}" x2="${x}" y2="${y(b)}"
+        stroke="var(--acc)" stroke-width="1.3"/>`;
+    const dot = q => `<circle cx="${x}" cy="${y(q)}" r="3.5" fill="var(--acc)"/>`;
+    if (op.k === 'g') s += box(x, op.q, op.label, 'var(--acc)');
+    else if (op.k === 'cx') {
+      const all = op.controls.concat([op.target]);
+      s += vline(Math.min(...all), Math.max(...all));
+      op.controls.forEach(q => s += dot(q));
+      const ty = y(op.target);
+      s += `<circle cx="${x}" cy="${ty}" r="8" fill="none"
+            stroke="var(--acc)" stroke-width="1.5"/>
+            <line x1="${x-8}" y1="${ty}" x2="${x+8}" y2="${ty}"
+            stroke="var(--acc)" stroke-width="1.5"/>
+            <line x1="${x}" y1="${ty-8}" x2="${x}" y2="${ty+8}"
+            stroke="var(--acc)" stroke-width="1.5"/>`;
+    } else if (op.k === 'cp') {
+      s += vline(Math.min(op.i, op.j), Math.max(op.i, op.j));
+      if (Math.abs(op.phi - Math.PI) < 1e-9) {
+        s += dot(op.i) + dot(op.j);   // CZ: fully symmetric, two dots
+      } else {
+        // the letter sits on the CP owner, the dot on the other qubit
+        s += dot(op.j);
+        s += box(x, op.i, `P(${fmtAngle(op.phi)})`, 'var(--acc)');
+      }
+    } else if (op.k === 'mc1') {
+      const all = op.controls.concat([op.target]);
+      s += vline(Math.min(...all), Math.max(...all));
+      op.controls.forEach(q => s += dot(q));
+      s += box(x, op.target, op.label, 'var(--acc)');
+    } else if (op.k === 'perm') {
+      const lo = Math.min(...op.q), hi = Math.max(...op.q);
+      const ctr = op.controls.length ? op.controls : [lo];
+      s += vline(Math.min(lo, ...ctr), Math.max(hi, ...ctr));
+      op.controls.forEach(q => s += dot(q));
+      s += `<rect x="${x-14}" y="${y(lo)-11}" width="28"
+            height="${y(hi)-y(lo)+22}" rx="4" fill="#0c101a"
+            stroke="var(--warm)" stroke-width="1.3"/>
+            <text x="${x}" y="${(y(lo)+y(hi))/2+4}"
+            text-anchor="middle">${esc(op.name)}</text>`;
+    } else if (op.k === 'M') {
+      op.q.forEach(q => s += box(x, q, 'M', 'var(--bad)'));
+    }
+  });
+  $('circuitBox').innerHTML = s + '</svg>';
+}
+
+// ----------------------------------------------------------------- tree SVG
+function drawTree(boxId, totId, tree, maxCost, anim, strip) {
+  const boxEl = $(boxId);
+  const W = Math.max(300, boxEl.clientWidth);
+  const nGates = strip ? Math.max(1, strip.gates.length) : 1;
+  const hueOf = t => Math.round(t * 330 / nGates);
+  const leafPins = [];
+
+  // dendrogram: leaves on the baseline, node height = subtree height
+  let leafX = 0, maxH = 0;
+  (function layout(node) {
+    if (!node.k) { node.x = leafX++; node.h = 0; return; }
+    layout(node.k[0]); layout(node.k[1]);
+    node.x = (node.k[0].x + node.k[1].x) / 2;
+    node.h = Math.max(node.k[0].h, node.k[1].h) + 1;
+    maxH = Math.max(maxH, node.h);
+  })(tree.root);
+
+  const many = leafX > 14;
+  const labelRoom = many ? 46 : 22;
+  // live tree: fixed height
+  const H = anim ? 300
+                 : Math.min(340, Math.max(190, maxH * 16 + labelRoom + 30));
+  boxEl.style.height = H + 'px';
+  const base = H - labelRoom;
+  const X = x => 26 + x / Math.max(1, leafX - 1) * (W - 52);
+  const Y = h => base - h / Math.max(1, maxH) * (base - 16);
+
+  // tween towards the target position
+  const alpha = anim ? 1 - Math.exp(-(anim.dt || 0.016) * 9) : 1;
+  if (anim) { anim.moved = 0; anim.nodePos = {}; }
+  (function place(node) {
+    let tx = X(node.x), ty = Y(node.h);
+    if (anim && node.id !== undefined) {
+      let p = anim.pos[node.id];
+      if (!p) p = anim.pos[node.id] = { x: tx, y: ty };
+      p.x += (tx - p.x) * alpha;
+      p.y += (ty - p.y) * alpha;
+      anim.moved = Math.max(anim.moved,
+        Math.abs(tx - p.x), Math.abs(ty - p.y));
+      tx = p.x; ty = p.y;
+    }
+    node.px = tx; node.py = ty;
+    if (anim && node.id !== undefined) anim.nodePos[node.id] = node;
+    if (node.k) node.k.forEach(place);
+  })(tree.root);
+  const heat = c => {
+    const f = Math.min(1, c / Math.max(1e-9, maxCost));
+    return `rgb(${Math.round(80+175*f)},${Math.round(160-60*f)},${Math.round(255-175*f)})`;
+  };
+  // name of an intermediate tensor: the wires it holds (q3, q3′)
+  const sig = names => {
+    const ws = [...new Set(names.map(s => s.split('·')[0]))];
+    ws.sort((a, b) => parseInt(a.slice(1)) - parseInt(b.slice(1))
+                      || a.length - b.length);
+    const shown = ws.slice(0, 5).join(' ');
+    return ws.length > 5 ? shown + ' …' : shown;
+  };
+  const showInner = leafX <= 24;
+  let edges = '', nodes = '', labels = '';
+  (function walk(node) {
+    const x = node.px, y = node.py;
+    const inds = node.i.length
+      ? `indices (${node.i.length}): ` + node.i.join(', ') : 'scalar';
+    if (!node.k) {
+      let fill = '#55627f', key = null;
+      if (strip && node.op !== undefined) {
+        fill = `hsl(${hueOf(node.op)}, 70%, ${node.bra ? 40 : 62}%)`;
+        key = 'g' + node.op;
+      } else if (strip && node.cap !== undefined) {
+        key = 'c' + node.cap;
+      }
+      if (key) leafPins.push({ x, y, key, op: node.op, cap: node.cap });
+      nodes += `<rect x="${x-3.5}" y="${y-3.5}" width="7" height="7" rx="1"
+        fill="${fill}"${key ? ` class="pv" data-op="${key}"` : ''}>
+        <title>${esc(node.L || 'tensor')} · width 2^${node.w}
+${esc(inds)}</title></rect>`;
+      const leafKeyOut = key ? [key] : [];
+      const ly = base + 10;
+      labels += many
+        ? `<text x="${x+3}" y="${ly}" text-anchor="end" fill="#8fa0c4"
+           font-size="9" transform="rotate(-52 ${x+3} ${ly})"
+           >${esc(node.L || '')}</text>`
+        : `<text x="${x}" y="${ly+2}" text-anchor="middle" fill="#8fa0c4"
+           font-size="11">${esc(node.L || '')}</text>`;
+      return leafKeyOut;
+    }
+    const subKeys = [];
+    node.k.forEach((ch, slot) => {
+      let ex = ch.px, ey = ch.py, stroke = '#2a3550', sw = 1.1;
+      if (anim && node.id !== undefined) {
+        // on a rewiring the edge end glides to the new child and glows
+        const key = node.id + '_' + slot;
+        let em = anim.edge[key];
+        if (!em) em = anim.edge[key] = { x: ex, y: ey, child: ch.id, hot: 0 };
+        if (em.child !== ch.id) { em.child = ch.id; em.hot = performance.now(); }
+        em.x += (ex - em.x) * alpha; em.y += (ey - em.y) * alpha;
+        anim.moved = Math.max(anim.moved,
+          Math.abs(ex - em.x), Math.abs(ey - em.y));
+        ex = em.x; ey = em.y;
+        const age = performance.now() - em.hot;
+        if (em.hot && age < 1000) {
+          const f = 1 - age / 1000;
+          stroke = `rgba(76,195,255,${0.25 + 0.75 * f})`;
+          sw = 1.1 + 1.6 * f;
+        }
+      }
+      edges += `<line x1="${x}" y1="${y}" x2="${ex}" y2="${ey}"
+        stroke="${stroke}" stroke-width="${sw}"/>`;
+      subKeys.push(...walk(ch));
+    });
+    const grp = strip && subKeys.length
+      ? ` class="pv" data-grp="${[...new Set(subKeys)].join(' ')}"` : '';
+    const r = 3.5 + 8 * Math.min(1, node.c / Math.max(1e-9, maxCost));
+    nodes += `<circle cx="${x}" cy="${y}" r="${r}"
+      fill="${heat(node.c)}"${grp}>
+      <title>contraction · cost 2^${node.c} flops
+result: width 2^${node.w}
+${esc(inds)}</title></circle>`;
+    if (showInner) {
+      nodes += `<text x="${x + r + 3}" y="${y + 3}" fill="#8fa0c4"
+        font-size="9">${esc(sig(node.i))}</text>`;
+    }
+    if (node.c >= maxCost * 0.85) {
+      nodes += `<text x="${x}" y="${y - r - 3}" text-anchor="middle"
+        fill="var(--ink)">${node.c}</text>`;
+    }
+    return subKeys;
+  })(tree.root);
+
+  // decision rings: grey — considered and rejected, blue — accepted
+  let rings = '';
+  if (anim && anim.events && anim.events.length) {
+    const now = performance.now();
+    for (const ev of anim.events) {
+      const p = anim.nodePos[ev.id];
+      if (!p) continue;
+      const f = 1 - (now - ev.t) / 900;
+      if (f <= 0) continue;
+      const r = 7 + 12 * (1 - f);
+      const col = ev.ok ? `rgba(76,195,255,${0.85 * f})`
+                        : `rgba(123,135,163,${0.5 * f})`;
+      rings += `<circle cx="${p.px}" cy="${p.py}" r="${r}" fill="none"
+        stroke="${col}" stroke-width="${ev.ok ? 2 : 1.2}"/>`;
+    }
+  }
+  // mini circuit + dashed leaf-to-gate links
+  let strips = '', links = '', H2 = H;
+  if (strip) {
+    const nQ = strip.n, K = strip.gates.length;
+    const mRH = 9, x0 = 34;
+    const stripH = nQ * mRH + 22;
+    H2 = H + stripH;
+    const mCW = Math.min(26, Math.max(9, (W - x0 - 14) / K));
+    const wireY = q => H + 14 + q * mRH;
+    const gateX = t => x0 + 8 + (t + 0.5) * mCW;
+    for (let q = 0; q < nQ; q++) {
+      strips += `<line x1="${x0}" y1="${wireY(q)}" x2="${W-8}"
+        y2="${wireY(q)}" stroke="#232c44" stroke-width="1"/>
+        <text x="${x0-26}" y="${wireY(q)+3}" fill="#55627f"
+        font-size="8.5">q${q}</text>`;
+      strips += `<circle cx="${x0}" cy="${wireY(q)}" r="3" fill="#55627f"
+        class="pv" data-op="c${q}"><title>|0⟩ / ⟨0| q${q}</title></circle>`;
+    }
+    strip.gates.forEach((g, t) => {
+      const lo = Math.min(...g.q), hi = Math.max(...g.q);
+      const col = `hsl(${hueOf(t)}, 70%, 55%)`;
+      strips += `<rect x="${gateX(t)-3.5}" y="${wireY(lo)-4}" width="7"
+        height="${wireY(hi)-wireY(lo)+8}" rx="2.5" fill="${col}"
+        class="pv" data-op="g${t}"><title>${esc(g.label)} · q${g.q.join(',q')}
+operation #${t+1}</title></rect>`;
+    });
+    for (const p of leafPins) {
+      let tx, ty, col;
+      if (p.op !== undefined) {
+        const g = strip.gates[p.op];
+        const lo = Math.min(...g.q), hi = Math.max(...g.q);
+        tx = gateX(p.op); ty = (wireY(lo) + wireY(hi)) / 2;
+        col = `hsl(${hueOf(p.op)}, 70%, 60%)`;
+      } else {
+        tx = x0; ty = wireY(p.cap); col = '#55627f';
+      }
+      links += `<line class="lk" data-op="${p.key}" x1="${p.x}"
+        y1="${p.y + 4}" x2="${tx}" y2="${ty}" stroke="${col}"
+        stroke-width="1.2" stroke-dasharray="3,3"/>`;
+    }
+    boxEl.style.height = H2 + 'px';
+    boxEl.onmouseover = e => {
+      const el = e.target.closest
+        ? e.target.closest('[data-op],[data-grp]') : null;
+      boxEl.querySelectorAll('.hot').forEach(n => n.classList.remove('hot'));
+      if (!el) return;
+      const keys = (el.getAttribute('data-op') ||
+                    el.getAttribute('data-grp')).split(' ');
+      el.classList.add('hot');
+      for (const k of keys)
+        boxEl.querySelectorAll(`[data-op="${k}"]`)
+          .forEach(n => n.classList.add('hot'));
+    };
+    boxEl.onmouseleave = () => boxEl.querySelectorAll('.hot')
+      .forEach(n => n.classList.remove('hot'));
+  }
+  boxEl.innerHTML = `<svg viewBox="0 0 ${W} ${H2}"
+    xmlns="http://www.w3.org/2000/svg">${links}${edges}${strips}${nodes}${labels}${rings}</svg>`;
+  $(totId).innerHTML =
+    `2<sup>${tree.total.toFixed(2)}</sup> <small>flops</small>`;
+  let maxC = 0, maxW = 0;
+  (function stats(n) {
+    maxW = Math.max(maxW, n.w);
+    if (n.k) { maxC = Math.max(maxC, n.c); n.k.forEach(stats); }
+  })(tree.root);
+  const nc = leafX - 1;
+  const avg = Math.log2(Math.pow(2, tree.total) / Math.max(1, nc));
+  $(totId.replace('tot', 'cap')).textContent =
+    `${nc} contractions · mean 2^${avg.toFixed(1)} · peak node 2^${maxC} · ` +
+    `largest tensor 2^${maxW}`;
+}
+function maxNodeCost(node) {
+  if (!node.k) return 0;
+  return Math.max(node.c, ...node.k.map(maxNodeCost));
+}
+
+// ----------------------------------------------------------------- sandbox
+function fit(cv) {
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if (W < 10 || H < 10) return null;          // hidden or not laid out yet
+  cv.width = W * devicePixelRatio; cv.height = H * devicePixelRatio;
+  const g = cv.getContext('2d');
+  g.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  return [g, W, H];
+}
+function initAmps(kind) {
+  amps = new Array(1 << N).fill(0);
+  if (kind === 'flat') amps.fill(1); else amps[0] = 1;
+  drawIn();
+}
+function drawIn() {
+  const f = fit($('cvIn')); if (!f) return;
+  const [g, W, H] = f;
+  g.clearRect(0, 0, W, H);
+  const size = amps.length, bw = W / size, mid = H / 2;
+  g.strokeStyle = '#2a3550';
+  g.beginPath(); g.moveTo(0, mid); g.lineTo(W, mid); g.stroke();
+  if (size <= 128) {
+    for (let i = 0; i < size; i++) {
+      const h = amps[i] * (H / 2 - 8);
+      g.fillStyle = amps[i] >= 0 ? '#4cc3ff' : '#ff9f43';
+      g.fillRect(i * bw + 1, Math.min(mid, mid - h), Math.max(1, bw - 2),
+                 Math.abs(h) || 1);
+    }
+  } else {
+    // too many for bars: a polyline
+    g.strokeStyle = '#4cc3ff'; g.lineWidth = 1.6;
+    g.beginPath();
+    for (let i = 0; i < size; i++) {
+      const y = mid - amps[i] * (H / 2 - 8);
+      i ? g.lineTo(i * bw + bw / 2, y) : g.moveTo(bw / 2, y);
+    }
+    g.stroke();
+  }
+  if (N <= 6) {
+    g.fillStyle = '#7b87a3'; g.font = '10px Menlo';
+    const step = Math.ceil((N + 1) * 7 * size / W);
+    for (let i = 0; i < size; i += step)
+      g.fillText(i.toString(2).padStart(N, '0'), i * bw + 2, H - 4);
+  }
+}
+function drawOut(amps2, obs) {
+  const f = fit($('cvOut')); if (!f) return;
+  const [g, W, H] = f;
+  g.clearRect(0, 0, W, H);
+  if (amps2) {
+    const size = amps2.length, bw = W / size, mid = (H - 14) / 2;
+    const top = Math.max(1e-9,
+      ...amps2.map(([re, im]) => Math.max(Math.abs(re), Math.abs(im))));
+    g.strokeStyle = '#2a3550';
+    g.beginPath(); g.moveTo(0, mid); g.lineTo(W, mid); g.stroke();
+    for (const [part, color] of [[0, '#4cc3ff'], [1, '#ff9f43']]) {
+      g.strokeStyle = color; g.lineWidth = 1.8;
+      g.beginPath();
+      for (let i = 0; i < size; i++) {
+        const y = mid - amps2[i][part] / top * (mid - 8);
+        const x = i * bw + bw / 2;
+        i ? g.lineTo(x, y) : g.moveTo(x, y);
+      }
+      g.stroke();
+      // dots mark the grid points
+      g.fillStyle = color;
+      for (let i = 0; i < size; i++) {
+        const y = mid - amps2[i][part] / top * (mid - 8);
+        g.beginPath(); g.arc(i * bw + bw / 2, y, 2, 0, 7); g.fill();
+      }
+    }
+    if (N <= 6) {
+      g.fillStyle = '#7b87a3'; g.font = '10px Menlo';
+      const step = Math.ceil((N + 1) * 7 * size / W);
+      for (let i = 0; i < size; i += step)
+        g.fillText(i.toString(2).padStart(N, '0'), i * bw + 2, H - 3);
+    }
+  }
+  if (obs) showObs(obs, 'obsBox2');
+}
+
+// drawing with the mouse
+(function() {
+  const cv = $('cvIn');
+  let drag = false, pi = null, pv = null;
+  function apply(e) {
+    const r = cv.getBoundingClientRect();
+    if (r.width < 10) return;
+    const size = amps.length;
+    const i = Math.max(0, Math.min(size - 1,
+      Math.floor((e.clientX - r.left) / r.width * size)));
+    const v = Math.max(-1, Math.min(1,
+      1 - 2 * (e.clientY - r.top) / r.height));
+    if (pi !== null && pi !== i) {
+      const lo = Math.min(pi, i), hi = Math.max(pi, i);
+      for (let j = lo; j <= hi; j++) {
+        const t = (j - lo) / (hi - lo);
+        amps[j] = pi < i ? pv * (1 - t) + v * t : v * (1 - t) + pv * t;
+      }
+    } else amps[i] = v;
+    pi = i; pv = v;
+    drawIn();
+    runSim();
+  }
+  cv.addEventListener('mousedown', e => { drag = true; pi = null; apply(e); });
+  window.addEventListener('mousemove', e => { if (drag) apply(e); });
+  window.addEventListener('mouseup', () => { drag = false; pi = null; });
+})();
+
+// ---------------------------------------------------------------- requests
+async function post(url, body) {
+  const r = await fetch(url, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body) });
+  const j = await r.json();
+  if (j.error) {
+    if (j.trace) console.error(j.trace);
+    throw new Error(j.error);
+  }
+  return j;
+}
+function showObs(obs, boxId) {
+  $(boxId).innerHTML = Object.entries(obs || {})
+    .map(([k, v]) => `<span class="chip">${k} = <b>${v || '—'}</b></span>`)
+    .join('');
+}
+
+$('btnGo').onclick = async () => {
+  $('err1').textContent = ''; $('tnStats').textContent = 'compiling…';
+  try {
+    const j = await post('/compile', { code: currentProgram() });
+    drawCircuit(j.circuit);
+    showObs(j.observables, 'obsBox');
+    $('out1').textContent = j.stdout || '';
+    $('tnStats').textContent =
+      `network: ${j.n_tensors} tensors, ${j.n_inds} indices`;
+    // unhide before drawing: sizes must be real
+    $('secTrees').style.display = '';
+    $('secPlay').style.display = '';
+    {
+      // both trees come from the page's annealer (the exact tnco port)
+      const eng = new MiniTNCO(j.network);
+      eng.reset('natural');
+      j.initial = eng.treeJSON();
+      let best = null;
+      for (let r = 0; r < 2; r++) {
+        eng.reset();
+        const P = 60000;
+        for (let s = 0; s < P; s++)
+          eng.microStep(BMAX * Math.min(1, s / (P * 0.8)));
+        if (!best || eng.total < best.total)
+          best = { total: eng.total, tree: eng.treeJSON() };
+      }
+      j.optimized = best.tree;
+      j.network.opt_total = +best.tree.total.toFixed(3);
+    }
+    const mc = Math.max(maxNodeCost(j.initial.root),
+                        maxNodeCost(j.optimized.root));
+    lastTreesData = { initial: j.initial, optimized: j.optimized,
+                      strip: j.strip, mc };
+    drawTree('tree0', 'tot0', j.initial, mc, null, j.strip);
+    drawTree('tree1', 'tot1', j.optimized, mc, null, j.strip);
+    const gainBits = j.initial.total - j.optimized.total;
+    $('gain').innerHTML = gainBits > 0.01
+      ? `the optimized tree is <b>2<sup>${gainBits.toFixed(2)}</sup> = ${Math.pow(2, gainBits).toPrecision(3)}×</b> cheaper`
+      : 'the natural tree is already optimal (the network is small)';
+    initLive(j.network);
+    const n = j.circuit.n;
+    if (n !== N) { N = n; lastAmps = null; initAmps('zero'); }
+    else drawIn();
+    $('dimLabel').textContent = `— 2^${N} = ${1 << N} points, drag them`;
+    const hasM = j.circuit.ops.some(o => o.k === 'M');
+    $('randNote').textContent = hasM
+      ? 'there are measurements — the outcome is random, hit Recompute'
+      : 'no measurements — the distribution is deterministic';
+    drawOut(lastAmps, {});
+  } catch (e) {
+    $('tnStats').textContent = '';
+    $('err1').textContent = e.message;
+  }
+};
+
+// one request in flight, the tail coalesces; seed fixed while drawing
+let simSeed = Math.floor(Math.random() * 1e9);
+let simBusy = false, simDirty = false;
+async function runSim() {
+  if (!N) return;
+  if (simBusy) { simDirty = true; return; }
+  simBusy = true;
+  try {
+    const j = await post('/simulate', {
+      code: currentProgram(), init_state: amps, seed: simSeed });
+    lastAmps = j.amplitudes; lastObs = j.observables;
+    drawOut(lastAmps, lastObs);
+    $('out3').textContent = j.stdout || '';
+    $('err3').textContent = '';
+  } catch (e) { $('err3').textContent = e.message; }
+  simBusy = false;
+  if (simDirty) { simDirty = false; runSim(); }
+}
+$('btnStats').onclick = async () => {
+  $('err3').textContent = '';
+  $('statsBox').innerHTML = '<span class="hint">sampling…</span>';
+  try {
+    const j = await post('/observe', {
+      code: currentProgram(),
+      init_state: amps.length ? amps : null,
+      seed: Math.floor(Math.random() * 1e9),
+    });
+    const entries = Object.entries(j.counts).sort((a, b) => b[1] - a[1]);
+    const top = entries[0][1];
+    $('statsBox').innerHTML =
+      `<div class="shead">${j.names.join(' · ')} — ${j.n} runs</div>` +
+      entries.map(([k, v]) =>
+        `<div class="srow"><span class="lbl">${k}</span>` +
+        `<div class="bar1" style="width:${(v / top * 260) | 0}px"></div>` +
+        `<span class="pct">${(100 * v / j.n).toFixed(1)}%</span></div>`
+      ).join('');
+  } catch (e) {
+    $('statsBox').innerHTML = '';
+    $('err3').textContent = e.message;
+  }
+};
+$('btnZero').onclick = () => { initAmps('zero'); runSim(); };
+$('btnFlat').onclick = () => { initAmps('flat'); runSim(); };
+$('btnRun').onclick = () => {
+  simSeed = Math.floor(Math.random() * 1e9);
+  runSim();
+};
+
+window.addEventListener('resize', () => {
+  if (N) { drawIn(); drawOut(lastAmps, lastObs); }
+});
+
+// ==================================================== mini tnco: SA live
+function pop32(x) {
+  x = x - ((x >> 1) & 0x55555555);
+  x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+  return (((x + (x >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+}
+
+class MiniTNCO {
+  // Exact port of tnco for dim-2 networks: result inds = XOR of children,
+  // cost = 2^popcount(union), NNI walk accepted with (1+delta/total)^-beta.
+  constructor(net) {
+    this.net = net;
+    this.W = Math.ceil(net.n_inds / 32) || 1;
+    this.L = net.ts.length;
+    this.NN = 2 * this.L - 1;
+    this.leafInds = [];
+    for (let i = 0; i < this.L; i++) {
+      const b = new Uint32Array(this.W);
+      for (const ix of net.ts[i]) b[ix >> 5] |= 1 << (ix & 31);
+      this.leafInds.push(b);
+    }
+    this.tmp = new Uint32Array(this.W);
+    // leaf meta for the mini circuit: gate (op, bra) or cap
+    this.meta = (net.raw || []).map(raw => {
+      if (raw.startsWith('|0⟩q')) return { cap: +raw.slice(4), bra: false };
+      if (raw.startsWith('⟨0|q')) return { cap: +raw.slice(4), bra: true };
+      const h = raw.indexOf('#');
+      if (h >= 0) return { op: +raw.slice(h + 1), bra: raw.includes('†') };
+      return {};
+    });
+    // display rank: ket caps, ket ops by time, then the bra layer
+    const nCaps = this.meta.filter(m => m.cap !== undefined && !m.bra).length;
+    const nOps = this.meta.reduce(
+      (a, m) => Math.max(a, m.op !== undefined ? m.op + 1 : 0), 0);
+    this.rank = this.meta.map(m => {
+      if (m.cap !== undefined)
+        return m.cap + (m.bra ? nCaps + nOps : 0);
+      if (m.op !== undefined)
+        return nCaps + m.op + (m.bra ? nCaps + nOps : 0);
+      return 1e9;
+    });
+    this.reset();
+  }
+  intersects(a, b) {
+    for (let w = 0; w < this.W; w++) if (a[w] & b[w]) return true;
+    return false;
+  }
+  popU(a, b) {  // popcount(a | b)
+    let p = 0;
+    for (let w = 0; w < this.W; w++) p += pop32(a[w] | b[w]);
+    return p;
+  }
+  _merge(a, b) {
+    const n = this._n++;
+    const u = new Uint32Array(this.W);
+    for (let w = 0; w < this.W; w++)
+      u[w] = this.inds[a][w] ^ this.inds[b][w];
+    this.inds.push(u);
+    this.kids[n] = [a, b];
+    this.par[a] = this.par[b] = n;
+    this.cost[n] = Math.pow(2, this.popU(this.inds[a], this.inds[b]));
+    this.total += this.cost[n];
+    return n;
+  }
+  reset(mode) {
+    this.inds = this.leafInds.map(b => Uint32Array.from(b));
+    this.kids = new Array(this.NN).fill(null);
+    this.par = new Int32Array(this.NN).fill(-1);
+    this.cost = new Float64Array(this.NN);
+    this.total = 0;
+    this._n = this.L;
+    if (mode === 'natural' && this.meta.length === this.L) {
+      // left to right: the ket layer by time, the bra layer, then gluing
+      const grab = (bra, gates) => this.meta
+        .map((m, i) => ({ m, i }))
+        .filter(x => x.m.bra === bra &&
+                (gates ? x.m.op !== undefined : x.m.cap !== undefined))
+        .sort((a, b) => gates ? a.m.op - b.m.op : a.m.cap - b.m.cap)
+        .map(x => x.i);
+      const fold = l => l.reduce((cur, nxt) => this._merge(cur, nxt));
+      const ketIds = grab(false, false).concat(grab(false, true));
+      const braIds = grab(true, false).concat(grab(true, true));
+      let root = fold(ketIds);
+      if (braIds.length) root = this._merge(root, fold(braIds));
+      this.root = root;
+    } else {
+      let act = [];
+      for (let i = 0; i < this.L; i++) act.push(i);
+      while (act.length > 1) {
+        const ai = (Math.random() * act.length) | 0, a = act[ai];
+        const cands = [];
+        for (const b of act)
+          if (b !== a && this.intersects(this.inds[a], this.inds[b]))
+            cands.push(b);
+        const b = cands.length
+          ? cands[(Math.random() * cands.length) | 0]
+          : act[(ai + 1) % act.length];
+        const n = this._merge(a, b);
+        act = act.filter(x => x !== a && x !== b);
+        act.push(n);
+      }
+      this.root = this._n - 1;
+    }
+    this.best = this.total;
+    this.steps = 0;
+    this.cursor = -1;
+  }
+  microStep(beta) {
+    // one NNI proposal; the leaf->root walk unrolled into micro-steps
+    if (this.cursor < 0) {
+      this.cursor = this.par[(Math.random() * this.L) | 0];
+      if (this.cursor < 0) return null;
+    }
+    const B = this.cursor, A = this.par[B];
+    if (A < 0) { this.cursor = -1; return null; }
+    this.steps++;
+    this.cursor = A;
+    const C = this.kids[A][0] === B ? this.kids[A][1] : this.kids[A][0];
+    let [D, E] = this.kids[B];
+    const iC = this.inds[C];
+    const dInt = this.intersects(this.inds[D], iC);
+    const eInt = this.intersects(this.inds[E], iC);
+    if (!dInt && !eInt) return { B, ok: false };
+    if ((dInt && eInt && Math.random() < 0.5) || (!dInt && eInt))
+      [D, E] = [E, D];
+    const nb = this.tmp;
+    for (let w = 0; w < this.W; w++) nb[w] = this.inds[D][w] ^ iC[w];
+    const costB = Math.pow(2, this.popU(this.inds[D], iC));
+    const costA = Math.pow(2, this.popU(nb, this.inds[E]));
+    const delta = costA + costB - this.cost[A] - this.cost[B];
+    const ok = delta <= 0 ||
+      Math.random() < Math.pow(1 + delta / this.total, -beta);
+    if (ok) {
+      // keep the slots: the layout is not reshuffled without need
+      this.kids[B] = this.kids[B][0] === D ? [D, C] : [C, D];
+      this.kids[A] = this.kids[A][0] === B ? [B, E] : [E, B];
+      this.par[C] = B; this.par[D] = B; this.par[E] = A;
+      this.inds[B].set(nb);
+      this.cost[B] = costB; this.cost[A] = costA;
+      this.total += delta;
+      if (this.total < this.best) this.best = this.total;
+    }
+    return { B, ok };
+  }
+  treeJSON() {
+    const names = this.net.idx_names, labels = this.net.labels;
+    const nameList = b => {
+      const out = [];
+      for (let w = 0; w < this.W; w++)
+        for (let k = 0; k < 32; k++)
+          if (b[w] & (1 << k)) out.push(names[w * 32 + k] || (w * 32 + k));
+      return out;
+    };
+    const build = p => {
+      const node = { id: p, w: this.popU(this.inds[p], this.inds[p]),
+                     i: nameList(this.inds[p]) };
+      if (this.kids[p] === null) {
+        node.L = labels[p] || '';
+        const m = this.meta[p];
+        if (m) {
+          if (m.op !== undefined) { node.op = m.op; node.bra = m.bra; }
+          if (m.cap !== undefined) { node.cap = m.cap; node.bra = m.bra; }
+        }
+        return [node, this.rank[p] !== undefined ? this.rank[p] : 1e9];
+      }
+      node.c = Math.round(Math.log2(this.cost[p]) * 100) / 100;
+      const [k0, r0] = build(this.kids[p][0]);
+      const [k1, r1] = build(this.kids[p][1]);
+      // left/right is free: children by time keeps the tree readable
+      node.k = r0 <= r1 ? [k0, k1] : [k1, k0];
+      return [node, Math.min(r0, r1)];
+    };
+    return { total: Math.log2(this.total), root: build(this.root)[0] };
+  }
+}
+
+// ------------------------------------------------------------------ player
+const BMAX = 3000, T_ANNEAL = 150000;   // annealing, in proposals
+let liveEvents = [];                    // recent decisions, for the rings
+let engine = null, playing = false, lastT = 0, walkAcc = 0;
+let hs = [], hc = [], hb = [], sampleEvery = 1, heatMax = 1;
+let liveAnim = null;
+
+function wps() { return Math.pow(10, 0.045 * +$('liveSpeed').value); }
+function fmtWps() {
+  const w = wps();
+  let txt;
+  if (w >= 1000) txt = (w / 1000).toFixed(w < 10000 ? 1 : 0) + 'k moves/s';
+  else {
+    const n = Math.round(w);
+    txt = n + (n === 1 ? ' move/s' : ' moves/s');
+  }
+  $('liveSpeedV').textContent = txt;
+}
+$('liveSpeed').oninput = fmtWps;
+
+function liveSample() {
+  hs.push(engine.steps);
+  hc.push(Math.log2(engine.total));
+  hb.push(Math.log2(engine.best));
+  if (hs.length > 3000) {
+    const dec = a => a.filter((_, i) => i % 2 === 0);
+    hs = dec(hs); hc = dec(hc); hb = dec(hb);
+    sampleEvery *= 2;
+  }
+}
+function liveReset(mode) {
+  if (!engine) return;
+  engine.reset(mode);
+  hs = []; hc = []; hb = []; sampleEvery = 1; walkAcc = 0; heatMax = 1;
+  liveAnim = { pos: {}, edge: {}, dt: 0.016, moved: 0, events: [] };
+  liveEvents = [];
+  liveSample();
+  engine.dirty = true;   // draw the first frame even while paused
+}
+function initLive(net) {
+  engine = new MiniTNCO(net);
+  playing = false;
+  $('btnLive').textContent = '▶ Optimize live';
+  liveReset();
+  fmtWps();
+}
+$('btnLive').onclick = () => {
+  if (!engine) return;
+  playing = !playing;
+  $('btnLive').textContent = playing ? '⏸ Pause' : '▶ Optimize live';
+};
+$('btnRestart').onclick = () => { liveReset('random'); };
+$('btnRestartNat').onclick = () => { liveReset('natural'); };
+
+function drawLiveChart() {
+  const f = fit($('liveChart')); if (!f || !hs.length) return;
+  const [g, W, H] = f;
+  g.clearRect(0, 0, W, H);
+  const optT = engine.net.opt_total;
+  let lo = Math.min(...hb, optT) - 0.3, hi = Math.max(...hc) + 0.3;
+  const X = i => 6 + i / Math.max(1, hs.length - 1) * (W - 12);
+  const Y = v => 8 + (hi - v) / (hi - lo) * (H - 28);
+  g.strokeStyle = '#6ee7a066'; g.setLineDash([4, 4]);
+  g.beginPath(); g.moveTo(6, Y(optT)); g.lineTo(W - 6, Y(optT)); g.stroke();
+  g.setLineDash([]);
+  for (const [arr, color] of [[hc, '#ff9f43'], [hb, '#6ee7a0']]) {
+    g.strokeStyle = color; g.lineWidth = 1.8;
+    g.beginPath();
+    arr.forEach((v, i) => i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)));
+    g.stroke();
+  }
+  g.fillStyle = '#7b87a3'; g.font = '10px Menlo';
+  g.fillText('2^' + hi.toFixed(1), 6, 12);
+  g.fillText('2^' + lo.toFixed(1), 6, H - 18);
+  g.fillText('step ' + engine.steps.toLocaleString('en'), W - 90, H - 6);
+}
+function liveFrame(t) {
+  requestAnimationFrame(liveFrame);
+  if (!engine) return;
+  const dt = Math.min(0.1, (t - lastT) / 1000) || 0;
+  lastT = t;
+  if (playing) {
+    walkAcc += wps() * dt;
+    let k = Math.min(60000, walkAcc | 0);
+    walkAcc -= k;
+    const record = wps() <= 300;   // rings are only visible at low speeds
+    const now = performance.now();
+    while (k--) {
+      const beta = BMAX * Math.min(1, engine.steps / T_ANNEAL);
+      const ev = engine.microStep(beta);
+      if (ev && record) liveEvents.push({ id: ev.B, ok: ev.ok, t: now });
+      if (engine.steps % sampleEvery === 0) liveSample();
+    }
+    liveEvents = liveEvents.filter(e => now - e.t < 900);
+    liveAnim.events = liveEvents;
+  }
+  const liveHidden = !$('liveBody').offsetParent;   // hidden, self or parent
+  if (!liveHidden &&
+      (playing || engine.dirty || (liveAnim && liveAnim.moved > 0.15))) {
+    engine.dirty = false;
+    const tj = engine.treeJSON();
+    heatMax = Math.max(heatMax, maxNodeCost(tj.root));
+    liveAnim.dt = dt || 0.016;
+    drawTree('movieTree', 'tot2', tj, heatMax, liveAnim,
+             lastTreesData && lastTreesData.strip);
+    drawLiveChart();
+    const beta = BMAX * Math.min(1, engine.steps / T_ANNEAL);
+    $('liveInfo').textContent =
+      `step ${engine.steps.toLocaleString('en')} · β=${beta | 0} · ` +
+      `now 2^${Math.log2(engine.total).toFixed(2)} · ` +
+      `min 2^${Math.log2(engine.best).toFixed(2)} · ` +
+      `optimized 2^${engine.net.opt_total}`;
+  }
+}
+requestAnimationFrame(liveFrame);
+</script>
+</body>
+</html>
