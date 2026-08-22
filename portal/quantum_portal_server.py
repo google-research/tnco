@@ -22,6 +22,8 @@ Then open http://localhost:8991/
 """
 
 import contextlib
+from http.server import BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer
 import io
 import json
 import math
@@ -31,19 +33,17 @@ import re
 import sys
 import time
 import traceback
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
 
 import quantum
-from quantum import Observable, Qubits
+from quantum import Observable
+from quantum import Qubits
 
+HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = 8991
 MAX_QUBITS = 12
 
-
 # ------------------------------------------------------------ QASM support
+
 
 def detect_lang(code):
     """Returns 'qasm' if the text looks like OpenQASM, else 'python'."""
@@ -56,22 +56,22 @@ _ANGLE_RE = re.compile(r'[0-9pi+\-*/(). eE]*')
 
 # gate name -> (n_qubits, python template); {q} are qubit refs, {a} angles
 _QASM_GATES = {
-    'h':   (1, '{q0}.H()'),
-    'x':   (1, '{q0}.X()'),
-    'y':   (1, '{q0}.Y()'),
-    'z':   (1, '{q0}.Z()'),
-    's':   (1, '{q0}.S()'),
+    'h': (1, '{q0}.H()'),
+    'x': (1, '{q0}.X()'),
+    'y': (1, '{q0}.Y()'),
+    'z': (1, '{q0}.Z()'),
+    's': (1, '{q0}.S()'),
     'sdg': (1, '{q0}.Sdg()'),
-    't':   (1, '{q0}.T()'),
+    't': (1, '{q0}.T()'),
     'tdg': (1, '{q0}.Tdg()'),
-    'rx':  (1, '{q0}.RX({a0})'),
-    'ry':  (1, '{q0}.RY({a0})'),
-    'rz':  (1, '{q0}.RZ({a0})'),
-    'p':   (1, '{q0}.P({a0})'),
-    'u1':  (1, '{q0}.P({a0})'),
-    'cx':  (2, '{q1} ^= {q0}'),
-    'cz':  (2, '{q0}.CZ({q1})'),
-    'cp':  (2, '{q0}.CP({q1}, {a0})'),
+    'rx': (1, '{q0}.RX({a0})'),
+    'ry': (1, '{q0}.RY({a0})'),
+    'rz': (1, '{q0}.RZ({a0})'),
+    'p': (1, '{q0}.P({a0})'),
+    'u1': (1, '{q0}.P({a0})'),
+    'cx': (2, '{q1} ^= {q0}'),
+    'cz': (2, '{q0}.CZ({q1})'),
+    'cp': (2, '{q0}.CP({q1}, {a0})'),
     'cu1': (2, '{q0}.CP({q1}, {a0})'),
     'ccx': (3, '{q2} ^= {q0} & {q1}'),
 }
@@ -89,8 +89,8 @@ def qasm_to_python(code):
     text = re.sub(r'//[^\n]*', '', code)
     stmts = [s.strip() for s in re.sub(r'\s+', ' ', text).split(';')]
 
-    qregs, body = {}, []   # qregs: name -> (offset, size)
-    cregs = {}             # name -> [size, bits filled so far]
+    qregs, body = {}, []  # qregs: name -> (offset, size)
+    cregs = {}  # name -> [size, bits filled so far]
     total = 0
 
     def qref(token, broadcastable=False):
@@ -101,8 +101,8 @@ def qasm_to_python(code):
             if name not in qregs:
                 raise quantum.QuantumError('QASM: unknown qreg %r' % name)
             if idx >= qregs[name][1]:
-                raise quantum.QuantumError('QASM: %s[%d] is out of range'
-                                           % (name, idx))
+                raise quantum.QuantumError('QASM: %s[%d] is out of range' %
+                                           (name, idx))
             return ['%s[%d]' % (name, idx)]
         if token in qregs and broadcastable:
             return ['%s[%d]' % (token, i) for i in range(qregs[token][1])]
@@ -137,8 +137,8 @@ def qasm_to_python(code):
                     'expected %s[%d] here' % (creg, filled))
             qs = qref(m.group(1), broadcastable=True)
             if filled + len(qs) > size:
-                raise quantum.QuantumError(
-                    'QASM: creg %s[%d] overflows' % (creg, size))
+                raise quantum.QuantumError('QASM: creg %s[%d] overflows' %
+                                           (creg, size))
             cregs[creg][1] = filled + len(qs)
             for q in qs:
                 body.append('%s << %s' % (creg, q))
@@ -155,39 +155,45 @@ def qasm_to_python(code):
                 if len(qtoks) != 2:
                     raise quantum.QuantumError('QASM: swap expects 2 qubits')
                 a, b = qref(qtoks[0])[0], qref(qtoks[1])[0]
-                body += ['%s ^= %s' % (b, a), '%s ^= %s' % (a, b),
-                         '%s ^= %s' % (b, a)]
+                body += [
+                    '%s ^= %s' % (b, a),
+                    '%s ^= %s' % (a, b),
+                    '%s ^= %s' % (b, a)
+                ]
                 continue
             if name in ('u2', 'u3', 'u'):
                 if name == 'u2':
                     args = ['pi/2'] + args
                 if len(args) != 3 or len(qtoks) != 1:
-                    raise quantum.QuantumError(
-                        'QASM: cannot parse %r' % s)
+                    raise quantum.QuantumError('QASM: cannot parse %r' % s)
                 th, ph, lam = args
                 for q in qref(qtoks[0], broadcastable=True):
-                    body += ['%s.RZ(%s)' % (q, lam), '%s.RY(%s)' % (q, th),
-                             '%s.RZ(%s)' % (q, ph)]
+                    body += [
+                        '%s.RZ(%s)' % (q, lam),
+                        '%s.RY(%s)' % (q, th),
+                        '%s.RZ(%s)' % (q, ph)
+                    ]
                 continue
             if name == 'cu3':
                 # the qelib1 definition of cu3, in DSL gates
                 if len(args) != 3 or len(qtoks) != 2:
-                    raise quantum.QuantumError(
-                        'QASM: cannot parse %r' % s)
+                    raise quantum.QuantumError('QASM: cannot parse %r' % s)
                 th, ph, lam = args
                 c, tq = qref(qtoks[0])[0], qref(qtoks[1])[0]
-                body += ['%s.P((%s+%s)/2)' % (c, lam, ph),
-                         '%s.P((%s-%s)/2)' % (tq, lam, ph),
-                         '%s ^= %s' % (tq, c),
-                         '%s.RZ(-(%s+%s)/2)' % (tq, ph, lam),
-                         '%s.RY(-(%s)/2)' % (tq, th),
-                         '%s ^= %s' % (tq, c),
-                         '%s.RY((%s)/2)' % (tq, th),
-                         '%s.RZ(%s)' % (tq, ph)]
+                body += [
+                    '%s.P((%s+%s)/2)' % (c, lam, ph),
+                    '%s.P((%s-%s)/2)' % (tq, lam, ph),
+                    '%s ^= %s' % (tq, c),
+                    '%s.RZ(-(%s+%s)/2)' % (tq, ph, lam),
+                    '%s.RY(-(%s)/2)' % (tq, th),
+                    '%s ^= %s' % (tq, c),
+                    '%s.RY((%s)/2)' % (tq, th),
+                    '%s.RZ(%s)' % (tq, ph)
+                ]
                 continue
             if name not in _QASM_GATES:
-                raise quantum.QuantumError(
-                    'QASM: gate %r is not supported' % name)
+                raise quantum.QuantumError('QASM: gate %r is not supported' %
+                                           name)
             arity, tpl = _QASM_GATES[name]
             if arity == 1:
                 if len(qtoks) != 1:
@@ -197,8 +203,8 @@ def qasm_to_python(code):
                     body.append(tpl.format(q0=q, a0=args[0] if args else ''))
             else:
                 if len(qtoks) != arity:
-                    raise quantum.QuantumError(
-                        'QASM: %s expects %d qubits' % (name, arity))
+                    raise quantum.QuantumError('QASM: %s expects %d qubits' %
+                                               (name, arity))
                 refs = [qref(t)[0] for t in qtoks]
                 fields = {'q%d' % i: r for i, r in enumerate(refs)}
                 if args:
@@ -222,6 +228,7 @@ def qasm_to_python(code):
 
 
 # ---------------------------------------------------------------- DSL exec
+
 
 def run_program(code, init_state=None, seed=None):
     """Runs a program in either language.
@@ -271,12 +278,16 @@ def run_program(code, init_state=None, seed=None):
     if not registers:
         raise quantum.QuantumError('the program has no Qubits(n) register')
     reg = max(registers, key=lambda r: len(r._log))
-    obs = {k: v.bits for k, v in ns.items()
-           if isinstance(v, Observable) and not k.startswith('_')}
+    obs = {
+        k: v.bits
+        for k, v in ns.items()
+        if isinstance(v, Observable) and not k.startswith('_')
+    }
     return reg, obs, out.getvalue()[-4000:]
 
 
 # ------------------------------------------------------ circuit serializer
+
 
 def circuit_json(reg):
     ops = []
@@ -289,17 +300,26 @@ def circuit_json(reg):
         elif kind == 'cp':
             ops.append({'k': 'cp', 'i': op[1], 'j': op[2], 'phi': op[3]})
         elif kind == 'mc1':
-            ops.append({'k': 'mc1', 'controls': list(op[1]),
-                        'target': op[2], 'label': op[4]})
+            ops.append({
+                'k': 'mc1',
+                'controls': list(op[1]),
+                'target': op[2],
+                'label': op[4]
+            })
         elif kind == 'perm':
-            ops.append({'k': 'perm', 'q': list(op[1]),
-                        'controls': list(op[2]), 'name': op[3]})
+            ops.append({
+                'k': 'perm',
+                'q': list(op[1]),
+                'controls': list(op[2]),
+                'name': op[3]
+            })
         elif kind == 'M':
             ops.append({'k': 'M', 'q': list(op[1])})
     return {'n': reg.n, 'ops': ops}
 
 
 # ------------------------------------------------------------ tensor network
+
 
 def _op_qubits_label(op):
     kind = op[0]
@@ -404,25 +424,35 @@ def build_tn(reg):
 
     raw_names = [t['name'] for t in tn.ts_tags]
     labels = [n.split('#')[0] for n in raw_names]
-    net_ops = [{'label': l, 'q': sorted(qs)}
-               for l, qs in map(_op_qubits_label, ops)]
+    net_ops = []
+    for label, qs in map(_op_qubits_label, ops):
+        net_ops.append({'label': label, 'q': sorted(qs)})
 
     return tn, labels, idx_names, raw_names, net_ops
 
 
 def compile_tn(reg):
     tn, labels, idx_names, raw_names, net_ops = build_tn(reg)
-    return {'n_tensors': tn.n_tensors, 'n_inds': tn.n_inds,
-            'strip': {'n': reg.n, 'gates': net_ops},
-            # both contraction trees are built by the page's annealer
-            'network': {'ts': [list(x) for x in tn.ts_inds],
-                        'n_inds': tn.n_inds,
-                        'labels': labels,
-                        'raw': raw_names,
-                        'idx_names': idx_names}}
+    return {
+        'n_tensors': tn.n_tensors,
+        'n_inds': tn.n_inds,
+        'strip': {
+            'n': reg.n,
+            'gates': net_ops
+        },
+        # both contraction trees are built by the page's annealer
+        'network': {
+            'ts': [list(x) for x in tn.ts_inds],
+            'n_inds': tn.n_inds,
+            'labels': labels,
+            'raw': raw_names,
+            'idx_names': idx_names
+        }
+    }
 
 
 # ------------------------------------------------------------------ server
+
 
 class Handler(BaseHTTPRequestHandler):
 
@@ -439,8 +469,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in ('/', '/index.html'):
-            with open(os.path.join(HERE, 'quantum_portal.html'),
-                      'rb') as f:
+            with open(os.path.join(HERE, 'quantum_portal.html'), 'rb') as f:
                 body = f.read()
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
@@ -457,8 +486,11 @@ class Handler(BaseHTTPRequestHandler):
             code = req.get('code', '')
             if self.path == '/compile':
                 reg, obs, stdout = run_program(code, seed=req.get('seed'))
-                out = {'circuit': circuit_json(reg), 'observables': obs,
-                       'stdout': stdout}
+                out = {
+                    'circuit': circuit_json(reg),
+                    'observables': obs,
+                    'stdout': stdout
+                }
                 out.update(compile_tn(reg))
                 self._json(out)
             elif self.path == '/translate':
@@ -466,11 +498,12 @@ class Handler(BaseHTTPRequestHandler):
                 lang = detect_lang(code)
                 if lang == 'python':
                     reg, _, _ = run_program(code, seed=req.get('seed'))
-                    self._json({'lang': 'qasm',
-                                'text': reg.as_circuit.to_qasm()})
+                    self._json({
+                        'lang': 'qasm',
+                        'text': reg.as_circuit.to_qasm()
+                    })
                 else:
-                    self._json({'lang': 'python',
-                                'text': qasm_to_python(code)})
+                    self._json({'lang': 'python', 'text': qasm_to_python(code)})
             elif self.path == '/observe':
                 # histogram of the observables over many runs
                 base = req.get('seed')
@@ -479,9 +512,9 @@ class Handler(BaseHTTPRequestHandler):
                 counts, names = {}, None
                 t0, n_runs = time.time(), 0
                 while n_runs < 500 and time.time() - t0 < 1.5:
-                    _, obs, _ = run_program(
-                        code, init_state=req.get('init_state'),
-                        seed=base + n_runs)
+                    _, obs, _ = run_program(code,
+                                            init_state=req.get('init_state'),
+                                            seed=base + n_runs)
                     if not obs:
                         raise quantum.QuantumError(
                             'the program has no observations (Observable)')
@@ -492,27 +525,32 @@ class Handler(BaseHTTPRequestHandler):
                     n_runs += 1
                 self._json({'names': names, 'counts': counts, 'n': n_runs})
             elif self.path == '/simulate':
-                reg, obs, stdout = run_program(
-                    code, init_state=req.get('init_state'),
-                    seed=req.get('seed'))
-                self._json({'n': reg.n,
-                            'distribution': reg.distribution_as_list,
-                            'amplitudes': [[z.real, z.imag]
-                                           for z in reg.amplitudes],
-                            'observables': obs,
-                            'stdout': stdout})
+                reg, obs, stdout = run_program(code,
+                                               init_state=req.get('init_state'),
+                                               seed=req.get('seed'))
+                self._json({
+                    'n': reg.n,
+                    'distribution': reg.distribution_as_list,
+                    'amplitudes': [[z.real, z.imag] for z in reg.amplitudes],
+                    'observables': obs,
+                    'stdout': stdout
+                })
             else:
                 self._json({'error': 'not found'}, 404)
         except Exception:
-            self._json({'error': traceback.format_exc(limit=3)
-                        .splitlines()[-1],
-                        'trace': traceback.format_exc(limit=6)}, 400)
+            self._json(
+                {
+                    'error': traceback.format_exc(limit=3).splitlines()[-1],
+                    'trace': traceback.format_exc(limit=6)
+                }, 400)
 
 
 if __name__ == '__main__':
     import argparse
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument('--port', type=int, default=PORT,
+    ap.add_argument('--port',
+                    type=int,
+                    default=PORT,
                     help='port to listen on (default: %d)' % PORT)
     PORT = ap.parse_args().port
     try:

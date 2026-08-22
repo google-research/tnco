@@ -42,12 +42,13 @@ distribution_as_list is the Born distribution of the state as it stands.
 """
 
 import cmath
+from fractions import Fraction
 import math
 import random
-from fractions import Fraction
 
-__all__ = ["Qubits", "Observable", "QubitRef", "QubitSlice", "Circuit",
-           "QuantumError"]
+__all__ = [
+    "Qubits", "Observable", "QubitRef", "QubitSlice", "Circuit", "QuantumError"
+]
 
 _SQRT2 = 1.0 / math.sqrt(2.0)
 
@@ -103,10 +104,10 @@ def _zyz(m):
     """
     (a, b), (c, d) = [[complex(x) for x in row] for row in m]
     theta = 2 * math.atan2(abs(c), abs(a))
-    if abs(c) < 1e-12:           # diagonal
+    if abs(c) < 1e-12:  # diagonal
         gamma = cmath.phase(a)
         return 0.0, 0.0, cmath.phase(d) - gamma, gamma
-    if abs(a) < 1e-12:           # antidiagonal
+    if abs(a) < 1e-12:  # antidiagonal
         gamma = cmath.phase(-b)
         return math.pi, cmath.phase(c) - gamma, 0.0, gamma
     gamma = cmath.phase(a)
@@ -124,8 +125,12 @@ def _angle_str(phi, pi_sym, mult_fmt, fallback):
     fr = Fraction(phi / math.pi).limit_denominator(64)
     if fr != 0 and abs(phi - float(fr) * math.pi) < 1e-9:
         num, den = fr.numerator, fr.denominator
-        s = pi_sym if num == 1 else ("-" + pi_sym if num == -1
-                                     else mult_fmt % num)
+        if num == 1:
+            s = pi_sym
+        elif num == -1:
+            s = "-" + pi_sym
+        else:
+            s = mult_fmt % num
         return s if den == 1 else "%s/%d" % (s, den)
     return fallback % phi
 
@@ -205,7 +210,10 @@ class QubitRef:
         return GateHandle(self.reg, self)
 
     def R(self, phi):
-        """A plain rotation by phi: ((cos, -sin), (sin, cos)). R(phi)=RY(2*phi)."""
+        """A plain rotation by phi: ((cos, -sin), (sin, cos)).
+
+        R(phi)=RY(2*phi).
+        """
         c, s = math.cos(phi), math.sin(phi)
         self.reg._apply1(self.index, ((c, -s), (s, c)),
                          "R(%s)" % _fmt_angle(phi))
@@ -266,7 +274,8 @@ class QubitRef:
         elif isinstance(other, Controls):
             self.reg._apply_mcx(tuple(r.index for r in other.refs), self.index)
         else:
-            raise QuantumError("a control is a qubit or a conjunction of qubits")
+            raise QuantumError(
+                "a control is a qubit or a conjunction of qubits")
         return GateHandle(self.reg, self)
 
     def measure(self):
@@ -306,7 +315,8 @@ class Qubits:
         # Supports a[i] ^= ...: __ixor__ already applied the gate, no-op here.
         if -self.n <= i < 0:
             i += self.n
-        if isinstance(value, QubitRef) and value.reg is self and value.index == i:
+        if (isinstance(value, QubitRef) and value.reg is self and
+                value.index == i):
             return
         raise QuantumError("a qubit cannot be assigned a value directly")
 
@@ -335,13 +345,12 @@ class Qubits:
     def _retro_pow(self, log_index, t, ref):
         """Replaces the last applied gate by its power t."""
         if log_index != len(self._log) - 1:
-            raise QuantumError(
-                "only the last gate can be raised to a power")
+            raise QuantumError("only the last gate can be raised to a power")
         op = self._log.pop()
         kind = op[0]
         if kind == "g":
             _, label, i, m = op
-            self._apply1_core(i, _inv2(m))          # undo
+            self._apply1_core(i, _inv2(m))  # undo
             self._apply1(i, _mat_pow(m, t), _pow_label(label, t))
         elif kind == "cx":
             _, controls, target = op
@@ -356,7 +365,7 @@ class Qubits:
                             _pow_label(label, t))
         elif kind == "cp":
             _, i, j, phi = op
-            self._apply_cphase_core(i, j, -phi)     # undo
+            self._apply_cphase_core(i, j, -phi)  # undo
             self._apply_cphase(i, j, phi * t)
         else:
             raise QuantumError("this gate has no powers")
@@ -407,11 +416,13 @@ class Qubits:
         self._apply_cphase_core(i, j, phi)
 
     def _distribution(self):
-        return [abs(x) ** 2 for x in self.state]
+        return [abs(x)**2 for x in self.state]
 
     @property
     def amplitudes(self):
-        return [complex(round(z.real, 12), round(z.imag, 12)) for z in self.state]
+        return [
+            complex(round(z.real, 12), round(z.imag, 12)) for z in self.state
+        ]
 
     @property
     def as_circuit(self):
@@ -424,8 +435,11 @@ class Qubits:
     @property
     def distribution(self):
         fmt = "{:0%db}" % self.n
-        return {fmt.format(k): p
-                for k, p in enumerate(self.distribution_as_list) if p > 0}
+        return {
+            fmt.format(k): p
+            for k, p in enumerate(self.distribution_as_list)
+            if p > 0
+        }
 
     def _extract(self, k, bits):
         v = 0
@@ -438,7 +452,7 @@ class Qubits:
         dist = [0.0] * (1 << len(indices))
         for k, z in enumerate(self.state):
             if z:
-                dist[self._extract(k, bits)] += abs(z) ** 2
+                dist[self._extract(k, bits)] += abs(z)**2
         return dist
 
     def _measure_subset(self, indices):
@@ -478,9 +492,10 @@ class Qubits:
         mlen = len(indices)
         table = [f(v) for v in range(1 << mlen)]
         if sorted(table) != list(range(1 << mlen)):
-            raise QuantumError("the function is not a permutation of the register")
-        self._log.append(("perm", tuple(indices), tuple(controls), name,
-                          tuple(table)))
+            raise QuantumError(
+                "the function is not a permutation of the register")
+        self._log.append(
+            ("perm", tuple(indices), tuple(controls), name, tuple(table)))
         bits = [self._bit(i) for i in indices]
         cmask = 0
         for c in controls:
@@ -520,17 +535,17 @@ class QubitSlice:
         return QubitRef(self.reg, self.indices[i])
 
     def __setitem__(self, i, value):
-        if (isinstance(value, QubitRef) and value.reg is self.reg
-                and value.index == self.indices[i]):
+        if (isinstance(value, QubitRef) and value.reg is self.reg and
+                value.index == self.indices[i]):
             return
         raise QuantumError("a qubit cannot be assigned a value directly")
 
     def permute(self, f, when=None, name=None):
         """A classical reversible function f on the subregister: |v> -> |f(v)>.
 
-        when is a control qubit (or a conjunction a[i] & a[j]): the permutation
-        is applied only on the branches where the control equals 1.
-        name is the label used by as_circuit.
+        when is a control qubit (or a conjunction a[i] & a[j]): the
+        permutation is applied only on the branches where the control
+        equals 1. name is the label used by as_circuit.
         """
         if when is None:
             controls = ()
@@ -539,7 +554,8 @@ class QubitSlice:
         elif isinstance(when, Controls):
             controls = tuple(r.index for r in when.refs)
         else:
-            raise QuantumError("when must be a qubit or a conjunction of qubits")
+            raise QuantumError(
+                "when must be a qubit or a conjunction of qubits")
         self.reg._apply_permutation(self.indices, f, controls, name)
         return self
 
@@ -550,12 +566,18 @@ class QubitSlice:
     @property
     def distribution(self):
         fmt = "{:0%db}" % len(self.indices)
-        return {fmt.format(v): p
-                for v, p in enumerate(self.distribution_as_list) if p > 0}
+        return {
+            fmt.format(v): p
+            for v, p in enumerate(self.distribution_as_list)
+            if p > 0
+        }
 
 
 class Circuit:
-    """The circuit: the register's op log. print(a.as_circuit) draws it."""
+    """The circuit: the register's op log.
+
+    print(a.as_circuit) draws it.
+    """
 
     def __init__(self, n, ops):
         self.n = n
@@ -612,9 +634,11 @@ class Circuit:
                     col.append("─" * width)
             cols.append(col)
         w = len(str(self.n - 1))
-        return "\n".join(
-            "q%-*d: ─" % (w, r) + "─".join(col[r] for col in cols) + "─"
-            for r in range(self.n))
+        rows = []
+        for r in range(self.n):
+            row = "─".join(col[r] for col in cols)
+            rows.append("q%-*d: ─%s─" % (w, r, row))
+        return "\n".join(rows)
 
     def __repr__(self):
         return str(self)
@@ -623,9 +647,16 @@ class Circuit:
         """Compiles the circuit into a cirq.Circuit (needs cirq installed)."""
         import cirq
         import numpy as np
-        named = {"H": cirq.H, "X": cirq.X, "Y": cirq.Y, "Z": cirq.Z,
-                 "S": cirq.S, "T": cirq.T,
-                 "Sdg": cirq.S ** -1, "Tdg": cirq.T ** -1}
+        named = {
+            "H": cirq.H,
+            "X": cirq.X,
+            "Y": cirq.Y,
+            "Z": cirq.Z,
+            "S": cirq.S,
+            "T": cirq.T,
+            "Sdg": cirq.S**-1,
+            "Tdg": cirq.T**-1
+        }
         q = cirq.LineQubit.range(self.n)
         circuit = cirq.Circuit()
         mcount = 0
@@ -642,7 +673,7 @@ class Circuit:
                 gate = cirq.X(q[t]).controlled_by(*(q[c] for c in controls))
             elif kind == "cp":
                 _, i, j, phi = op
-                gate = cirq.CZ(q[i], q[j]) ** (phi / math.pi)
+                gate = cirq.CZ(q[i], q[j])**(phi / math.pi)
             elif kind == "mc1":
                 _, controls, target, m, label = op
                 gate = cirq.MatrixGate(np.array(m), name=label)(q[target])
@@ -653,13 +684,11 @@ class Circuit:
                 mat = np.zeros((size, size))
                 for v, w in enumerate(table):
                     mat[w][v] = 1
-                gate = cirq.MatrixGate(mat, name=name)(*(q[i]
-                                                         for i in indices))
+                gate = cirq.MatrixGate(mat, name=name)(*(q[i] for i in indices))
                 if controls:
                     gate = gate.controlled_by(*(q[c] for c in controls))
             elif kind == "M":
-                gate = cirq.measure(*(q[i] for i in op[1]),
-                                    key="m%d" % mcount)
+                gate = cirq.measure(*(q[i] for i in op[1]), key="m%d" % mcount)
                 mcount += 1
             else:
                 raise QuantumError("unknown operation in the log: %r" % kind)
@@ -670,14 +699,24 @@ class Circuit:
         """Compiles the circuit into OpenQASM 2.0 (a string).
 
         Named gates map to qelib1; the rest becomes u3 via an exact ZYZ
-        decomposition. ``permute``, powers with several controls and CNOTs
-        with more than two controls do not export.
+        decomposition. ``permute``, powers with several controls and
+        CNOTs with more than two controls do not export.
         """
-        named = {"H": "h", "X": "x", "Y": "y", "Z": "z",
-                 "S": "s", "Sdg": "sdg", "T": "t", "Tdg": "tdg"}
+        named = {
+            "H": "h",
+            "X": "x",
+            "Y": "y",
+            "Z": "z",
+            "S": "s",
+            "Sdg": "sdg",
+            "T": "t",
+            "Tdg": "tdg"
+        }
         n_bits = sum(len(op[1]) for op in self.ops if op[0] == "M")
-        lines = ["OPENQASM 2.0;", 'include "qelib1.inc";', "",
-                 "qreg q[%d];" % self.n]
+        lines = [
+            "OPENQASM 2.0;", 'include "qelib1.inc";', "",
+            "qreg q[%d];" % self.n
+        ]
         if n_bits:
             lines.append("creg c[%d];" % n_bits)
         lines.append("")
@@ -691,16 +730,16 @@ class Circuit:
                 else:
                     theta, phi, lam, gamma = _zyz(m)
                     # the global phase is unobservable and dropped
-                    lines.append("u3(%s,%s,%s) q[%d];  // %s"
-                                 % (_qasm_angle(theta), _qasm_angle(phi),
-                                    _qasm_angle(lam), i, label))
+                    lines.append("u3(%s,%s,%s) q[%d];  // %s" %
+                                 (_qasm_angle(theta), _qasm_angle(phi),
+                                  _qasm_angle(lam), i, label))
             elif kind == "cx":
                 controls, t = op[1], op[2]
                 if len(controls) == 1:
                     lines.append("cx q[%d],q[%d];" % (controls[0], t))
                 elif len(controls) == 2:
-                    lines.append("ccx q[%d],q[%d],q[%d];"
-                                 % (controls[0], controls[1], t))
+                    lines.append("ccx q[%d],q[%d],q[%d];" %
+                                 (controls[0], controls[1], t))
                 else:
                     raise QuantumError(
                         "QASM export: more than 2 controls is not supported")
@@ -709,23 +748,23 @@ class Circuit:
                 if abs(phi - math.pi) < 1e-12:
                     lines.append("cz q[%d],q[%d];" % (i, j))
                 else:
-                    lines.append("cu1(%s) q[%d],q[%d];"
-                                 % (_qasm_angle(phi), i, j))
+                    lines.append("cu1(%s) q[%d],q[%d];" %
+                                 (_qasm_angle(phi), i, j))
             elif kind == "mc1":
                 _, controls, target, m, label = op
                 if len(controls) != 1:
                     raise QuantumError(
-                        "QASM export: multi-controlled %s is not supported"
-                        % label)
+                        "QASM export: multi-controlled %s is not supported" %
+                        label)
                 theta, phi, lam, gamma = _zyz(m)
                 c = controls[0]
                 if abs(gamma) > 1e-9:
                     # controlled global phase is a real phase on the control
-                    lines.append("u1(%s) q[%d];  // phase of %s"
-                                 % (_qasm_angle(gamma), c, label))
-                lines.append("cu3(%s,%s,%s) q[%d],q[%d];  // %s"
-                             % (_qasm_angle(theta), _qasm_angle(phi),
-                                _qasm_angle(lam), c, target, label))
+                    lines.append("u1(%s) q[%d];  // phase of %s" %
+                                 (_qasm_angle(gamma), c, label))
+                lines.append("cu3(%s,%s,%s) q[%d],q[%d];  // %s" %
+                             (_qasm_angle(theta), _qasm_angle(phi),
+                              _qasm_angle(lam), c, target, label))
             elif kind == "perm":
                 raise QuantumError(
                     "QASM export: permute has no QASM counterpart")
@@ -757,8 +796,8 @@ class Observable:
             # a classical bit
             self.bits += str(int(source))
         else:
-            raise QuantumError(
-                "only Qubits, a slice, a qubit or a classical bit can be measured")
+            raise QuantumError("only Qubits, a slice, a qubit or a classical "
+                               "bit can be measured")
         return self
 
     @property
