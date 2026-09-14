@@ -14,8 +14,8 @@
 """The standalone page's back end: the server's routes without the server.
 
 Runs inside Pyodide. `api(path, body)` answers exactly like the HTTP
-server's POST handler, JSON in and JSON out; the contraction trees are not
-built here — the page builds both with its own annealer.
+server's POST handler, JSON in and JSON out; the contraction trees are
+not built here — the page builds both with its own annealer.
 """
 
 import json
@@ -32,17 +32,25 @@ def api(path, body):
         code = req.get('code', '')
         if path == '/compile':
             reg, obs, stdout = S.run_program(code, seed=req.get('seed'))
-            out = {'circuit': S.circuit_json(reg), 'observables': obs,
-                   'stdout': stdout, 'weight': reg.weight}
+            out = {
+                'circuit': S.circuit_json(reg),
+                'observables': obs,
+                'stdout': stdout,
+                'weight': reg.weight
+            }
             out.update(S.compile_tn(reg))
             return json.dumps(out)
         if path == '/translate':
             if S.detect_lang(code) == 'python':
                 reg, _, _ = S.run_program(code, seed=req.get('seed'))
-                return json.dumps({'lang': 'qasm',
-                                   'text': reg.as_circuit.to_qasm()})
-            return json.dumps({'lang': 'python',
-                               'text': S.qasm_to_python(code)})
+                return json.dumps({
+                    'lang': 'qasm',
+                    'text': reg.as_circuit.to_qasm()
+                })
+            return json.dumps({
+                'lang': 'python',
+                'text': S.qasm_to_python(code)
+            })
         if path == '/observe':
             base = req.get('seed')
             if base is None:
@@ -61,21 +69,22 @@ def api(path, body):
                 key = ' '.join(obs[k] or '—' for k in names)
                 counts[key] = counts.get(key, 0) + 1
                 n_runs += 1
-            return json.dumps({'names': names, 'counts': counts,
-                               'n': n_runs})
+            return json.dumps({'names': names, 'counts': counts, 'n': n_runs})
         if path == '/simulate':
-            reg, obs, stdout = S.run_program(
-                code, init_state=req.get('init_state'),
-                seed=req.get('seed'))
-            return json.dumps({'n': reg.n,
-                               'weight': reg.weight,
-                               'distribution': reg.distribution_as_list,
-                               'amplitudes': [[z.real, z.imag]
-                                              for z in reg.amplitudes],
-                               'observables': obs,
-                               'stdout': stdout})
+            reg, obs, stdout = S.run_program(code,
+                                             init_state=req.get('init_state'),
+                                             seed=req.get('seed'))
+            return json.dumps({
+                'n': reg.n,
+                'weight': reg.weight,
+                'distribution': reg.distribution_as_list,
+                'amplitudes': [[z.real, z.imag] for z in reg.amplitudes],
+                'observables': obs,
+                'stdout': stdout
+            })
         return json.dumps({'error': 'not found'})
     except Exception:
-        return json.dumps({'error': traceback.format_exc(limit=3)
-                           .splitlines()[-1],
-                           'trace': traceback.format_exc(limit=6)})
+        return json.dumps({
+            'error': traceback.format_exc(limit=3).splitlines()[-1],
+            'trace': traceback.format_exc(limit=6)
+        })

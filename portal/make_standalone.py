@@ -19,7 +19,7 @@ swapped for portal_local.js, which runs quantum.py and the server module
 in Pyodide. Everything else — trees, annealing, the network views — is
 already client-side.
 
-    python3 make_standalone.py
+python3 make_standalone.py
 """
 
 import os
@@ -38,15 +38,13 @@ def main():
     page = read('quantum_portal.html')
     local_js = read('portal_local.js')
 
-    post_re = re.compile(r'async function post\(url, body\) \{.*?\n\}\n',
-                         re.S)
+    post_re = re.compile(r'async function post\(url, body\) \{.*?\n\}\n', re.S)
     if not post_re.search(page):
         raise SystemExit('post() not found')
     page = post_re.sub(lambda m: local_js, page, count=1)
 
     blocks = []
-    for name in ('quantum.py', 'quantum_portal_server.py',
-                 'portal_runtime.py'):
+    for name in ('quantum.py', 'quantum_portal_server.py', 'portal_runtime.py'):
         ident = name.replace('.', '_')
         blocks.append('<script type="text/x-python" id="%s" data-file="%s">\n'
                       '%s</script>\n' % (ident, name, read(name)))
@@ -57,8 +55,7 @@ def main():
         '</h1>\n<div id="boot" class="hint" style="margin:-6px 0 10px">'
         'starting…</div>\n', 1)
     page = page.replace(
-        '</script>\n</body>',
-        "\n$('btnGo').disabled = true;\n"
+        '</script>\n</body>', "\n$('btnGo').disabled = true;\n"
         "pyReady = bootPython().catch(e => {\n"
         "  bootStatus(e.message, true);\n"
         "  throw e;\n"
