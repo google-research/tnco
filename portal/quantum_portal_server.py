@@ -109,7 +109,7 @@ def qasm_to_python(code):
         raise quantum.QuantumError('QASM: cannot parse qubit %r' % token)
 
     for s in stmts:
-        if not s or s.startswith(('OPENQASM', 'include', 'barrier')):
+        if not s or s.startswith(('OPENQASM', 'include', 'barrier', 'opaque')):
             continue
         if s.startswith('if'):
             raise quantum.QuantumError(
@@ -151,6 +151,13 @@ def qasm_to_python(code):
                 if not _ANGLE_RE.fullmatch(a):
                     raise quantum.QuantumError('QASM: bad angle %r' % a)
             qtoks = [t.strip() for t in qubits.split(',')]
+            if name == 'returns':
+                if len(args) != 1 or args[0] not in ('0', '1'):
+                    raise quantum.QuantumError(
+                        'QASM: returns expects one bit, 0 or 1')
+                for q in qref(qtoks[0], broadcastable=True):
+                    body.append('%s.returns(%s)' % (q, args[0]))
+                continue
             if name == 'swap':
                 if len(qtoks) != 2:
                     raise quantum.QuantumError('QASM: swap expects 2 qubits')
@@ -313,6 +320,10 @@ def circuit_json(reg):
                 'controls': list(op[2]),
                 'name': op[3]
             })
+        elif kind == 'u2':
+            ops.append({'k': 'u2', 'i': op[1], 'j': op[2], 'label': op[6]})
+        elif kind == 'ret':
+            ops.append({'k': 'ret', 'q': op[1], 'b': op[2]})
         elif kind == 'M':
             ops.append({'k': 'M', 'q': list(op[1])})
     return {'n': reg.n, 'ops': ops}
@@ -334,6 +345,8 @@ def _op_qubits_label(op):
         return label, (op[1], op[2])
     if kind == 'perm':
         return op[3], tuple(op[1]) + tuple(op[2])
+    if kind == 'u2':
+        return op[6], (op[1], op[2])
     return '?', ()
 
 
@@ -362,7 +375,9 @@ def build_tn(reg):
     With a partial measurement this is the two-layer <psi|...|psi> sandwich:
     unmeasured qubits are glued between the layers, measured legs stay open,
     so the network computes the observation distribution. Otherwise it is a
-    single layer with every output open.
+    single layer with every output open. A returned qubit
+    (q.returns(b)) ends in a cap |b> instead: its leg is closed on every
+    layer it has.
 
     Args:
         reg: the executed register; its log defines the circuit.
@@ -372,7 +387,8 @@ def build_tn(reg):
         labels and raw names per tensor, readable index names per line,
         and {label, q} per gate.
     """
-    ops = [op for op in reg._log if op[0] != 'M']
+    ops = [op for op in reg._log if op[0] not in ('M', 'ret')]
+    rets = {op[1]: op[2] for op in reg._log if op[0] == 'ret'}
     if not ops:
         raise quantum.QuantumError(
             'the program has no gates — nothing to build a network from')
@@ -409,7 +425,12 @@ def build_tn(reg):
     if measured:
         cur_b = build_layer('b')
         for q in range(reg.n):
-            if q in measured:
+            if q in rets:
+                # the future observer closes each bracket: the ket layer
+                # ends in a bra, the bra layer ends in a ket
+                where[cur_k[q]].append('⟨%d|q%d·ret' % (rets[q], q))
+                where[cur_b[q]].append('|%d⟩q%d·ret' % (rets[q], q))
+            elif q in measured:
                 where[cur_k[q]].append('*')
                 where[cur_b[q]].append('*')
             else:
@@ -418,12 +439,15 @@ def build_tn(reg):
                 idx_names.remove(cur_b[q])
     else:
         for q in range(reg.n):
-            where[cur_k[q]].append('*')
+            if q in rets:
+                where[cur_k[q]].append('⟨%d|q%d·ret' % (rets[q], q))
+            else:
+                where[cur_k[q]].append('*')
 
     tn = _TN(idx_names, where)
 
     raw_names = [t['name'] for t in tn.ts_tags]
-    labels = [n.split('#')[0] for n in raw_names]
+    labels = [n.split('#')[0].split('·')[0] for n in raw_names]
     net_ops = []
     for label, qs in map(_op_qubits_label, ops):
         net_ops.append({'label': label, 'q': sorted(qs)})
@@ -489,7 +513,8 @@ class Handler(BaseHTTPRequestHandler):
                 out = {
                     'circuit': circuit_json(reg),
                     'observables': obs,
-                    'stdout': stdout
+                    'stdout': stdout,
+                    'weight': reg.weight
                 }
                 out.update(compile_tn(reg))
                 self._json(out)
@@ -530,6 +555,7 @@ class Handler(BaseHTTPRequestHandler):
                                                seed=req.get('seed'))
                 self._json({
                     'n': reg.n,
+                    'weight': reg.weight,
                     'distribution': reg.distribution_as_list,
                     'amplitudes': [[z.real, z.imag] for z in reg.amplitudes],
                     'observables': obs,

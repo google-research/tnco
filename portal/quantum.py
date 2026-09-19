@@ -61,7 +61,27 @@ _GATES = {
     "Sdg": ((1, 0), (0, -1j)),
     "T": ((1, 0), (0, cmath.exp(1j * math.pi / 4))),
     "Tdg": ((1, 0), (0, cmath.exp(-1j * math.pi / 4))),
+    "W": ((0, (1 - 1j) * _SQRT2), ((1 + 1j) * _SQRT2, 0)),  # (X+Y)/sqrt(2)
 }
+
+
+def _fsim(theta, phi):
+    """The fSim matrix: swap amplitude -i*sin(theta), e^{-i phi} on |11>."""
+    c, s = math.cos(theta), -1j * math.sin(theta)
+    e11 = cmath.exp(-1j * phi)
+    return ((1, 0, 0, 0), (0, c, s, 0), (0, s, c, 0), (0, 0, 0, e11))
+
+
+def _inv4(m):
+    return tuple(
+        tuple(complex(m[r][c]).conjugate() for r in range(4)) for c in range(4))
+
+
+def _u2_label(name, theta, phi):
+    if name == "iSWAP":
+        t = theta / (-math.pi / 2)
+        return "iSWAP" if abs(t - 1) < 1e-12 else "iSWAP^%g" % t
+    return "%s(%s,%s)" % (name, _fmt_angle(theta), _fmt_angle(phi))
 
 
 class QuantumError(Exception):
@@ -245,6 +265,19 @@ class QubitRef:
         self.reg._apply_cphase(self.index, other.index, phi)
         return GateHandle(self.reg, self)
 
+    def fSim(self, other, theta, phi):
+        """The Sycamore gate: swap by theta, phase phi on |11>."""
+        self.reg._apply_u2(self.index, other.index, "fSim", theta, phi)
+        return GateHandle(self.reg, self)
+
+    def iSWAP(self, other):
+        """iSWAP = fSim(-pi/2, 0); ** 0.5 gives sqrt(iSWAP)."""
+        self.reg._apply_u2(self.index, other.index, "iSWAP", -math.pi / 2, 0.0)
+        return GateHandle(self.reg, self)
+
+    def W(self):
+        return self._g("W")
+
     def __and__(self, other):
         if isinstance(other, QubitRef):
             return Controls((self, other))
@@ -281,6 +314,15 @@ class QubitRef:
     def measure(self):
         return self.reg._measure_one(self.index)
 
+    def returns(self, b):
+        """The call of the future observer: this qubit ends in |b>.
+
+        Projects the state onto b (post-selection), folds the branch
+        weight into reg.weight, and seals the qubit: any later gate or
+        measurement on it is an error.
+        """
+        self.reg._apply_returns(self.index, b)
+
 
 class Qubits:
     """A register of n qubits, initialized to |0...0>."""
@@ -292,6 +334,8 @@ class Qubits:
         self.state = [0j] * (1 << n)
         self.state[0] = 1 + 0j
         self._log = []
+        self._returned = set()
+        self.weight = 1.0
 
     def __enter__(self):
         return self
@@ -323,6 +367,12 @@ class Qubits:
     def _bit(self, i):
         return 1 << (self.n - 1 - i)
 
+    def _free(self, indices):
+        for i in indices:
+            if i in self._returned:
+                raise QuantumError(
+                    "q[%d] has already returned; nothing may touch it" % i)
+
     def _apply1_core(self, i, m):
         bit = self._bit(i)
         st = self.state
@@ -334,11 +384,13 @@ class Qubits:
                 st[k1] = m[1][0] * a0 + m[1][1] * a1
 
     def _apply1(self, i, m, label="U"):
+        self._free((i,))
         self._log.append(("g", label, i, m))
         self._apply1_core(i, m)
 
     def _apply_mc1(self, controls, target, m, label):
         """A multi-controlled single-qubit gate (for powers of CNOT)."""
+        self._free(tuple(controls) + (target,))
         self._log.append(("mc1", tuple(controls), target, m, label))
         self._apply_mc1_core(controls, target, m)
 
@@ -367,6 +419,11 @@ class Qubits:
             _, i, j, phi = op
             self._apply_cphase_core(i, j, -phi)  # undo
             self._apply_cphase(i, j, phi * t)
+        elif kind == "u2":
+            _, i, j, name, theta, phi, _label = op
+            self._apply_u2_core(i, j, _inv4(_fsim(theta, phi)))  # undo
+            # the two parts of fSim commute: a power just scales the angles
+            self._apply_u2(i, j, name, theta * t, phi * t)
         else:
             raise QuantumError("this gate has no powers")
         return GateHandle(self, ref)
@@ -387,6 +444,7 @@ class Qubits:
     def _apply_mcx(self, controls, target):
         if target in controls:
             raise QuantumError("a qubit cannot control itself")
+        self._free(tuple(controls) + (target,))
         self._log.append(("cx", tuple(controls), target))
         tbit = self._bit(target)
         cmask = 0
@@ -412,8 +470,51 @@ class Qubits:
     def _apply_cphase(self, i, j, phi):
         if i == j:
             raise QuantumError("a qubit cannot control itself")
+        self._free((i, j))
         self._log.append(("cp", i, j, phi))
         self._apply_cphase_core(i, j, phi)
+
+    def _apply_u2_core(self, i, j, m):
+        """An arbitrary two-qubit gate; the pair's basis is |ij>, i first."""
+        bi, bj = self._bit(i), self._bit(j)
+        st = self.state
+        for k in range(len(st)):
+            if k & (bi | bj):
+                continue
+            ks = (k, k | bj, k | bi, k | bi | bj)
+            v = [st[x] for x in ks]
+            for r, kr in enumerate(ks):
+                st[kr] = sum(m[r][c] * v[c] for c in range(4))
+
+    def _apply_u2(self, i, j, name, theta, phi):
+        if i == j:
+            raise QuantumError("a two-qubit gate needs two distinct qubits")
+        self._free((i, j))
+        self._log.append(
+            ("u2", i, j, name, theta, phi, _u2_label(name, theta, phi)))
+        self._apply_u2_core(i, j, _fsim(theta, phi))
+
+    def _apply_returns(self, i, b):
+        if b not in (0, 1):
+            raise QuantumError("returns expects 0 or 1")
+        self._free((i,))
+        bit = self._bit(i)
+        st = self.state
+        p = 0.0
+        for k in range(len(st)):
+            if ((k & bit) != 0) == bool(b):
+                p += abs(st[k])**2
+            else:
+                st[k] = 0j
+        if p < 1e-12:
+            raise QuantumError(
+                "q[%d].returns(%d): this branch has zero probability" % (i, b))
+        norm = math.sqrt(p)
+        for k in range(len(st)):
+            st[k] /= norm
+        self.weight *= p
+        self._log.append(("ret", i, b))
+        self._returned.add(i)
 
     def _distribution(self):
         return [abs(x)**2 for x in self.state]
@@ -456,6 +557,7 @@ class Qubits:
         return dist
 
     def _measure_subset(self, indices):
+        self._free(indices)
         self._log.append(("M", tuple(indices)))
         dist = self._marginal(indices)
         r = random.random()
@@ -485,6 +587,7 @@ class Qubits:
     def _apply_permutation(self, indices, f, controls=(), name=None):
         if set(indices) & set(controls):
             raise QuantumError("the control overlaps the permuted register")
+        self._free(tuple(indices) + tuple(controls))
         if name is None:
             name = getattr(f, "__name__", "f")
             if name == "<lambda>":
@@ -613,6 +716,10 @@ class Circuit:
                 cells[c] = "●"
             for i in indices:
                 cells[i] = "[%s]" % name
+        elif kind == "u2":
+            cells[op[1]] = cells[op[2]] = op[6]
+        elif kind == "ret":
+            cells[op[1]] = "⟨%d|" % op[2]
         elif kind == "M":
             for i in op[1]:
                 cells[i] = "M"
@@ -687,6 +794,12 @@ class Circuit:
                 gate = cirq.MatrixGate(mat, name=name)(*(q[i] for i in indices))
                 if controls:
                     gate = gate.controlled_by(*(q[c] for c in controls))
+            elif kind == "u2":
+                _, i, j, name, theta, phi, _label = op
+                gate = cirq.FSimGate(theta=theta, phi=phi)(q[i], q[j])
+            elif kind == "ret":
+                raise QuantumError("to_cirq: returns is a post-selection, "
+                                   "cirq has no gate for it")
             elif kind == "M":
                 gate = cirq.measure(*(q[i] for i in op[1]), key="m%d" % mcount)
                 mcount += 1
@@ -699,8 +812,9 @@ class Circuit:
         """Compiles the circuit into OpenQASM 2.0 (a string).
 
         Named gates map to qelib1; the rest becomes u3 via an exact ZYZ
-        decomposition. ``permute``, powers with several controls and
-        CNOTs with more than two controls do not export.
+        decomposition; fSim becomes two CNOTs around a controlled
+        rotation. ``permute``, powers with several controls and CNOTs
+        with more than two controls do not export.
         """
         named = {
             "H": "h",
@@ -713,10 +827,11 @@ class Circuit:
             "Tdg": "tdg"
         }
         n_bits = sum(len(op[1]) for op in self.ops if op[0] == "M")
-        lines = [
-            "OPENQASM 2.0;", 'include "qelib1.inc";', "",
-            "qreg q[%d];" % self.n
-        ]
+        lines = ["OPENQASM 2.0;", 'include "qelib1.inc";']
+        if any(op[0] == "ret" for op in self.ops):
+            lines.append("opaque returns(b) q;")
+        lines.append("")
+        lines.append("qreg q[%d];" % self.n)
         if n_bits:
             lines.append("creg c[%d];" % n_bits)
         lines.append("")
@@ -768,6 +883,26 @@ class Circuit:
             elif kind == "perm":
                 raise QuantumError(
                     "QASM export: permute has no QASM counterpart")
+            elif kind == "u2":
+                # fSim(t, p) = CX(j->i) CRX(2t, i->j) CX(j->i) CP(-p):
+                # the swap block, conjugated onto the |10>,|11> pair,
+                # then the phase on |11>
+                _, i, j, name, th2, phi2, label = op
+                rx = ((math.cos(th2), -1j * math.sin(th2)),
+                      (-1j * math.sin(th2), math.cos(th2)))
+                theta, phi, lam, gamma = _zyz(rx)
+                lines.append("cx q[%d],q[%d];  // %s" % (j, i, label))
+                if abs(gamma) > 1e-9:
+                    lines.append("u1(%s) q[%d];" % (_qasm_angle(gamma), i))
+                lines.append("cu3(%s,%s,%s) q[%d],q[%d];" %
+                             (_qasm_angle(theta), _qasm_angle(phi),
+                              _qasm_angle(lam), i, j))
+                lines.append("cx q[%d],q[%d];" % (j, i))
+                if abs(phi2) > 1e-12:
+                    lines.append("cu1(%s) q[%d],q[%d];" %
+                                 (_qasm_angle(-phi2), i, j))
+            elif kind == "ret":
+                lines.append("returns(%d) q[%d];" % (op[2], op[1]))
             elif kind == "M":
                 for i in op[1]:
                     lines.append("measure q[%d] -> c[%d];" % (i, slot))
