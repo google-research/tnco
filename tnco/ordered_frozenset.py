@@ -53,7 +53,7 @@ class OrderedFrozenSet:
         return iter(self._order)
 
     def __hash__(self) -> int:
-        return hash(self._order)
+        return hash(self._set)
 
     def __len__(self) -> int:
         return len(self._order)
